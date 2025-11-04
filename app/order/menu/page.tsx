@@ -10,6 +10,9 @@ export default function CustomerMenuPage() {
   const [waiterCalled, setWaiterCalled] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
+  const [orderStatus, setOrderStatus] = useState<'Received' | 'Accepted' | 'In-Progress' | 'Delivered' | 'Bill Generated' | 'Bill Paid'>('Received');
+  const [orderId, setOrderId] = useState('');
 
   useEffect(() => {
     setMounted(true);
@@ -18,8 +21,72 @@ export default function CustomerMenuPage() {
       window.location.href = '/order';
     } else {
       setCustomerName(name);
+      
+      // Restore selected items from localStorage
+      const savedItems = localStorage.getItem('selectedItems');
+      if (savedItems) {
+        try {
+          setSelectedItems(JSON.parse(savedItems));
+        } catch (error) {
+          console.error('Error loading saved items:', error);
+        }
+      }
+
+      // Restore order placed state from localStorage
+      const savedOrderPlaced = localStorage.getItem('orderPlaced');
+      if (savedOrderPlaced === 'true') {
+        setOrderPlaced(true);
+      }
+
+      // Restore order status from localStorage
+      const savedOrderStatus = localStorage.getItem('orderStatus');
+      if (savedOrderStatus) {
+        setOrderStatus(savedOrderStatus as any);
+      }
+
+      // Restore order ID from localStorage
+      const savedOrderId = localStorage.getItem('orderId');
+      if (savedOrderId) {
+        setOrderId(savedOrderId);
+      }
     }
   }, []);
+
+  // Save selected items to localStorage whenever they change
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem('selectedItems', JSON.stringify(selectedItems));
+    }
+  }, [selectedItems, mounted]);
+
+  // Update current time every second when order is placed
+  useEffect(() => {
+    if (orderPlaced) {
+      const timer = setInterval(() => {
+        setCurrentTime(new Date().toLocaleTimeString());
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [orderPlaced]);
+
+  // Save order placed state to localStorage
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem('orderPlaced', orderPlaced.toString());
+    }
+  }, [orderPlaced, mounted]);
+
+  // Save order status to localStorage
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem('orderStatus', orderStatus);
+    }
+  }, [orderStatus, mounted]);
+
+  // Mock Order ID (will be replaced by backend API later)
+  const getMockOrderId = () => {
+    return 'SX122344'; // Fixed mock data
+  };
 
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => 
@@ -92,16 +159,28 @@ export default function CustomerMenuPage() {
       });
 
       if (response.ok) {
+        const mockOrderId = getMockOrderId();
+        setOrderId(mockOrderId);
+        localStorage.setItem('orderId', mockOrderId);
         setOrderPlaced(true);
+        // Keep selectedItems in localStorage so they persist on refresh
       }
     } catch (error) {
       console.error('Error placing order:', error);
+      const mockOrderId = getMockOrderId();
+      setOrderId(mockOrderId);
+      localStorage.setItem('orderId', mockOrderId);
       setOrderPlaced(true);
+      // Keep selectedItems in localStorage so they persist on refresh
     }
   };
 
   const handleRefresh = () => {
     localStorage.removeItem('customerName');
+    localStorage.removeItem('selectedItems');
+    localStorage.removeItem('orderPlaced');
+    localStorage.removeItem('orderStatus');
+    localStorage.removeItem('orderId');
     window.location.href = '/order';
   };
 
@@ -109,8 +188,29 @@ export default function CustomerMenuPage() {
 
   if (orderPlaced) {
     return (
-      <div className="min-h-screen gradient-soft flex items-center justify-center p-4">
-        <div className="relative group max-w-md w-full">
+      <div className="min-h-screen gradient-soft flex flex-col items-center">
+        {/* Header with Banner Background - Mobile Container (No Text) */}
+        <div className="w-full max-w-md shadow-soft-lg sticky top-0 z-10 relative overflow-hidden gradient-primary rounded-b-2xl mb-4">
+          {/* Content Layer with Banner Background */}
+          <div 
+            className="relative z-10 w-full px-6 py-12"
+            style={{
+              backgroundImage: 'url(/Menu_Header_OR_Footer_BG.png)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }}
+          >
+            {/* Fogged Glossy Overlay - Extremely light tint */}
+            <div className="absolute inset-0 bg-gradient-to-r from-primary-500/8 via-accent-500/5 to-primary-500/8"></div>
+            
+            {/* Shiny Glass Effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/8 via-transparent to-transparent"></div>
+          </div>
+        </div>
+
+        {/* Order Content Card */}
+        <div className="relative group max-w-md w-full mx-auto px-4">
           {/* Glowing border effect */}
           <div className="absolute -inset-0.5 gradient-primary rounded-[28px] opacity-75 blur-md"></div>
           
@@ -123,45 +223,122 @@ export default function CustomerMenuPage() {
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent"></div>
             
             {/* Content */}
-            <div className="relative z-10 p-10 text-center">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full gradient-primary mb-6 shadow-soft-lg animate-pulse">
-                <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h2 className="text-3xl font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text mb-4">Order Placed!</h2>
-              <p className="text-lg text-gray-700 font-medium mb-6">
-                Your order is being prepared. Our staff will serve you shortly!
-              </p>
-              <div className="relative rounded-2xl overflow-hidden mb-6">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50"></div>
-                <div className="relative z-10 p-4">
-                  <p className="text-sm text-primary-700 font-bold flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <div className="relative z-10 p-6">
+              {/* Header: Tick Mark + Name + Time */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-500 shadow-soft-lg flex-shrink-0">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
-                    <span>Cooking in Progress...</span>
-                  </p>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
+                      {customerName}'s Order
+                    </h2>
+                    <p className="text-xs font-semibold text-gray-600 mt-0.5">Order ID: {orderId}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">ETA Time</p>
+                  <p className="text-sm font-bold text-primary-600">15min</p>
                 </div>
               </div>
+
+              {/* Status Section */}
+              <div className="mb-4">
+                <div className="bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50 rounded-2xl p-4 border border-primary-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-gray-700">Order Status</span>
+                    <span className="text-lg font-bold text-primary-600">{orderStatus}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Items List */}
+              <div className="mb-4">
+                <h3 className="text-sm font-bold text-gray-700 mb-3">Order Items</h3>
+                <div className="space-y-2">
+                  {selectedItems.map(({ item, quantity }) => (
+                    <div key={item.id} className="relative group/item rounded-2xl overflow-hidden">
+                      {/* Card background */}
+                      <div className="bg-gradient-to-br from-white via-white to-purple-50/60 p-4 border border-primary-100 shadow-sm">
+                        <div className="flex items-center gap-3">
+                          {/* Icon */}
+                          {item.icon && (
+                            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100">
+                              {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
+                                <img 
+                                  src={item.icon} 
+                                  alt={item.name}
+                                  className="w-8 h-8 object-contain"
+                                />
+                              ) : (
+                                <span className="text-xl">{item.icon}</span>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Item name */}
+                          <div className="flex-1">
+                            <h4 className="font-bold text-gray-800">{item.name}</h4>
+                          </div>
+                          
+                          {/* Quantity only */}
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-primary-600">× {quantity}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Total - Only visible for Bill Generated or Bill Paid */}
+              {(orderStatus === 'Bill Generated' || orderStatus === 'Bill Paid') && (
+                <div className="bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50 rounded-2xl p-4 mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-bold text-gray-800">Total Amount</span>
+                    <span className="text-2xl font-bold text-primary-600">₹{getTotalAmount()}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Button */}
               <button
                 onClick={handleRefresh}
                 className="relative w-full py-3 px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
               >
                 <div className="absolute inset-0 gradient-primary"></div>
-                <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent group-hover/btn:from-white/30 transition-all"></div>
                 <span className="relative z-10 text-white">Start New Order</span>
               </button>
             </div>
           </div>
         </div>
+
+        {/* Footer - Subtle Bottom Banner */}
+        <footer className="fixed bottom-0 left-0 right-0 z-0">
+          <div className="w-full bg-white/60 backdrop-blur-sm border-t border-gray-200/50 py-2 shadow-sm">
+            <p className="text-xs text-gray-500 text-center">
+              Powered by{' '}
+              <a
+                href="https://www.devtechai.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary-500 hover:text-primary-600 font-semibold underline"
+              >
+                DevTechAi.Org
+              </a>
+            </p>
+          </div>
+        </footer>
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen gradient-soft pb-32 flex flex-col items-center">
+    <main className="min-h-screen gradient-soft flex flex-col items-center">
       {/* Header with Banner Background - Mobile Container */}
       <div className="w-full max-w-md shadow-soft-lg sticky top-0 z-10 relative overflow-hidden gradient-primary rounded-b-2xl">
         {/* Content Layer with Banner Background */}
@@ -192,7 +369,7 @@ export default function CustomerMenuPage() {
       </div>
 
       {/* Expandable Category Accordion - Mobile Container */}
-      <div className="w-full max-w-md px-6 py-4 space-y-3">
+      <div className="w-full max-w-md px-6 py-4 pb-64 space-y-3">
         {categories.map(category => {
           const isExpanded = expandedCategories.includes(category);
           const categoryItems = getMenuItemsByCategory(category);
@@ -253,41 +430,41 @@ export default function CustomerMenuPage() {
                           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                           
                           {/* Content */}
-                          <div className="relative z-10 p-5">
+                          <div className="relative z-10 p-3">
                             {/* Title Row with Icon and Add Button */}
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-3 flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2 flex-1">
                                 {item.icon && (
-                                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100 overflow-hidden">
+                                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100 overflow-hidden">
                                     {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
                                       <img 
                                         src={item.icon} 
                                         alt={item.name}
-                                        className="w-10 h-10 object-contain"
+                                        className="w-6 h-6 object-contain"
                                       />
                                     ) : (
-                                      <span className="text-2xl">{item.icon}</span>
+                                      <span className="text-lg">{item.icon}</span>
                                     )}
                                   </div>
                                 )}
-                                <h3 className="text-lg font-bold text-gray-800 flex-1">{item.name}</h3>
+                                <h3 className="text-sm font-bold text-gray-800 flex-1">{item.name}</h3>
                               </div>
                               
                               {/* Add Button or Quantity Controls */}
                               {quantity > 0 ? (
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
                                   <button
                                     onClick={() => removeItem(item.id)}
-                                    className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-red-600 text-white font-bold hover:shadow-soft-lg transition-all active:scale-95 shadow-soft"
+                                    className="w-6 h-6 rounded-md bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold hover:shadow-soft-lg transition-all active:scale-95 shadow-soft"
                                   >
                                     −
                                   </button>
-                                  <span className="text-base font-bold text-gray-800 min-w-[35px] text-center bg-gradient-to-br from-primary-50 to-accent-50 px-3 py-1 rounded-lg border border-primary-100">
+                                  <span className="text-xs font-bold text-gray-800 min-w-[28px] text-center bg-gradient-to-br from-primary-50 to-accent-50 px-2 py-0.5 rounded-md border border-primary-100">
                                     {quantity}
                                   </span>
                                   <button
                                     onClick={() => addItem(item)}
-                                    className="w-8 h-8 rounded-lg gradient-primary text-white font-bold hover:shadow-soft-lg transition-all active:scale-95 shadow-soft"
+                                    className="w-6 h-6 rounded-md gradient-primary text-white text-xs font-bold hover:shadow-soft-lg transition-all active:scale-95 shadow-soft"
                                   >
                                     +
                                   </button>
@@ -295,7 +472,7 @@ export default function CustomerMenuPage() {
                               ) : (
                                 <button
                                   onClick={() => addItem(item)}
-                                  className="px-5 py-2 gradient-primary text-white font-bold text-sm rounded-lg hover:shadow-soft-lg transition-all active:scale-95 shadow-soft"
+                                  className="px-3 py-1 gradient-primary text-white font-bold text-xs rounded-md hover:shadow-soft-lg transition-all active:scale-95 shadow-soft"
                                 >
                                   Add +
                                 </button>
@@ -304,8 +481,8 @@ export default function CustomerMenuPage() {
                             
                             {/* Description and Price */}
                             <div className="flex justify-between items-center">
-                              <p className="text-sm text-gray-600 flex-1 mr-4 truncate">{item.description}</p>
-                              <p className="text-xl font-bold text-primary-600 whitespace-nowrap">₹{item.price}</p>
+                              <p className="text-[10px] text-gray-600 flex-1 mr-2 truncate leading-tight">{item.description}</p>
+                              <p className="text-base font-bold text-primary-600 whitespace-nowrap">₹{item.price}</p>
                             </div>
                           </div>
                         </div>
@@ -319,31 +496,22 @@ export default function CustomerMenuPage() {
         })}
       </div>
 
-      {/* Fixed Bottom Bar - Elegant Glass Design - Mobile Container */}
-      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-xl shadow-soft-xl border-t-2 border-primary-100 rounded-t-2xl safe-area-inset-bottom">
-        <div className="p-4 space-y-3">
+      {/* Fixed Bottom Bar - Fully Opaque - Mobile Container */}
+      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white shadow-soft-xl border-t-2 border-primary-100 rounded-t-2xl safe-area-inset-bottom z-20">
+        <div className="p-4 space-y-3 bg-white">
           {/* Order Summary */}
           {selectedItems.length > 0 && (
-            <div className="relative group/summary rounded-2xl overflow-hidden mb-2">
-              {/* Gradient background */}
-              <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50"></div>
-              
-              {/* Shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-white/40 via-transparent to-transparent"></div>
-              
+            <div className="relative group/summary rounded-2xl overflow-hidden mb-2 bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50">
               {/* Content */}
               <div className="relative z-10 p-4">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="font-bold text-gray-800">
+                <div className="flex justify-center items-center mb-3">
+                  <span className="text-lg font-bold text-primary-600">
                     {selectedItems.reduce((sum, i) => sum + i.quantity, 0)} items selected
-                  </span>
-                  <span className="text-2xl font-bold text-primary-600">
-                    ₹{getTotalAmount()}
                   </span>
                 </div>
                 <div className="text-xs text-gray-600 space-y-2 max-h-24 overflow-y-auto">
                   {selectedItems.map(({ item, quantity }) => (
-                    <div key={item.id} className="flex justify-between bg-white/80 backdrop-blur-sm rounded-lg p-2 border border-primary-100">
+                    <div key={item.id} className="flex justify-between bg-white rounded-lg p-2 border border-primary-100 shadow-sm">
                       <span className="font-semibold">{item.name} × {quantity}</span>
                       <span className="font-bold text-primary-600">₹{item.price * quantity}</span>
                     </div>
@@ -353,7 +521,7 @@ export default function CustomerMenuPage() {
             </div>
           )}
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 bg-white pt-2">
             <button
               onClick={handleCallWaiter}
               disabled={waiterCalled}
@@ -380,12 +548,28 @@ export default function CustomerMenuPage() {
               className="relative flex-1 py-3 px-4 rounded-xl font-bold transition-all shadow-soft disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group/order active:scale-95"
             >
               <div className="absolute inset-0 gradient-primary group-hover/order:shadow-soft-lg transition-all"></div>
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent group-hover/order:from-white/30 transition-all"></div>
               <span className="relative z-10 text-white">🍽️ Place Order</span>
             </button>
           </div>
         </div>
       </div>
+
+      {/* Footer - Subtle Bottom Banner */}
+      <footer className="fixed bottom-0 left-0 right-0 z-0">
+        <div className="w-full bg-white/60 backdrop-blur-sm border-t border-gray-200/50 py-2 shadow-sm">
+          <p className="text-xs text-gray-500 text-center">
+            Powered by{' '}
+            <a
+              href="https://www.devtechai.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-500 hover:text-primary-600 font-semibold underline"
+            >
+              DevTechAi.Org
+            </a>
+          </p>
+        </div>
+      </footer>
     </main>
   );
 }

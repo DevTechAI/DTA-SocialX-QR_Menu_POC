@@ -21,62 +21,32 @@ export default function OrderLandingPage() {
   if (!mounted) return null;
 
   return (
-    <main className="min-h-screen gradient-soft flex flex-col">
-      {/* Content Container - Mobile focused */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
-        <div className="w-full max-w-md">
-          {/* SocialX Logo Card with Café Background */}
-          <div className="mb-8 rounded-3xl overflow-hidden shadow-soft-xl transform hover:scale-105 transition-all duration-300">
-            <div className="relative w-full h-64 p-8" style={{
-              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.75) 0%, rgba(99, 102, 241, 0.75) 100%)',
-            }}>
-              {/* Café Background Vector - Fitted to this window */}
-              <div 
-                className="absolute inset-0"
-                style={{
-                  backgroundImage: 'url(/background_vector.png)',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat',
-                  opacity: 0.35,
-                }}
-              />
-              
-                      {/* Content Layer - Positioned above screen midline */}
-                      <div className="absolute inset-0 flex items-center justify-center transform -translate-y-20">
-                        <div className="text-center relative z-10">
-                  {/* Coffee Cup Icon */}
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/40 backdrop-blur-md mb-4 mt-20 shadow-soft-lg">
-                    <svg className="w-9 h-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      {/* Coffee cup body */}
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9v8c0 1.657 1.343 3 3 3h8c1.657 0 3-1.343 3-3v-2" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 9h1a3 3 0 013 3v1a3 3 0 01-3 3h-1" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 9h12V7c0-1.105-.895-2-2-2H7c-1.105 0-2 .895-2 2v2z" />
-                      {/* Steam lines */}
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 5V3" opacity="0.7" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 5V2" opacity="0.7" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 5V3" opacity="0.7" />
-                    </svg>
-                  </div>
-                  
-                          {/* Brand Name */}
-                          <h1 className="text-5xl font-bold text-white drop-shadow-2xl mb-3" style={{ fontFamily: 'cursive' }}>
-                            SocialX
-                          </h1>
-                          <p className="text-2xl text-white/95 italic font-medium drop-shadow-lg" style={{ fontFamily: 'Georgia, serif' }}>
-                            Community Café
-                          </p>
-                </div>
-              </div>
-              
-              {/* Decorative circles with animation */}
-              <div className="absolute top-4 right-4 w-20 h-20 rounded-full bg-white/15 backdrop-blur-sm animate-pulse z-10"></div>
-              <div className="absolute bottom-4 left-4 w-16 h-16 rounded-full bg-white/15 backdrop-blur-sm animate-pulse z-10" style={{ animationDelay: '1s' }}></div>
-            </div>
-          </div>
+    <main className="min-h-screen gradient-soft flex flex-col items-center">
+      {/* Header with Banner Background - Mobile Container (No Text) */}
+      <div className="w-full max-w-md shadow-soft-lg sticky top-0 z-10 relative overflow-hidden gradient-primary rounded-b-xl sm:rounded-b-2xl mb-3 sm:mb-4">
+        {/* Content Layer with Banner Background */}
+        <div 
+          className="relative z-10 w-full px-4 sm:px-6 py-8 sm:py-10 md:py-12"
+          style={{
+            backgroundImage: 'url(/Menu_Header_OR_Footer_BG.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
+        >
+          {/* Fogged Glossy Overlay - Extremely light tint */}
+          <div className="absolute inset-0 bg-gradient-to-r from-primary-500/8 via-accent-500/5 to-primary-500/8"></div>
+          
+          {/* Shiny Glass Effect */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/8 via-transparent to-transparent"></div>
+        </div>
+      </div>
 
+      {/* Content Container - Mobile focused */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full -mt-24 sm:-mt-28 md:-mt-32">
+        <div className="w-full max-w-md">
           {/* Welcome Card - Elegant Glass-morphism Design */}
-          <div className="relative group">
+          <div className="relative group mb-8">
             {/* Glowing border effect */}
             <div className="absolute -inset-0.5 gradient-primary rounded-[28px] opacity-75 group-hover:opacity-100 blur-sm transition duration-500"></div>
             
@@ -151,6 +121,56 @@ export default function OrderLandingPage() {
                 <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-primary-300 rounded-bl-2xl opacity-50"></div>
                 <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-accent-300 rounded-br-2xl opacity-50"></div>
               </div>
+            </div>
+          </div>
+
+          {/* SocialX Logo Card with Café Background */}
+          <div className="rounded-3xl overflow-hidden shadow-soft-xl transform hover:scale-105 transition-all duration-300">
+            <div className="relative w-full h-64 p-8" style={{
+              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.75) 0%, rgba(99, 102, 241, 0.75) 100%)',
+            }}>
+              {/* Café Background Vector - Fitted to this window */}
+              <div 
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: 'url(/background_vector.png)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  opacity: 0.35,
+                }}
+              />
+              
+                      {/* Content Layer - Positioned above screen midline */}
+                      <div className="absolute inset-0 flex items-center justify-center transform -translate-y-20">
+                        <div className="text-center relative z-10">
+                  {/* Coffee Cup Icon */}
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/40 backdrop-blur-md mb-4 mt-20 shadow-soft-lg">
+                    <svg className="w-9 h-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      {/* Coffee cup body */}
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9v8c0 1.657 1.343 3 3 3h8c1.657 0 3-1.343 3-3v-2" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 9h1a3 3 0 013 3v1a3 3 0 01-3 3h-1" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 9h12V7c0-1.105-.895-2-2-2H7c-1.105 0-2 .895-2 2v2z" />
+                      {/* Steam lines */}
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 5V3" opacity="0.7" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 5V2" opacity="0.7" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 5V3" opacity="0.7" />
+                    </svg>
+                  </div>
+                  
+                          {/* Brand Name */}
+                          <h1 className="text-5xl font-bold text-white drop-shadow-2xl mb-3" style={{ fontFamily: 'cursive' }}>
+                            SocialX
+                          </h1>
+                          <p className="text-2xl text-white/95 italic font-medium drop-shadow-lg" style={{ fontFamily: 'Georgia, serif' }}>
+                            Community Café
+                          </p>
+                </div>
+              </div>
+              
+              {/* Decorative circles with animation */}
+              <div className="absolute top-4 right-4 w-20 h-20 rounded-full bg-white/15 backdrop-blur-sm animate-pulse z-10"></div>
+              <div className="absolute bottom-4 left-4 w-16 h-16 rounded-full bg-white/15 backdrop-blur-sm animate-pulse z-10" style={{ animationDelay: '1s' }}></div>
             </div>
           </div>
         </div>
