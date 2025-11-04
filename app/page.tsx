@@ -248,7 +248,7 @@ export default function SocialXMenuApp() {
         <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-10 relative overflow-hidden gradient-primary rounded-b-xl sm:rounded-b-2xl mb-3 sm:mb-4">
           {/* Content Layer with Banner Background */}
           <div 
-            className="relative z-10 w-full px-4 sm:px-6 py-8 sm:py-10 md:py-12"
+            className="relative z-10 w-full px-4 py-4 sm:px-6 sm:py-8 md:py-10"
             style={{
               backgroundImage: 'url(/Menu_Header_OR_Footer_BG.png)',
               backgroundSize: 'cover',
@@ -425,16 +425,16 @@ export default function SocialXMenuApp() {
         {/* Back Button - Left Arrow */}
         <button
           onClick={navigateBack}
-          className="fixed top-4 left-4 z-[60] group/back"
+          className="fixed top-2 left-2 md:top-4 md:left-4 z-[60] group/back"
         >
-          <div className="relative rounded-xl overflow-hidden shadow-soft-lg hover:shadow-soft-xl transition-all active:scale-95">
+          <div className="relative rounded-lg md:rounded-xl overflow-hidden shadow-soft-lg hover:shadow-soft-xl transition-all active:scale-95">
             {/* Glossy transparent background */}
             <div className="absolute inset-0 bg-white/40 backdrop-blur-md"></div>
             {/* Glass shine effect */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-transparent"></div>
             {/* Arrow icon */}
-            <div className="relative z-10 p-3">
-              <svg className="w-6 h-6 text-primary-600 group-hover/back:text-primary-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <div className="relative z-10 p-2 md:p-3">
+              <svg className="w-5 h-5 md:w-6 md:h-6 text-primary-600 group-hover/back:text-primary-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </div>
@@ -445,7 +445,7 @@ export default function SocialXMenuApp() {
         <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl mb-4">
           {/* Content Layer with Banner Background */}
           <div 
-            className="relative z-10 w-full px-6 py-12"
+            className="relative z-10 w-full px-4 py-6 md:px-6 md:py-12"
             style={{
               backgroundImage: 'url(/Menu_Header_OR_Footer_BG.png)',
               backgroundSize: 'cover',
@@ -603,16 +603,16 @@ export default function SocialXMenuApp() {
       {/* Back Button - Left Arrow (to Name Entry) */}
       <button
         onClick={navigateBack}
-        className="fixed top-4 left-4 z-[60] group/back"
+        className="fixed top-2 left-2 md:top-4 md:left-4 z-[60] group/back"
       >
-        <div className="relative rounded-xl overflow-hidden shadow-soft-lg hover:shadow-soft-xl transition-all active:scale-95">
+        <div className="relative rounded-lg md:rounded-xl overflow-hidden shadow-soft-lg hover:shadow-soft-xl transition-all active:scale-95">
           {/* Glossy transparent background */}
           <div className="absolute inset-0 bg-white/40 backdrop-blur-md"></div>
           {/* Glass shine effect */}
           <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-transparent"></div>
           {/* Arrow icon */}
-          <div className="relative z-10 p-3">
-            <svg className="w-6 h-6 text-primary-600 group-hover/back:text-primary-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <div className="relative z-10 p-2 md:p-3">
+            <svg className="w-5 h-5 md:w-6 md:h-6 text-primary-600 group-hover/back:text-primary-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </div>
@@ -623,16 +623,16 @@ export default function SocialXMenuApp() {
       {cameFromOrderPlaced && (
         <button
           onClick={() => navigateToView('orderPlaced')}
-          className="fixed top-4 right-4 z-[60] group/forward"
+          className="fixed top-2 right-2 md:top-4 md:right-4 z-[60] group/forward"
         >
-          <div className="relative rounded-xl overflow-hidden shadow-soft-lg hover:shadow-soft-xl transition-all active:scale-95">
+          <div className="relative rounded-lg md:rounded-xl overflow-hidden shadow-soft-lg hover:shadow-soft-xl transition-all active:scale-95">
             {/* Glossy transparent background */}
             <div className="absolute inset-0 bg-white/40 backdrop-blur-md"></div>
             {/* Glass shine effect */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-transparent"></div>
             {/* Arrow icon */}
-            <div className="relative z-10 p-3">
-              <svg className="w-6 h-6 text-primary-600 group-hover/forward:text-primary-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <div className="relative z-10 p-2 md:p-3">
+              <svg className="w-5 h-5 md:w-6 md:h-6 text-primary-600 group-hover/forward:text-primary-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </div>
@@ -644,7 +644,7 @@ export default function SocialXMenuApp() {
       <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl">
         {/* Content Layer with Banner Background */}
         <div 
-          className="relative z-10 w-full px-6 py-6"
+          className="relative z-10 w-full px-4 py-3 md:px-6 md:py-6"
           style={{
             backgroundImage: 'url(/Menu_Header_OR_Footer_BG.png)',
             backgroundSize: 'cover',
@@ -660,17 +660,17 @@ export default function SocialXMenuApp() {
           
           {/* Text Content */}
           <div className="relative z-10">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.95), 0 4px 12px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,1)' }}>
+            <h1 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.95), 0 4px 12px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,1)' }}>
               <span>Hi, {customerName}!</span>
-              <span className="text-3xl">👋</span>
+              <span className="text-xl md:text-3xl">👋</span>
             </h1>
-            <p className="text-white text-sm mt-1 font-semibold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.5)' }}>Choose your favorites from our menu</p>
+            <p className="text-white text-xs md:text-sm mt-0.5 md:mt-1 font-semibold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.5)' }}>Choose your favorites from our menu</p>
           </div>
         </div>
       </div>
 
       {/* Expandable Category Accordion - Mobile Container */}
-      <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl px-6 md:px-8 lg:px-10 py-3 pb-64 space-y-1.5">
+      <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-2 md:py-3 pb-48 md:pb-64 space-y-1.5">
         {categories.map(category => {
           const isExpanded = expandedCategories.includes(category);
           const categoryItems = getMenuItemsByCategory(category);
