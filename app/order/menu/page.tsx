@@ -234,7 +234,7 @@ export default function CustomerMenuPage() {
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
-                      {customerName}'s Order
+                      {customerName}&apos;s Order
                     </h2>
                     <p className="text-xs font-semibold text-gray-600 mt-0.5">Order ID: {orderId}</p>
                   </div>
