@@ -5,7 +5,7 @@ import { menuItems, categories, getMenuItemsByCategory, type MenuItem } from '@/
 
 export default function CustomerMenuPage() {
   const [customerName, setCustomerName] = useState('');
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(['HOT']); // Start with HOT expanded
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]); // Start with all tabs collapsed
   const [selectedItems, setSelectedItems] = useState<{ item: MenuItem; quantity: number }[]>([]);
   const [waiterCalled, setWaiterCalled] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
@@ -133,6 +133,11 @@ export default function CustomerMenuPage() {
     setTimeout(() => setWaiterCalled(false), 3000);
   };
 
+  const handleClearSelection = () => {
+    setSelectedItems([]);
+    localStorage.removeItem('selectedItems');
+  };
+
   const handlePlaceOrder = async () => {
     if (selectedItems.length === 0) {
       alert('Please select at least one item!');
@@ -190,7 +195,7 @@ export default function CustomerMenuPage() {
     return (
       <div className="min-h-screen gradient-soft flex flex-col items-center pb-16 sm:pb-20">
         {/* Header with Banner Background - Mobile Container (No Text) */}
-        <div className="w-full max-w-md shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl mb-4">
+        <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl mb-4">
           {/* Content Layer with Banner Background */}
           <div 
             className="relative z-10 w-full px-6 py-12"
@@ -210,7 +215,7 @@ export default function CustomerMenuPage() {
         </div>
 
         {/* Order Content Card */}
-        <div className="relative group max-w-md w-full mx-auto px-3 sm:px-4 mb-6 sm:mb-8">
+        <div className="relative group max-w-md md:max-w-2xl lg:max-w-3xl w-full mx-auto px-3 sm:px-4 md:px-6 lg:px-8 mb-6 sm:mb-8">
           {/* Glowing border effect */}
           <div className="absolute -inset-0.5 gradient-primary rounded-[28px] opacity-75 blur-md"></div>
           
@@ -346,7 +351,7 @@ export default function CustomerMenuPage() {
   return (
     <main className="min-h-screen gradient-soft flex flex-col items-center">
       {/* Header with Banner Background - Mobile Container */}
-      <div className="w-full max-w-md shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl">
+      <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl">
         {/* Content Layer with Banner Background */}
         <div 
           className="relative z-10 w-full px-6 py-6"
@@ -375,7 +380,7 @@ export default function CustomerMenuPage() {
       </div>
 
       {/* Expandable Category Accordion - Mobile Container */}
-      <div className="w-full max-w-md px-6 py-3 pb-64 space-y-1.5">
+      <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl px-6 md:px-8 lg:px-10 py-3 pb-64 space-y-1.5">
         {categories.map(category => {
           const isExpanded = expandedCategories.includes(category);
           const categoryItems = getMenuItemsByCategory(category);
@@ -503,20 +508,34 @@ export default function CustomerMenuPage() {
       </div>
 
       {/* Fixed Bottom Bar - Fully Opaque - Mobile Container */}
-      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white shadow-soft-xl border-t-2 border-primary-100 rounded-t-2xl safe-area-inset-bottom z-20">
-        <div className="flex flex-col bg-white max-h-[50vh]">
-          {/* Scrollable Order Summary */}
+      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md md:max-w-2xl lg:max-w-3xl bg-white shadow-soft-xl border-t-2 border-primary-100 rounded-t-2xl safe-area-inset-bottom z-20">
+        <div className="flex flex-col bg-white">
+          {/* Scrollable Order Summary - Fixed height to show 2.5 items */}
           {selectedItems.length > 0 && (
-            <div className="relative group/summary rounded-t-2xl overflow-hidden bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50 flex-1 overflow-y-auto">
+            <div className="relative group/summary rounded-t-2xl overflow-hidden bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50">
               {/* Content */}
               <div className="relative z-10 p-4">
-                <div className="text-xs text-gray-600 space-y-2">
+                {/* Items List - Max height to show 2 items */}
+                <div className="text-xs text-gray-600 space-y-2 max-h-[96px] overflow-y-auto mb-3">
                   {selectedItems.map(({ item, quantity }) => (
                     <div key={item.id} className="flex justify-between bg-white rounded-lg p-2 border border-primary-100 shadow-sm">
                       <span className="font-semibold">{item.name} × {quantity}</span>
                       <span className="font-bold text-primary-600">₹{item.price * quantity}</span>
                     </div>
                   ))}
+                </div>
+                
+                {/* Clear Button - Centered */}
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleClearSelection}
+                    className="group/clear text-xs font-semibold text-red-500 hover:text-red-600 px-4 py-1.5 rounded-lg bg-white/80 hover:bg-red-50 border border-red-200 hover:border-red-300 transition-all shadow-sm active:scale-95"
+                  >
+                    <span className="flex items-center gap-1">
+                      <span>🗑️</span>
+                      <span>Clear All</span>
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>

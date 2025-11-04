@@ -13,6 +13,11 @@ export default function OrderLandingPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (customerName.trim()) {
+      // Clear all previous order data for a fresh start
+      localStorage.removeItem('orderPlaced');
+      localStorage.removeItem('selectedItems');
+      localStorage.removeItem('orderStatus');
+      localStorage.removeItem('orderId');
       localStorage.setItem('customerName', customerName.trim());
       window.location.href = '/menu';
     }
@@ -23,7 +28,7 @@ export default function OrderLandingPage() {
   return (
     <main className="min-h-screen gradient-soft flex flex-col items-center">
       {/* Header with Banner Background - Mobile Container (No Text) */}
-      <div className="w-full max-w-md shadow-soft-lg sticky top-0 z-10 relative overflow-hidden gradient-primary rounded-b-xl sm:rounded-b-2xl mb-3 sm:mb-4">
+      <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-10 relative overflow-hidden gradient-primary rounded-b-xl sm:rounded-b-2xl mb-3 sm:mb-4">
         {/* Content Layer with Banner Background */}
         <div 
           className="relative z-10 w-full px-4 sm:px-6 py-8 sm:py-10 md:py-12"
@@ -44,7 +49,7 @@ export default function OrderLandingPage() {
 
       {/* Content Container - Mobile focused */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full -mt-20 sm:-mt-24 md:-mt-28 lg:-mt-32">
-        <div className="w-full max-w-md px-3 sm:px-0">
+        <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl px-3 sm:px-0 md:px-4 lg:px-6">
           {/* Welcome Card - Elegant Glass-morphism Design */}
           <div className="relative group mb-6 sm:mb-8">
             {/* Glowing border effect */}
@@ -126,7 +131,7 @@ export default function OrderLandingPage() {
 
           {/* SocialX Logo Card with Café Background */}
           <div className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-soft-xl transform hover:scale-105 transition-all duration-300">
-            <div className="relative w-full h-48 sm:h-56 md:h-64 p-6 sm:p-8" style={{
+            <div className="relative w-full h-48 sm:h-56 md:h-72 lg:h-80 p-6 sm:p-8 md:p-10" style={{
               background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.75) 0%, rgba(99, 102, 241, 0.75) 100%)',
             }}>
               {/* Café Background Vector - Fitted to this window */}
