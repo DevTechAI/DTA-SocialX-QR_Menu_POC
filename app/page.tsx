@@ -1,204 +1,197 @@
-import Link from 'next/link';
+'use client';
 
-export default function Home() {
+import { useState, useEffect } from 'react';
+
+export default function OrderLandingPage() {
+  const [customerName, setCustomerName] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (customerName.trim()) {
+      localStorage.setItem('customerName', customerName.trim());
+      window.location.href = '/menu';
+    }
+  };
+
+  if (!mounted) return null;
+
   return (
-    <main className="min-h-screen gradient-soft">
-      <div className="max-w-4xl mx-auto p-8">
-        {/* Header */}
-        <div className="text-center mb-12 mt-8">
-          <div className="inline-block gradient-primary rounded-3xl shadow-soft-xl p-8 mb-6">
-            <div className="flex items-center justify-center gap-3">
-              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </div>
-              <div className="text-left">
-                <h1 className="text-4xl font-bold text-white" style={{ fontFamily: 'cursive' }}>
-                  SocialX
-                </h1>
-                <p className="text-lg text-white/90 italic" style={{ fontFamily: 'Georgia, serif' }}>
-                  Community Café
-                </p>
+    <main className="min-h-screen gradient-soft flex flex-col items-center">
+      {/* Header with Banner Background - Mobile Container (No Text) */}
+      <div className="w-full max-w-md shadow-soft-lg sticky top-0 z-10 relative overflow-hidden gradient-primary rounded-b-xl sm:rounded-b-2xl mb-3 sm:mb-4">
+        {/* Content Layer with Banner Background */}
+        <div 
+          className="relative z-10 w-full px-4 sm:px-6 py-8 sm:py-10 md:py-12"
+          style={{
+            backgroundImage: 'url(/Menu_Header_OR_Footer_BG.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
+        >
+          {/* Fogged Glossy Overlay - Extremely light tint */}
+          <div className="absolute inset-0 bg-gradient-to-r from-primary-500/8 via-accent-500/5 to-primary-500/8"></div>
+          
+          {/* Shiny Glass Effect */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/8 via-transparent to-transparent"></div>
+        </div>
+      </div>
+
+      {/* Content Container - Mobile focused */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full -mt-20 sm:-mt-24 md:-mt-28 lg:-mt-32">
+        <div className="w-full max-w-md px-3 sm:px-0">
+          {/* Welcome Card - Elegant Glass-morphism Design */}
+          <div className="relative group mb-6 sm:mb-8">
+            {/* Glowing border effect */}
+            <div className="absolute -inset-0.5 gradient-primary rounded-[24px] sm:rounded-[28px] opacity-75 group-hover:opacity-100 blur-sm transition duration-500"></div>
+            
+            {/* Main card */}
+            <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-soft-xl transform hover:scale-[1.02] transition-all duration-500">
+              {/* Glass-morphism background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-purple-50/80 backdrop-blur-xl"></div>
+              
+              {/* Shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+              
+              {/* Content */}
+              <div className="relative z-10 p-6 sm:p-8 md:p-10">
+                {/* Welcome Header */}
+                <div className="text-center mb-6 sm:mb-8">
+                  <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
+                    Welcome!
+                  </h2>
+                </div>
+                
+                <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                  {/* Name Input with elite styling */}
+                  <div>
+                    <div className="relative group/input">
+                      {/* Elite border frame */}
+                      <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
+                      
+                      <input
+                        type="text"
+                        id="name"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="Please enter your name"
+                        className="relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                        required
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  {/* Submit Button - Narrow & Shiny Transparent */}
+                  <button
+                    type="submit"
+                    className="relative w-full group/btn transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99]"
+                  >
+                    {/* Elite outer border */}
+                    <div className="absolute -inset-px bg-gradient-to-r from-primary-400/60 via-accent-400/60 to-primary-400/60 rounded-lg opacity-100 group-hover/btn:opacity-100 transition duration-300 blur-[0.5px]"></div>
+                    
+                    {/* Inner button - Narrow */}
+                    <div className="relative py-2.5 sm:py-3 px-4 sm:px-5 rounded-lg overflow-hidden backdrop-blur-md">
+                      {/* Shiny transparent gradient background */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary-500/70 via-accent-500/70 to-primary-500/70 bg-[length:200%_100%] group-hover/btn:bg-[position:100%_0] transition-all duration-500"></div>
+                      
+                      {/* Glass shine effect */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent"></div>
+                      
+                      {/* Animated shine sweep */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700"></div>
+                      
+                      {/* Button content */}
+                      <span className="relative flex items-center justify-center gap-2 text-white drop-shadow-lg">
+                        <span className="text-sm sm:text-base font-bold">Click for Menu</span>
+                        <span className="text-lg sm:text-xl group-hover/btn:rotate-12 transition-transform duration-300">🍽️</span>
+                      </span>
+                    </div>
+                  </button>
+                </form>
+
+                {/* Decorative corner accents */}
+                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 w-6 h-6 sm:w-8 sm:h-8 border-t-2 border-l-2 border-primary-300 rounded-tl-2xl opacity-50"></div>
+                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 border-t-2 border-r-2 border-accent-300 rounded-tr-2xl opacity-50"></div>
+                <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 w-6 h-6 sm:w-8 sm:h-8 border-b-2 border-l-2 border-primary-300 rounded-bl-2xl opacity-50"></div>
+                <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 border-b-2 border-r-2 border-accent-300 rounded-br-2xl opacity-50"></div>
               </div>
             </div>
           </div>
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">
-            QR Menu POC
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            A modern, mobile-responsive order management system for cafés and restaurants
-          </p>
-        </div>
 
-        {/* Feature Cards */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
-          {/* Customer Portal Card */}
-          <Link href="/order" className="group">
-            <div className="card-theme hover:shadow-card-hover transition-all transform hover:scale-105 h-full p-8">
-              <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mb-4 group-hover:shadow-soft-lg transition-all">
-                <span className="text-4xl">📱</span>
+          {/* SocialX Logo Card with Café Background */}
+          <div className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-soft-xl transform hover:scale-105 transition-all duration-300">
+            <div className="relative w-full h-48 sm:h-56 md:h-64 p-6 sm:p-8" style={{
+              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.75) 0%, rgba(99, 102, 241, 0.75) 100%)',
+            }}>
+              {/* Café Background Vector - Fitted to this window */}
+              <div 
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: 'url(/background_vector.png)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  opacity: 0.35,
+                }}
+              />
+              
+                      {/* Content Layer - Positioned above screen midline */}
+                      <div className="absolute inset-0 flex items-center justify-center transform -translate-y-20">
+                        <div className="text-center relative z-10">
+                  {/* Coffee Cup Icon */}
+                  <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-white/40 backdrop-blur-md mb-3 sm:mb-4 mt-16 sm:mt-18 md:mt-20 shadow-soft-lg">
+                    <svg className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      {/* Coffee cup body */}
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9v8c0 1.657 1.343 3 3 3h8c1.657 0 3-1.343 3-3v-2" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 9h1a3 3 0 013 3v1a3 3 0 01-3 3h-1" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 9h12V7c0-1.105-.895-2-2-2H7c-1.105 0-2 .895-2 2v2z" />
+                      {/* Steam lines */}
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 5V3" opacity="0.7" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 5V2" opacity="0.7" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 5V3" opacity="0.7" />
+                    </svg>
+                  </div>
+                  
+                          {/* Brand Name */}
+                          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-2xl mb-2 sm:mb-3" style={{ fontFamily: 'cursive' }}>
+                            SocialX
+                          </h1>
+                          <p className="text-lg sm:text-xl md:text-2xl text-white/95 italic font-medium drop-shadow-lg" style={{ fontFamily: 'Georgia, serif' }}>
+                            Community Café
+                          </p>
+                </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-3">
-                Customer Portal
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Mobile-optimized ordering experience. Scan QR code, browse menu, and place orders.
-              </p>
-              <div className="flex items-center text-primary-600 font-semibold group-hover:gap-2 transition-all">
-                <span>Start Ordering</span>
-                <span className="ml-2 group-hover:ml-0 transform group-hover:translate-x-1 transition-transform">→</span>
-              </div>
-            </div>
-          </Link>
-
-          {/* Manager Dashboard Card */}
-          <Link href="/manager" className="group">
-            <div className="card-theme hover:shadow-card-hover transition-all transform hover:scale-105 h-full p-8">
-              <div className="w-16 h-16 rounded-2xl gradient-secondary flex items-center justify-center mb-4 group-hover:shadow-soft-lg transition-all">
-                <span className="text-4xl">💼</span>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-3">
-                Manager Dashboard
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Desktop-optimized order management. Track orders, update status, and view analytics.
-              </p>
-              <div className="flex items-center text-accent-600 font-semibold group-hover:gap-2 transition-all">
-                <span>Open Dashboard</span>
-                <span className="ml-2 group-hover:ml-0 transform group-hover:translate-x-1 transition-transform">→</span>
-              </div>
-            </div>
-          </Link>
-        </div>
-
-        {/* Features List */}
-        <div className="card-theme p-8 mb-8 shadow-soft-lg">
-          <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-            <span className="text-3xl">✨</span>
-            <span>Features</span>
-          </h3>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
-                <span className="text-xl">📸</span>
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-800 mb-1">QR Code Integration</h4>
-                <p className="text-sm text-gray-600">Instant menu access via QR scan</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl gradient-secondary flex items-center justify-center flex-shrink-0">
-                <span className="text-xl">📊</span>
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-800 mb-1">Real-time Dashboard</h4>
-                <p className="text-sm text-gray-600">Live order tracking and analytics</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl gradient-accent flex items-center justify-center flex-shrink-0">
-                <span className="text-xl">🎨</span>
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-800 mb-1">Modern UI</h4>
-                <p className="text-sm text-gray-600">Clean, intuitive interface</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-                <span className="text-xl">📱</span>
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-800 mb-1">Mobile-First</h4>
-                <p className="text-sm text-gray-600">Optimized for all devices</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                <span className="text-xl">🔄</span>
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-800 mb-1">Status Tracking</h4>
-                <p className="text-sm text-gray-600">Color-coded order workflow</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
-                <span className="text-xl">💾</span>
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-800 mb-1">Supabase Backend</h4>
-                <p className="text-sm text-gray-600">Reliable cloud database</p>
-              </div>
+              
+              {/* Decorative circles with animation */}
+              <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/15 backdrop-blur-sm animate-pulse z-10"></div>
+              <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/15 backdrop-blur-sm animate-pulse z-10" style={{ animationDelay: '1s' }}></div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Quick Start Guide */}
-        <div className="gradient-soft rounded-3xl p-8 mb-8 shadow-soft">
-          <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <span className="text-3xl">🚀</span>
-            <span>Quick Start</span>
-          </h3>
-          <ol className="space-y-3 text-gray-700">
-            <li className="flex items-start gap-3">
-              <span className="flex items-center justify-center w-8 h-8 rounded-xl gradient-primary text-white font-bold flex-shrink-0">1</span>
-              <span>Set up Supabase database (see <code className="bg-white px-2 py-1 rounded-lg text-sm font-mono text-primary-600">supabase/README.md</code>)</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="flex items-center justify-center w-8 h-8 rounded-xl gradient-primary text-white font-bold flex-shrink-0">2</span>
-              <span>Configure environment variables in <code className="bg-white px-2 py-1 rounded-lg text-sm font-mono text-primary-600">.env.local</code></span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="flex items-center justify-center w-8 h-8 rounded-xl gradient-primary text-white font-bold flex-shrink-0">3</span>
-              <span>Generate QR codes pointing to <code className="bg-white px-2 py-1 rounded-lg text-sm font-mono text-primary-600">/order</code></span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="flex items-center justify-center w-8 h-8 rounded-xl gradient-primary text-white font-bold flex-shrink-0">4</span>
-              <span>Place on tables and start taking orders!</span>
-            </li>
-          </ol>
-        </div>
-
-        {/* Documentation Links */}
-        <div className="card-theme p-8 shadow-soft-lg">
-          <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <span className="text-2xl">📚</span>
-            <span>Documentation</span>
-          </h3>
-          <div className="space-y-3">
-            <a href="/SETUP_GUIDE.md" className="block text-primary-600 hover:text-primary-700 hover:underline font-medium flex items-center gap-2">
-              <span>→</span>
-              <span>Complete Setup Guide</span>
-            </a>
-            <a href="/PROJECT_STRUCTURE.md" className="block text-primary-600 hover:text-primary-700 hover:underline font-medium flex items-center gap-2">
-              <span>→</span>
-              <span>Project Structure</span>
-            </a>
-            <a href="/supabase/README.md" className="block text-primary-600 hover:text-primary-700 hover:underline font-medium flex items-center gap-2">
-              <span>→</span>
-              <span>Supabase Configuration</span>
-            </a>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <footer className="text-center mt-12 py-6">
-          <p className="text-sm text-gray-600">
+      {/* Footer - Subtle Bottom Banner */}
+      <footer className="fixed bottom-0 left-0 right-0 z-0">
+        <div className="w-full bg-white/60 backdrop-blur-sm border-t border-gray-200/50 py-2 shadow-sm">
+          <p className="text-xs text-gray-500 text-center">
             Powered by{' '}
             <a
               href="https://www.devtechai.org"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary-600 hover:text-primary-700 font-semibold underline"
+              className="text-primary-500 hover:text-primary-600 font-semibold underline"
             >
               DevTechAi.Org
             </a>
           </p>
-        </footer>
-      </div>
+        </div>
+      </footer>
     </main>
   );
 }
