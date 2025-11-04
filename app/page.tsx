@@ -243,7 +243,7 @@ export default function SocialXMenuApp() {
   // ===== NAME ENTRY VIEW =====
   if (currentView === 'nameEntry') {
     return (
-      <main className="min-h-screen gradient-soft flex flex-col items-center">
+      <main className="min-h-screen gradient-soft flex flex-col items-center w-full overflow-x-hidden">
         {/* Header with Banner Background - Mobile Container (No Text) */}
         <div className="w-full md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-10 relative overflow-hidden gradient-primary rounded-b-xl sm:rounded-b-2xl mb-3 sm:mb-4">
           {/* Content Layer with Banner Background */}
@@ -421,23 +421,35 @@ export default function SocialXMenuApp() {
   // ===== ORDER PLACED VIEW =====
   if (currentView === 'orderPlaced') {
     return (
-      <div className="min-h-screen gradient-soft flex flex-col items-center pb-16 sm:pb-20">
-        {/* Back Button - Left Arrow */}
+      <div className="min-h-screen gradient-soft flex flex-col items-center pb-16 sm:pb-20 w-full overflow-x-hidden">
+        {/* Back Button - Left Arrow - Mid Screen */}
         <button
           onClick={navigateBack}
-          className="fixed top-2 left-2 md:top-4 md:left-4 z-[60] group/back"
+          className="fixed top-1/2 left-2 md:left-4 -translate-y-1/2 z-[60] group/back"
         >
-          <div className="relative rounded-lg md:rounded-xl overflow-hidden shadow-soft-lg hover:shadow-soft-xl transition-all active:scale-95">
-            {/* Glossy transparent background */}
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-md"></div>
-            {/* Glass shine effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-transparent"></div>
-            {/* Arrow icon */}
-            <div className="relative z-10 p-2 md:p-3">
-              <svg className="w-5 h-5 md:w-6 md:h-6 text-primary-600 group-hover/back:text-primary-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </div>
+          <div className="relative transition-all active:scale-90 hover:scale-110">
+            {/* Glossy orange arrow with border */}
+            <svg className="w-8 h-8 md:w-10 md:h-10 drop-shadow-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+              {/* Outer glow */}
+              <path 
+                d="M15 19l-7-7 7-7" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                className="stroke-primary-400 opacity-40 blur-[2px]"
+                strokeWidth={4}
+              />
+              {/* Main arrow with gradient */}
+              <path 
+                d="M15 19l-7-7 7-7" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                className="stroke-primary-500 group-hover/back:stroke-primary-600 transition-colors"
+                strokeWidth={2.5}
+                style={{
+                  filter: 'drop-shadow(0 0 8px rgba(249, 115, 22, 0.6))'
+                }}
+              />
+            </svg>
           </div>
         </button>
 
@@ -599,43 +611,67 @@ export default function SocialXMenuApp() {
   const cameFromOrderPlaced = navigationHistory.includes('orderPlaced');
   
   return (
-    <main className="min-h-screen gradient-soft flex flex-col items-center">
-      {/* Back Button - Left Arrow (to Name Entry) */}
+    <main className="min-h-screen gradient-soft flex flex-col items-center w-full overflow-x-hidden">
+      {/* Back Button - Left Arrow (to Name Entry) - Mid Screen */}
       <button
         onClick={navigateBack}
-        className="fixed top-2 left-2 md:top-4 md:left-4 z-[60] group/back"
+        className="fixed top-1/2 left-2 md:left-4 -translate-y-1/2 z-[60] group/back"
       >
-        <div className="relative rounded-lg md:rounded-xl overflow-hidden shadow-soft-lg hover:shadow-soft-xl transition-all active:scale-95">
-          {/* Glossy transparent background */}
-          <div className="absolute inset-0 bg-white/40 backdrop-blur-md"></div>
-          {/* Glass shine effect */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-transparent"></div>
-          {/* Arrow icon */}
-          <div className="relative z-10 p-2 md:p-3">
-            <svg className="w-5 h-5 md:w-6 md:h-6 text-primary-600 group-hover/back:text-primary-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-          </div>
+        <div className="relative transition-all active:scale-90 hover:scale-110">
+          {/* Glossy orange arrow with border */}
+          <svg className="w-8 h-8 md:w-10 md:h-10 drop-shadow-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+            {/* Outer glow */}
+            <path 
+              d="M15 19l-7-7 7-7" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="stroke-primary-400 opacity-40 blur-[2px]"
+              strokeWidth={4}
+            />
+            {/* Main arrow with gradient */}
+            <path 
+              d="M15 19l-7-7 7-7" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="stroke-primary-500 group-hover/back:stroke-primary-600 transition-colors"
+              strokeWidth={2.5}
+              style={{
+                filter: 'drop-shadow(0 0 8px rgba(249, 115, 22, 0.6))'
+              }}
+            />
+          </svg>
         </div>
       </button>
 
-      {/* Forward Button - Right Arrow (to Order Placed) - Only if came from there */}
+      {/* Forward Button - Right Arrow (to Order Placed) - Only if came from there - Mid Screen */}
       {cameFromOrderPlaced && (
         <button
           onClick={() => navigateToView('orderPlaced')}
-          className="fixed top-2 right-2 md:top-4 md:right-4 z-[60] group/forward"
+          className="fixed top-1/2 right-2 md:right-4 -translate-y-1/2 z-[60] group/forward"
         >
-          <div className="relative rounded-lg md:rounded-xl overflow-hidden shadow-soft-lg hover:shadow-soft-xl transition-all active:scale-95">
-            {/* Glossy transparent background */}
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-md"></div>
-            {/* Glass shine effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-transparent"></div>
-            {/* Arrow icon */}
-            <div className="relative z-10 p-2 md:p-3">
-              <svg className="w-5 h-5 md:w-6 md:h-6 text-primary-600 group-hover/forward:text-primary-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
+          <div className="relative transition-all active:scale-90 hover:scale-110">
+            {/* Glossy orange arrow with border */}
+            <svg className="w-8 h-8 md:w-10 md:h-10 drop-shadow-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+              {/* Outer glow */}
+              <path 
+                d="M9 5l7 7-7 7" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                className="stroke-primary-400 opacity-40 blur-[2px]"
+                strokeWidth={4}
+              />
+              {/* Main arrow with gradient */}
+              <path 
+                d="M9 5l7 7-7 7" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                className="stroke-primary-500 group-hover/forward:stroke-primary-600 transition-colors"
+                strokeWidth={2.5}
+                style={{
+                  filter: 'drop-shadow(0 0 8px rgba(249, 115, 22, 0.6))'
+                }}
+              />
+            </svg>
           </div>
         </button>
       )}

@@ -4,7 +4,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'SocialX Menu',
   description: 'QR-based ordering system for SocialX Community Café',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
+  viewport: 'width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, viewport-fit=cover',
   icons: {
     icon: '/favicon.png',
     apple: '/favicon.png',
