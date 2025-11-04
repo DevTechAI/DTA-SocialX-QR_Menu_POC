@@ -245,7 +245,7 @@ export default function SocialXMenuApp() {
     return (
       <main className="min-h-screen gradient-soft flex flex-col items-center">
         {/* Header with Banner Background - Mobile Container (No Text) */}
-        <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-10 relative overflow-hidden gradient-primary rounded-b-xl sm:rounded-b-2xl mb-3 sm:mb-4">
+        <div className="w-full md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-10 relative overflow-hidden gradient-primary rounded-b-xl sm:rounded-b-2xl mb-3 sm:mb-4">
           {/* Content Layer with Banner Background */}
           <div 
             className="relative z-10 w-full px-4 py-4 sm:px-6 sm:py-8 md:py-10"
@@ -266,7 +266,7 @@ export default function SocialXMenuApp() {
 
         {/* Content Container - Mobile focused */}
         <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full -mt-20 sm:-mt-24 md:-mt-28 lg:-mt-32">
-          <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl px-3 sm:px-0 md:px-4 lg:px-6">
+          <div className="w-full md:max-w-2xl lg:max-w-3xl px-3 sm:px-0 md:px-4 lg:px-6">
             {/* Welcome Card - Elegant Glass-morphism Design */}
             <div className="relative group mb-6 sm:mb-8">
               {/* Glowing border effect */}
@@ -442,7 +442,7 @@ export default function SocialXMenuApp() {
         </button>
 
         {/* Header with Banner Background - Mobile Container (No Text) */}
-        <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl mb-4">
+        <div className="w-full md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl mb-4">
           {/* Content Layer with Banner Background */}
           <div 
             className="relative z-10 w-full px-4 py-6 md:px-6 md:py-12"
@@ -462,7 +462,7 @@ export default function SocialXMenuApp() {
         </div>
 
         {/* Order Content Card */}
-        <div className="relative group max-w-md md:max-w-2xl lg:max-w-3xl w-full mx-auto px-3 sm:px-4 md:px-6 lg:px-8 mb-6 sm:mb-8">
+        <div className="relative group md:max-w-2xl lg:max-w-3xl w-full mx-auto px-3 sm:px-4 md:px-6 lg:px-8 mb-6 sm:mb-8">
           {/* Glowing border effect */}
           <div className="absolute -inset-0.5 gradient-primary rounded-[28px] opacity-75 blur-md"></div>
           
@@ -641,7 +641,7 @@ export default function SocialXMenuApp() {
       )}
 
       {/* Header with Banner Background - Mobile Container */}
-      <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl">
+      <div className="w-full md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl">
         {/* Content Layer with Banner Background */}
         <div 
           className="relative z-10 w-full px-4 py-3 md:px-6 md:py-6"
@@ -670,7 +670,7 @@ export default function SocialXMenuApp() {
       </div>
 
       {/* Expandable Category Accordion - Mobile Container */}
-      <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-2 md:py-3 pb-48 md:pb-64 space-y-1.5">
+      <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-2 md:py-3 pb-48 md:pb-64 space-y-1.5">
         {categories.map(category => {
           const isExpanded = expandedCategories.includes(category);
           const categoryItems = getMenuItemsByCategory(category);
@@ -791,7 +791,7 @@ export default function SocialXMenuApp() {
       </div>
 
       {/* Fixed Bottom Bar - Fully Opaque - Mobile Container */}
-      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md md:max-w-2xl lg:max-w-3xl bg-white shadow-soft-xl border-t-2 border-primary-100 rounded-t-3xl safe-area-inset-bottom z-20">
+      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full md:max-w-2xl lg:max-w-3xl bg-white shadow-soft-xl border-t-2 border-primary-100 rounded-t-3xl safe-area-inset-bottom z-20">
         <div className="flex flex-col bg-white rounded-t-3xl">
           {/* Scrollable Order Summary - Fixed height to show 2 items */}
           {selectedItems.length > 0 && (
