@@ -1,0 +1,51 @@
+<svg width="400" height="200" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background pattern -->
+  <defs>
+    <pattern id="warmPattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="10" cy="10" r="2" fill="#D97706" opacity="0.3"/>
+      <circle cx="30" cy="30" r="2" fill="#D97706" opacity="0.3"/>
+    </pattern>
+  </defs>
+  
+  <rect width="400" height="200" fill="#F59E0B"/>
+  <rect width="400" height="200" fill="url(#warmPattern)"/>
+  
+  <!-- Decorative elements -->
+  <path d="M 20 20 Q 40 30 60 20" stroke="#047857" stroke-width="3" fill="none"/>
+  <path d="M 340 180 Q 360 170 380 180" stroke="#047857" stroke-width="3" fill="none"/>
+  
+  <!-- Coffee cup icon -->
+  <g transform="translate(30, 80)">
+    <rect x="0" y="10" width="30" height="35" rx="3" fill="#1F2937" stroke="#D97706" stroke-width="2"/>
+    <ellipse cx="15" cy="10" rx="15" ry="5" fill="#1F2937" stroke="#D97706" stroke-width="2"/>
+    <path d="M 5 20 Q 7 25 5 30" stroke="#F59E0B" stroke-width="1.5" fill="none" opacity="0.5"/>
+    <path d="M 15 20 Q 17 25 15 30" stroke="#F59E0B" stroke-width="1.5" fill="none" opacity="0.5"/>
+    <path d="M 25 20 Q 27 25 25 30" stroke="#F59E0B" stroke-width="1.5" fill="none" opacity="0.5"/>
+  </g>
+  
+  <!-- Plant icon -->
+  <g transform="translate(340, 30)">
+    <rect x="15" y="30" width="10" height="15" fill="#92400E"/>
+    <ellipse cx="20" cy="30" rx="8" ry="5" fill="#92400E"/>
+    <path d="M 20 30 Q 10 20 15 10" stroke="#047857" stroke-width="3" fill="none"/>
+    <path d="M 20 30 Q 30 20 25 10" stroke="#047857" stroke-width="3" fill="none"/>
+    <ellipse cx="15" cy="10" rx="4" ry="6" fill="#047857"/>
+    <ellipse cx="25" cy="10" rx="4" ry="6" fill="#047857"/>
+  </g>
+  
+  <!-- Main text -->
+  <text x="200" y="90" font-family="'Brush Script MT', cursive" font-size="56" font-weight="bold" text-anchor="middle" fill="#FFFBEB" stroke="#1F2937" stroke-width="2">
+    SocialX
+  </text>
+  <text x="200" y="130" font-family="Georgia, serif" font-size="28" font-style="italic" text-anchor="middle" fill="#FFFBEB">
+    Community Café
+  </text>
+  
+  <!-- Cat icon -->
+  <g transform="translate(160, 140)">
+    <circle cx="0" cy="0" r="8" fill="#1F2937"/>
+    <path d="M -8 -5 L -10 -12 L -5 -8 Z" fill="#1F2937"/>
+    <path d="M 8 -5 L 10 -12 L 5 -8 Z" fill="#1F2937"/>
+  </g>
+</svg>
+
