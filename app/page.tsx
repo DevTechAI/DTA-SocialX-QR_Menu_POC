@@ -8,6 +8,7 @@ type ViewState = 'nameEntry' | 'menu' | 'orderPlaced';
 export default function SocialXMenuApp() {
   // View state
   const [currentView, setCurrentView] = useState<ViewState>('nameEntry');
+  const [navigationHistory, setNavigationHistory] = useState<ViewState[]>([]);
   
   // Name entry state
   const [customerName, setCustomerName] = useState('');
@@ -86,6 +87,20 @@ export default function SocialXMenuApp() {
     }
   }, [currentView]);
 
+  // Navigation helpers
+  const navigateToView = (view: ViewState) => {
+    setNavigationHistory(prev => [...prev, currentView]);
+    setCurrentView(view);
+  };
+
+  const navigateBack = () => {
+    if (navigationHistory.length > 0) {
+      const previousView = navigationHistory[navigationHistory.length - 1];
+      setNavigationHistory(prev => prev.slice(0, -1));
+      setCurrentView(previousView);
+    }
+  };
+
   // Name Entry Handlers
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +116,7 @@ export default function SocialXMenuApp() {
       setSelectedItems([]);
       setExpandedCategories([]);
       
-      setCurrentView('menu');
+      navigateToView('menu');
     }
   };
 
@@ -186,7 +201,7 @@ export default function SocialXMenuApp() {
         setOrderId(mockOrderId);
         localStorage.setItem('orderId', mockOrderId);
         localStorage.setItem('orderPlaced', 'true');
-        setCurrentView('orderPlaced');
+        navigateToView('orderPlaced');
       }
     } catch (error) {
       console.error('Error placing order:', error);
@@ -194,7 +209,7 @@ export default function SocialXMenuApp() {
       setOrderId(mockOrderId);
       localStorage.setItem('orderId', mockOrderId);
       localStorage.setItem('orderPlaced', 'true');
-      setCurrentView('orderPlaced');
+      navigateToView('orderPlaced');
     }
   };
 
@@ -211,6 +226,7 @@ export default function SocialXMenuApp() {
     setExpandedCategories([]);
     setOrderId('');
     setOrderStatus('Received');
+    setNavigationHistory([]);
     
     localStorage.removeItem('customerName');
     localStorage.removeItem('selectedItems');
@@ -258,8 +274,8 @@ export default function SocialXMenuApp() {
               
               {/* Main card */}
               <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-soft-xl transform hover:scale-[1.02] transition-all duration-500">
-                {/* Glass-morphism background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-purple-50/80 backdrop-blur-xl"></div>
+              {/* Glass-morphism background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-orange-50/80 backdrop-blur-xl"></div>
                 
                 {/* Shine effect */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
@@ -333,7 +349,7 @@ export default function SocialXMenuApp() {
             {/* SocialX Logo Card with Café Background */}
             <div className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-soft-xl transform hover:scale-105 transition-all duration-300">
               <div className="relative w-full h-48 sm:h-56 md:h-72 lg:h-80 p-6 sm:p-8 md:p-10" style={{
-                background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.75) 0%, rgba(99, 102, 241, 0.75) 100%)',
+                background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.75) 0%, rgba(251, 146, 60, 0.75) 100%)',
               }}>
                 {/* Café Background Vector - Fitted to this window */}
                 <div 
@@ -406,6 +422,25 @@ export default function SocialXMenuApp() {
   if (currentView === 'orderPlaced') {
     return (
       <div className="min-h-screen gradient-soft flex flex-col items-center pb-16 sm:pb-20">
+        {/* Back Button - Left Arrow */}
+        <button
+          onClick={navigateBack}
+          className="fixed top-4 left-4 z-[60] group/back"
+        >
+          <div className="relative rounded-xl overflow-hidden shadow-soft-lg hover:shadow-soft-xl transition-all active:scale-95">
+            {/* Glossy transparent background */}
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-md"></div>
+            {/* Glass shine effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-transparent"></div>
+            {/* Arrow icon */}
+            <div className="relative z-10 p-3">
+              <svg className="w-6 h-6 text-primary-600 group-hover/back:text-primary-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </div>
+          </div>
+        </button>
+
         {/* Header with Banner Background - Mobile Container (No Text) */}
         <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl mb-4">
           {/* Content Layer with Banner Background */}
@@ -434,7 +469,7 @@ export default function SocialXMenuApp() {
           {/* Main card with glass-morphism */}
           <div className="relative rounded-3xl overflow-hidden shadow-soft-xl flex flex-col">
             {/* Glass background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-purple-50/80 backdrop-blur-xl"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-orange-50/80 backdrop-blur-xl"></div>
             
             {/* Shine effect */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent"></div>
@@ -466,7 +501,7 @@ export default function SocialXMenuApp() {
 
                 {/* Status Section */}
                 <div className="mb-4">
-                  <div className="bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50 rounded-2xl p-4 border border-primary-100">
+                  <div className="bg-gradient-to-br from-primary-50 via-accent-50 to-orange-50 rounded-2xl p-4 border border-primary-100">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-bold text-gray-700">Order Status</span>
                       <span className="text-lg font-bold text-primary-600">{orderStatus}</span>
@@ -482,7 +517,7 @@ export default function SocialXMenuApp() {
                   {selectedItems.map(({ item, quantity }) => (
                     <div key={item.id} className="relative group/item rounded-2xl overflow-hidden">
                       {/* Card background */}
-                      <div className="bg-gradient-to-br from-white via-white to-purple-50/60 p-4 border border-primary-100 shadow-sm">
+                      <div className="bg-gradient-to-br from-white via-white to-orange-50/60 p-4 border border-primary-100 shadow-sm">
                         <div className="flex items-center gap-3">
                           {/* Icon */}
                           {item.icon && (
@@ -519,7 +554,7 @@ export default function SocialXMenuApp() {
               <div className="p-4 sm:p-6 pt-3 sm:pt-4 border-t border-primary-100 bg-white/50">
                 {/* Total - Only visible for Bill Generated or Bill Paid */}
                 {(orderStatus === 'Bill Generated' || orderStatus === 'Bill Paid') && (
-                  <div className="bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50 rounded-2xl p-4 mb-4">
+                  <div className="bg-gradient-to-br from-primary-50 via-accent-50 to-orange-50 rounded-2xl p-4 mb-4">
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-bold text-gray-800">Total Amount</span>
                       <span className="text-2xl font-bold text-primary-600">₹{getTotalAmount()}</span>
@@ -561,8 +596,50 @@ export default function SocialXMenuApp() {
   }
 
   // ===== MENU VIEW =====
+  const cameFromOrderPlaced = navigationHistory.includes('orderPlaced');
+  
   return (
     <main className="min-h-screen gradient-soft flex flex-col items-center">
+      {/* Back Button - Left Arrow (to Name Entry) */}
+      <button
+        onClick={navigateBack}
+        className="fixed top-4 left-4 z-[60] group/back"
+      >
+        <div className="relative rounded-xl overflow-hidden shadow-soft-lg hover:shadow-soft-xl transition-all active:scale-95">
+          {/* Glossy transparent background */}
+          <div className="absolute inset-0 bg-white/40 backdrop-blur-md"></div>
+          {/* Glass shine effect */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-transparent"></div>
+          {/* Arrow icon */}
+          <div className="relative z-10 p-3">
+            <svg className="w-6 h-6 text-primary-600 group-hover/back:text-primary-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </div>
+        </div>
+      </button>
+
+      {/* Forward Button - Right Arrow (to Order Placed) - Only if came from there */}
+      {cameFromOrderPlaced && (
+        <button
+          onClick={() => navigateToView('orderPlaced')}
+          className="fixed top-4 right-4 z-[60] group/forward"
+        >
+          <div className="relative rounded-xl overflow-hidden shadow-soft-lg hover:shadow-soft-xl transition-all active:scale-95">
+            {/* Glossy transparent background */}
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-md"></div>
+            {/* Glass shine effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/60 via-transparent to-transparent"></div>
+            {/* Arrow icon */}
+            <div className="relative z-10 p-3">
+              <svg className="w-6 h-6 text-primary-600 group-hover/forward:text-primary-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+        </button>
+      )}
+
       {/* Header with Banner Background - Mobile Container */}
       <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl">
         {/* Content Layer with Banner Background */}
@@ -611,7 +688,7 @@ export default function SocialXMenuApp() {
                 {/* Main header bar */}
                 <div className="relative rounded-xl overflow-hidden shadow-soft hover:shadow-soft-lg transition-all duration-300">
                   {/* Glass background */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-purple-50/80 backdrop-blur-xl"></div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-orange-50/80 backdrop-blur-xl"></div>
                   
                   {/* Content */}
                   <div className="relative z-10 px-5 py-3 flex items-center justify-between">
@@ -644,7 +721,7 @@ export default function SocialXMenuApp() {
                         {/* Card */}
                         <div className="relative rounded-xl overflow-hidden shadow-soft">
                           {/* Glass background */}
-                          <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-purple-50/70 backdrop-blur-xl"></div>
+                          <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-orange-50/70 backdrop-blur-xl"></div>
                           
                           {/* Content */}
                           <div className="relative z-10 p-3">
@@ -718,7 +795,7 @@ export default function SocialXMenuApp() {
         <div className="flex flex-col bg-white rounded-t-3xl">
           {/* Scrollable Order Summary - Fixed height to show 2 items */}
           {selectedItems.length > 0 && (
-            <div className="relative group/summary rounded-t-3xl overflow-hidden bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50">
+            <div className="relative group/summary rounded-t-3xl overflow-hidden bg-gradient-to-br from-primary-50 via-accent-50 to-orange-50">
               {/* Content */}
               <div className="relative z-10 p-4 rounded-t-3xl">
                 {/* Items List - Max height to show 2 items */}
