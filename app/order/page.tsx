@@ -43,15 +43,15 @@ export default function OrderLandingPage() {
       </div>
 
       {/* Content Container - Mobile focused */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full -mt-24 sm:-mt-28 md:-mt-32">
-        <div className="w-full max-w-md">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full -mt-20 sm:-mt-24 md:-mt-28 lg:-mt-32">
+        <div className="w-full max-w-md px-3 sm:px-0">
           {/* Welcome Card - Elegant Glass-morphism Design */}
-          <div className="relative group mb-8">
+          <div className="relative group mb-6 sm:mb-8">
             {/* Glowing border effect */}
-            <div className="absolute -inset-0.5 gradient-primary rounded-[28px] opacity-75 group-hover:opacity-100 blur-sm transition duration-500"></div>
+            <div className="absolute -inset-0.5 gradient-primary rounded-[24px] sm:rounded-[28px] opacity-75 group-hover:opacity-100 blur-sm transition duration-500"></div>
             
             {/* Main card */}
-            <div className="relative rounded-3xl overflow-hidden shadow-soft-xl transform hover:scale-[1.02] transition-all duration-500">
+            <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-soft-xl transform hover:scale-[1.02] transition-all duration-500">
               {/* Glass-morphism background */}
               <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-purple-50/80 backdrop-blur-xl"></div>
               
@@ -59,15 +59,15 @@ export default function OrderLandingPage() {
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
               
               {/* Content */}
-              <div className="relative z-10 p-10">
+              <div className="relative z-10 p-6 sm:p-8 md:p-10">
                 {/* Welcome Header */}
-                <div className="text-center mb-8">
-                  <h2 className="text-4xl font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
+                <div className="text-center mb-6 sm:mb-8">
+                  <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
                     Welcome!
                   </h2>
                 </div>
                 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                   {/* Name Input with elite styling */}
                   <div>
                     <div className="relative group/input">
@@ -80,7 +80,7 @@ export default function OrderLandingPage() {
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         placeholder="Please enter your name"
-                        className="relative w-full px-5 py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                        className="relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
                         required
                         autoFocus
                       />
@@ -96,7 +96,7 @@ export default function OrderLandingPage() {
                     <div className="absolute -inset-px bg-gradient-to-r from-primary-400/60 via-accent-400/60 to-primary-400/60 rounded-lg opacity-100 group-hover/btn:opacity-100 transition duration-300 blur-[0.5px]"></div>
                     
                     {/* Inner button - Narrow */}
-                    <div className="relative py-3 px-5 rounded-lg overflow-hidden backdrop-blur-md">
+                    <div className="relative py-2.5 sm:py-3 px-4 sm:px-5 rounded-lg overflow-hidden backdrop-blur-md">
                       {/* Shiny transparent gradient background */}
                       <div className="absolute inset-0 bg-gradient-to-r from-primary-500/70 via-accent-500/70 to-primary-500/70 bg-[length:200%_100%] group-hover/btn:bg-[position:100%_0] transition-all duration-500"></div>
                       
@@ -108,25 +108,25 @@ export default function OrderLandingPage() {
                       
                       {/* Button content */}
                       <span className="relative flex items-center justify-center gap-2 text-white drop-shadow-lg">
-                        <span className="text-base font-bold">Click for Menu</span>
-                        <span className="text-xl group-hover/btn:rotate-12 transition-transform duration-300">🍽️</span>
+                        <span className="text-sm sm:text-base font-bold">Click for Menu</span>
+                        <span className="text-lg sm:text-xl group-hover/btn:rotate-12 transition-transform duration-300">🍽️</span>
                       </span>
                     </div>
                   </button>
                 </form>
 
                 {/* Decorative corner accents */}
-                <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-primary-300 rounded-tl-2xl opacity-50"></div>
-                <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-accent-300 rounded-tr-2xl opacity-50"></div>
-                <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-primary-300 rounded-bl-2xl opacity-50"></div>
-                <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-accent-300 rounded-br-2xl opacity-50"></div>
+                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 w-6 h-6 sm:w-8 sm:h-8 border-t-2 border-l-2 border-primary-300 rounded-tl-2xl opacity-50"></div>
+                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 border-t-2 border-r-2 border-accent-300 rounded-tr-2xl opacity-50"></div>
+                <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 w-6 h-6 sm:w-8 sm:h-8 border-b-2 border-l-2 border-primary-300 rounded-bl-2xl opacity-50"></div>
+                <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 border-b-2 border-r-2 border-accent-300 rounded-br-2xl opacity-50"></div>
               </div>
             </div>
           </div>
 
           {/* SocialX Logo Card with Café Background */}
-          <div className="rounded-3xl overflow-hidden shadow-soft-xl transform hover:scale-105 transition-all duration-300">
-            <div className="relative w-full h-64 p-8" style={{
+          <div className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-soft-xl transform hover:scale-105 transition-all duration-300">
+            <div className="relative w-full h-48 sm:h-56 md:h-64 p-6 sm:p-8" style={{
               background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.75) 0%, rgba(99, 102, 241, 0.75) 100%)',
             }}>
               {/* Café Background Vector - Fitted to this window */}
@@ -145,8 +145,8 @@ export default function OrderLandingPage() {
                       <div className="absolute inset-0 flex items-center justify-center transform -translate-y-20">
                         <div className="text-center relative z-10">
                   {/* Coffee Cup Icon */}
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/40 backdrop-blur-md mb-4 mt-20 shadow-soft-lg">
-                    <svg className="w-9 h-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-white/40 backdrop-blur-md mb-3 sm:mb-4 mt-16 sm:mt-18 md:mt-20 shadow-soft-lg">
+                    <svg className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       {/* Coffee cup body */}
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 9v8c0 1.657 1.343 3 3 3h8c1.657 0 3-1.343 3-3v-2" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M17 9h1a3 3 0 013 3v1a3 3 0 01-3 3h-1" />
@@ -159,18 +159,18 @@ export default function OrderLandingPage() {
                   </div>
                   
                           {/* Brand Name */}
-                          <h1 className="text-5xl font-bold text-white drop-shadow-2xl mb-3" style={{ fontFamily: 'cursive' }}>
+                          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-2xl mb-2 sm:mb-3" style={{ fontFamily: 'cursive' }}>
                             SocialX
                           </h1>
-                          <p className="text-2xl text-white/95 italic font-medium drop-shadow-lg" style={{ fontFamily: 'Georgia, serif' }}>
+                          <p className="text-lg sm:text-xl md:text-2xl text-white/95 italic font-medium drop-shadow-lg" style={{ fontFamily: 'Georgia, serif' }}>
                             Community Café
                           </p>
                 </div>
               </div>
               
               {/* Decorative circles with animation */}
-              <div className="absolute top-4 right-4 w-20 h-20 rounded-full bg-white/15 backdrop-blur-sm animate-pulse z-10"></div>
-              <div className="absolute bottom-4 left-4 w-16 h-16 rounded-full bg-white/15 backdrop-blur-sm animate-pulse z-10" style={{ animationDelay: '1s' }}></div>
+              <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/15 backdrop-blur-sm animate-pulse z-10"></div>
+              <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/15 backdrop-blur-sm animate-pulse z-10" style={{ animationDelay: '1s' }}></div>
             </div>
           </div>
         </div>

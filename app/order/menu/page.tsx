@@ -188,9 +188,9 @@ export default function CustomerMenuPage() {
 
   if (orderPlaced) {
     return (
-      <div className="min-h-screen gradient-soft flex flex-col items-center">
+      <div className="min-h-screen gradient-soft flex flex-col items-center pb-16 sm:pb-20">
         {/* Header with Banner Background - Mobile Container (No Text) */}
-        <div className="w-full max-w-md shadow-soft-lg sticky top-0 z-10 relative overflow-hidden gradient-primary rounded-b-2xl mb-4">
+        <div className="w-full max-w-md shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl mb-4">
           {/* Content Layer with Banner Background */}
           <div 
             className="relative z-10 w-full px-6 py-12"
@@ -210,55 +210,58 @@ export default function CustomerMenuPage() {
         </div>
 
         {/* Order Content Card */}
-        <div className="relative group max-w-md w-full mx-auto px-4">
+        <div className="relative group max-w-md w-full mx-auto px-3 sm:px-4 mb-6 sm:mb-8">
           {/* Glowing border effect */}
           <div className="absolute -inset-0.5 gradient-primary rounded-[28px] opacity-75 blur-md"></div>
           
           {/* Main card with glass-morphism */}
-          <div className="relative rounded-3xl overflow-hidden shadow-soft-xl">
+          <div className="relative rounded-3xl overflow-hidden shadow-soft-xl flex flex-col">
             {/* Glass background */}
             <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-purple-50/80 backdrop-blur-xl"></div>
             
             {/* Shine effect */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent"></div>
             
-            {/* Content */}
-            <div className="relative z-10 p-6">
-              {/* Header: Tick Mark + Name + Time */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-500 shadow-soft-lg flex-shrink-0">
-                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
+            {/* Content - Flexbox layout */}
+            <div className="relative z-10 flex flex-col">
+              {/* Fixed Header Section */}
+              <div className="flex-shrink-0 p-4 sm:p-6 pb-0">
+                {/* Header: Tick Mark + Name + Time */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-500 shadow-soft-lg flex-shrink-0">
+                      <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
+                        {customerName}&apos;s Order
+                      </h2>
+                      <p className="text-xs font-semibold text-gray-600 mt-0.5">Order ID: {orderId}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
-                      {customerName}&apos;s Order
-                    </h2>
-                    <p className="text-xs font-semibold text-gray-600 mt-0.5">Order ID: {orderId}</p>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">ETA Time</p>
+                    <p className="text-sm font-bold text-primary-600">15min</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-500">ETA Time</p>
-                  <p className="text-sm font-bold text-primary-600">15min</p>
+
+                {/* Status Section */}
+                <div className="mb-4">
+                  <div className="bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50 rounded-2xl p-4 border border-primary-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-gray-700">Order Status</span>
+                      <span className="text-lg font-bold text-primary-600">{orderStatus}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Status Section */}
-              <div className="mb-4">
-                <div className="bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50 rounded-2xl p-4 border border-primary-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-gray-700">Order Status</span>
-                    <span className="text-lg font-bold text-primary-600">{orderStatus}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Order Items List */}
-              <div className="mb-4">
+              {/* Scrollable Order Items List */}
+              <div className="px-4 sm:px-6 max-h-[35vh] sm:max-h-[40vh] md:max-h-[45vh] overflow-y-auto">
                 <h3 className="text-sm font-bold text-gray-700 mb-3">Order Items</h3>
-                <div className="space-y-2">
+                <div className="space-y-2 pb-4">
                   {selectedItems.map(({ item, quantity }) => (
                     <div key={item.id} className="relative group/item rounded-2xl overflow-hidden">
                       {/* Card background */}
@@ -295,24 +298,27 @@ export default function CustomerMenuPage() {
                 </div>
               </div>
 
-              {/* Total - Only visible for Bill Generated or Bill Paid */}
-              {(orderStatus === 'Bill Generated' || orderStatus === 'Bill Paid') && (
-                <div className="bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50 rounded-2xl p-4 mb-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-800">Total Amount</span>
-                    <span className="text-2xl font-bold text-primary-600">₹{getTotalAmount()}</span>
+              {/* Fixed Bottom Section */}
+              <div className="p-4 sm:p-6 pt-3 sm:pt-4 border-t border-primary-100 bg-white/50">
+                {/* Total - Only visible for Bill Generated or Bill Paid */}
+                {(orderStatus === 'Bill Generated' || orderStatus === 'Bill Paid') && (
+                  <div className="bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50 rounded-2xl p-4 mb-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-bold text-gray-800">Total Amount</span>
+                      <span className="text-2xl font-bold text-primary-600">₹{getTotalAmount()}</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Action Button */}
-              <button
-                onClick={handleRefresh}
-                className="relative w-full py-3 px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
-              >
-                <div className="absolute inset-0 gradient-primary"></div>
-                <span className="relative z-10 text-white">Start New Order</span>
-              </button>
+                {/* Action Button */}
+                <button
+                  onClick={handleRefresh}
+                  className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
+                >
+                  <div className="absolute inset-0 gradient-primary"></div>
+                  <span className="relative z-10 text-white">Start New Order</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -340,7 +346,7 @@ export default function CustomerMenuPage() {
   return (
     <main className="min-h-screen gradient-soft flex flex-col items-center">
       {/* Header with Banner Background - Mobile Container */}
-      <div className="w-full max-w-md shadow-soft-lg sticky top-0 z-10 relative overflow-hidden gradient-primary rounded-b-2xl">
+      <div className="w-full max-w-md shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl">
         {/* Content Layer with Banner Background */}
         <div 
           className="relative z-10 w-full px-6 py-6"
@@ -369,7 +375,7 @@ export default function CustomerMenuPage() {
       </div>
 
       {/* Expandable Category Accordion - Mobile Container */}
-      <div className="w-full max-w-md px-6 py-4 pb-64 space-y-3">
+      <div className="w-full max-w-md px-6 py-3 pb-64 space-y-1.5">
         {categories.map(category => {
           const isExpanded = expandedCategories.includes(category);
           const categoryItems = getMenuItemsByCategory(category);
@@ -382,10 +388,10 @@ export default function CustomerMenuPage() {
                 className="w-full relative group/header"
               >
                 {/* Glowing border effect */}
-                <div className="absolute -inset-0.5 gradient-primary rounded-2xl opacity-0 group-hover/header:opacity-75 blur-sm transition duration-300"></div>
+                <div className="absolute -inset-0.5 gradient-primary rounded-xl opacity-0 group-hover/header:opacity-75 blur-sm transition duration-300"></div>
                 
                 {/* Main header bar */}
-                <div className="relative rounded-2xl overflow-hidden shadow-soft hover:shadow-soft-lg transition-all duration-300">
+                <div className="relative rounded-xl overflow-hidden shadow-soft hover:shadow-soft-lg transition-all duration-300">
                   {/* Glass background */}
                   <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-purple-50/80 backdrop-blur-md"></div>
                   
@@ -393,12 +399,12 @@ export default function CustomerMenuPage() {
                   <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent opacity-0 group-hover/header:opacity-100 transition-opacity duration-500"></div>
                   
                   {/* Content */}
-                  <div className="relative z-10 px-6 py-4 flex items-center justify-between">
-                    <h3 className="text-xl font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
+                  <div className="relative z-10 px-5 py-2.5 flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
                       {category}
                     </h3>
                     <div className={`transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-                      <svg className="w-6 h-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <svg className="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
@@ -407,8 +413,8 @@ export default function CustomerMenuPage() {
               </button>
 
               {/* Expandable Items List */}
-              <div className={`overflow-hidden transition-all duration-500 ${isExpanded ? 'max-h-[5000px] opacity-100 mt-3' : 'max-h-0 opacity-0'}`}>
-                <div className="space-y-3">
+              <div className={`overflow-hidden transition-all duration-500 ${isExpanded ? 'max-h-[5000px] opacity-100 mt-1.5' : 'max-h-0 opacity-0'}`}>
+                <div className="space-y-1.5">
                   {categoryItems.map(item => {
                     const selectedItem = selectedItems.find(i => i.item.id === item.id);
                     const quantity = selectedItem?.quantity || 0;
@@ -419,10 +425,10 @@ export default function CustomerMenuPage() {
                         className="relative group"
                       >
                         {/* Glowing border effect on hover */}
-                        <div className="absolute -inset-0.5 gradient-primary rounded-[20px] opacity-0 group-hover:opacity-75 blur-sm transition duration-300"></div>
+                        <div className="absolute -inset-0.5 gradient-primary rounded-xl opacity-0 group-hover:opacity-75 blur-sm transition duration-300"></div>
                         
                         {/* Main card with glass-morphism */}
-                        <div className="relative rounded-2xl overflow-hidden shadow-soft hover:shadow-soft-lg transition-all duration-300 transform hover:scale-[1.01]">
+                        <div className="relative rounded-xl overflow-hidden shadow-soft hover:shadow-soft-lg transition-all duration-300 transform hover:scale-[1.01]">
                           {/* Glass background */}
                           <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-purple-50/80 backdrop-blur-md"></div>
                           
@@ -430,41 +436,41 @@ export default function CustomerMenuPage() {
                           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                           
                           {/* Content */}
-                          <div className="relative z-10 p-3">
+                          <div className="relative z-10 p-2.5">
                             {/* Title Row with Icon and Add Button */}
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-2 flex-1">
+                            <div className="flex items-center justify-between mb-0.5">
+                              <div className="flex items-center gap-1.5 flex-1">
                                 {item.icon && (
-                                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100 overflow-hidden">
+                                  <div className="flex-shrink-0 w-7 h-7 rounded-md bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100 overflow-hidden">
                                     {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
                                       <img 
                                         src={item.icon} 
                                         alt={item.name}
-                                        className="w-6 h-6 object-contain"
+                                        className="w-5 h-5 object-contain"
                                       />
                                     ) : (
-                                      <span className="text-lg">{item.icon}</span>
+                                      <span className="text-base">{item.icon}</span>
                                     )}
                                   </div>
                                 )}
-                                <h3 className="text-sm font-bold text-gray-800 flex-1">{item.name}</h3>
+                                <h3 className="text-sm font-bold text-gray-800 flex-1 leading-tight">{item.name}</h3>
                               </div>
                               
                               {/* Add Button or Quantity Controls */}
                               {quantity > 0 ? (
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-0.5">
                                   <button
                                     onClick={() => removeItem(item.id)}
-                                    className="w-6 h-6 rounded-md bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold hover:shadow-soft-lg transition-all active:scale-95 shadow-soft"
+                                    className="w-5 h-5 rounded bg-gradient-to-br from-red-500 to-red-600 text-white text-[10px] font-bold hover:shadow-soft-lg transition-all active:scale-95 shadow-soft flex items-center justify-center"
                                   >
                                     −
                                   </button>
-                                  <span className="text-xs font-bold text-gray-800 min-w-[28px] text-center bg-gradient-to-br from-primary-50 to-accent-50 px-2 py-0.5 rounded-md border border-primary-100">
+                                  <span className="text-[10px] font-bold text-gray-800 min-w-[24px] text-center bg-gradient-to-br from-primary-50 to-accent-50 px-1.5 py-0.5 rounded border border-primary-100">
                                     {quantity}
                                   </span>
                                   <button
                                     onClick={() => addItem(item)}
-                                    className="w-6 h-6 rounded-md gradient-primary text-white text-xs font-bold hover:shadow-soft-lg transition-all active:scale-95 shadow-soft"
+                                    className="w-5 h-5 rounded gradient-primary text-white text-[10px] font-bold hover:shadow-soft-lg transition-all active:scale-95 shadow-soft flex items-center justify-center"
                                   >
                                     +
                                   </button>
@@ -472,17 +478,17 @@ export default function CustomerMenuPage() {
                               ) : (
                                 <button
                                   onClick={() => addItem(item)}
-                                  className="px-3 py-1 gradient-primary text-white font-bold text-xs rounded-md hover:shadow-soft-lg transition-all active:scale-95 shadow-soft"
+                                  className="px-2.5 py-0.5 gradient-primary text-white font-bold text-[10px] rounded hover:shadow-soft-lg transition-all active:scale-95 shadow-soft"
                                 >
-                                  Add +
+                                  Add
                                 </button>
                               )}
                             </div>
                             
                             {/* Description and Price */}
-                            <div className="flex justify-between items-center">
-                              <p className="text-[10px] text-gray-600 flex-1 mr-2 truncate leading-tight">{item.description}</p>
-                              <p className="text-base font-bold text-primary-600 whitespace-nowrap">₹{item.price}</p>
+                            <div className="flex justify-between items-center mt-0.5">
+                              <p className="text-[9px] text-gray-500 flex-1 mr-1.5 truncate leading-tight">{item.description}</p>
+                              <p className="text-sm font-bold text-primary-600 whitespace-nowrap">₹{item.price}</p>
                             </div>
                           </div>
                         </div>
@@ -498,18 +504,13 @@ export default function CustomerMenuPage() {
 
       {/* Fixed Bottom Bar - Fully Opaque - Mobile Container */}
       <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white shadow-soft-xl border-t-2 border-primary-100 rounded-t-2xl safe-area-inset-bottom z-20">
-        <div className="p-4 space-y-3 bg-white">
-          {/* Order Summary */}
+        <div className="flex flex-col bg-white max-h-[50vh]">
+          {/* Scrollable Order Summary */}
           {selectedItems.length > 0 && (
-            <div className="relative group/summary rounded-2xl overflow-hidden mb-2 bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50">
+            <div className="relative group/summary rounded-t-2xl overflow-hidden bg-gradient-to-br from-primary-50 via-accent-50 to-purple-50 flex-1 overflow-y-auto">
               {/* Content */}
               <div className="relative z-10 p-4">
-                <div className="flex justify-center items-center mb-3">
-                  <span className="text-lg font-bold text-primary-600">
-                    {selectedItems.reduce((sum, i) => sum + i.quantity, 0)} items selected
-                  </span>
-                </div>
-                <div className="text-xs text-gray-600 space-y-2 max-h-24 overflow-y-auto">
+                <div className="text-xs text-gray-600 space-y-2">
                   {selectedItems.map(({ item, quantity }) => (
                     <div key={item.id} className="flex justify-between bg-white rounded-lg p-2 border border-primary-100 shadow-sm">
                       <span className="font-semibold">{item.name} × {quantity}</span>
@@ -521,7 +522,8 @@ export default function CustomerMenuPage() {
             </div>
           )}
 
-          <div className="flex gap-3 bg-white pt-2">
+          {/* Fixed Buttons at Bottom */}
+          <div className="flex gap-3 bg-white p-4 border-t border-primary-100">
             <button
               onClick={handleCallWaiter}
               disabled={waiterCalled}
