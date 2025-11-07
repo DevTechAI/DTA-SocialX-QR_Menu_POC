@@ -954,7 +954,7 @@ export default function SocialXMenuApp() {
             {!isEditingName ? (
               <>
                 <h1 className="text-lg md:text-2xl font-bold text-gray-800 flex items-center gap-2">
-                  <span>Hi, {customerName}!</span>
+              <span>Hi, {customerName}!</span>
                   <button
                     onClick={handleEditName}
                     className="inline-flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full bg-primary-100 hover:bg-primary-200 active:bg-primary-300 transition-all active:scale-95 p-1"
@@ -974,8 +974,8 @@ export default function SocialXMenuApp() {
                       />
                     </svg>
                   </button>
-                  <span className="text-xl md:text-3xl">👋</span>
-                </h1>
+              <span className="text-xl md:text-3xl">👋</span>
+            </h1>
                 <p className="text-gray-600 text-xs md:text-sm font-semibold mt-0.5 md:mt-1">Choose from menu</p>
               </>
             ) : (
@@ -1035,7 +1035,7 @@ export default function SocialXMenuApp() {
                       />
                     </svg>
                   </button>
-                </div>
+          </div>
                 <p className="text-gray-600 text-xs font-semibold">Press Enter to save, Esc to cancel</p>
               </div>
             )}
@@ -1067,18 +1067,18 @@ export default function SocialXMenuApp() {
       <div 
         className="w-full md:max-w-2xl lg:max-w-3xl py-2 md:py-3 space-y-1.5 flex-1"
         style={{
-          // Reduced horizontal padding by 20% from both sides
-          // Mobile: 16px * 0.8 = 12.8px, Tablet: 24px * 0.8 = 19.2px, Desktop: 40px * 0.8 = 32px
+          // Reduced horizontal padding by 20% + additional 15% = 32% total reduction (0.8 * 0.85 = 0.68)
+          // Mobile: 16px * 0.68 = 10.88px, Tablet: 24px * 0.68 = 16.32px, Desktop: 40px * 0.68 = 27.2px
           paddingLeft: deviceInfo.isMobile 
-            ? 'calc(1rem * 0.8)' // 12.8px (20% less than 16px)
+            ? 'calc(1rem * 0.68)' // 10.88px (32% less than 16px)
             : deviceInfo.screenWidth >= 1024
-            ? 'calc(2.5rem * 0.8)' // 32px (20% less than 40px)
-            : 'calc(1.5rem * 0.8)', // 19.2px (20% less than 24px)
+            ? 'calc(2.5rem * 0.68)' // 27.2px (32% less than 40px)
+            : 'calc(1.5rem * 0.68)', // 16.32px (32% less than 24px)
           paddingRight: deviceInfo.isMobile 
-            ? 'calc(1rem * 0.8)' // 12.8px (20% less than 16px)
+            ? 'calc(1rem * 0.68)' // 10.88px (32% less than 16px)
             : deviceInfo.screenWidth >= 1024
-            ? 'calc(2.5rem * 0.8)' // 32px (20% less than 40px)
-            : 'calc(1.5rem * 0.8)', // 19.2px (20% less than 24px)
+            ? 'calc(2.5rem * 0.68)' // 27.2px (32% less than 40px)
+            : 'calc(1.5rem * 0.68)', // 16.32px (32% less than 24px)
           // Calculate max height: viewport height - header height (approx 140px) - footer height (reduced by 50%, now ~30-40px) - selected items section (184px when visible) - margins
           // Footer height reduced by 50%: approximately 30-40px now
           // Selected items section: header (40px) + content (144px) = 184px
@@ -1113,7 +1113,7 @@ export default function SocialXMenuApp() {
                   <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-orange-50/80 backdrop-blur-xl"></div>
                   
                   {/* Content */}
-                  <div className="relative z-10 py-3 flex items-center justify-between" style={{ paddingLeft: 'calc(1.25rem * 0.8)', paddingRight: 'calc(1.25rem * 0.8)' }}>
+                  <div className="relative z-10 py-3 flex items-center justify-between" style={{ paddingLeft: 'calc(1.25rem * 0.68)', paddingRight: 'calc(1.25rem * 0.68)' }}>
                     <span className="text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
                       {category}
                     </span>
@@ -1133,7 +1133,7 @@ export default function SocialXMenuApp() {
 
               {/* Expanded Menu Items */}
               {isExpanded && (
-                <div className="mt-1.5 space-y-1.5" style={{ paddingLeft: 'calc(0.25rem * 0.8)' }}>
+                <div className="mt-1.5 space-y-1.5" style={{ paddingLeft: 'calc(0.25rem * 0.68)' }}>
                   {categoryItems.map(item => {
                     const selectedItem = selectedItems.find(i => i.item.id === item.id);
                     const quantity = selectedItem?.quantity || 0;
@@ -1225,7 +1225,7 @@ export default function SocialXMenuApp() {
       </div>
 
       {/* Selected Items Section - Fixed Above Footer */}
-      {selectedItems.length > 0 && (
+          {selectedItems.length > 0 && (
         <div 
           className="fixed left-0 right-0 z-30" 
           style={{ 
@@ -1256,7 +1256,7 @@ export default function SocialXMenuApp() {
                   WebkitOverflowScrolling: 'touch',
                 }}
               >
-                {selectedItems.map(({ item, quantity }) => (
+                  {selectedItems.map(({ item, quantity }) => (
                   <div key={item.id} className="flex items-center gap-3 bg-gradient-to-br from-white via-white to-orange-50/60 p-3 rounded-xl border border-primary-100 shadow-sm">
                     {/* Icon */}
                     {item.icon && (
@@ -1272,18 +1272,18 @@ export default function SocialXMenuApp() {
                         ) : (
                           <span className="text-base">{item.icon}</span>
                         )}
-                      </div>
+                    </div>
                     )}
                     
                     {/* Item name */}
                     <div className="flex-1 min-w-0">
                       <h4 className="font-bold text-gray-800 truncate text-sm">{item.name}</h4>
                       <p className="text-xs text-gray-500">₹{item.price} × {quantity}</p>
-                    </div>
-                    
+                </div>
+                
                     {/* Quantity controls */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
+                  <button
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -1297,11 +1297,11 @@ export default function SocialXMenuApp() {
                         aria-label={`Decrease ${item.name}`}
                       >
                         −
-                      </button>
+                  </button>
                       <span className="min-w-[30px] text-center px-2 py-0.5 bg-gradient-to-br from-primary-50 to-accent-50 rounded-lg font-bold text-primary-600 border border-primary-200 text-sm">
                         {quantity}
                       </span>
-                      <button
+            <button
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -1315,8 +1315,8 @@ export default function SocialXMenuApp() {
                         aria-label={`Increase ${item.name}`}
                       >
                         +
-                      </button>
-                      <button
+            </button>
+            <button
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -1330,11 +1330,11 @@ export default function SocialXMenuApp() {
                         aria-label={`Remove ${item.name}`}
                       >
                         ×
-                      </button>
-                    </div>
-                  </div>
+            </button>
+          </div>
+        </div>
                 ))}
-              </div>
+      </div>
             </div>
           </div>
         </div>
