@@ -895,118 +895,122 @@ export default function SocialXMenuApp() {
           {/* Shiny Glass Effect */}
           <div className="absolute inset-0 bg-gradient-to-br from-white/8 via-transparent to-transparent"></div>
           
-          {/* Text Content */}
-          <div className="relative z-10 flex items-center justify-between gap-4">
-            <div className="flex-1">
-              {!isEditingName ? (
-                <>
-                  <h1 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.95), 0 4px 12px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,1)' }}>
-                    <span>Hi, {customerName}!</span>
-                    <button
-                      onClick={handleEditName}
-                      className="inline-flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-all active:scale-95 p-1"
-                      aria-label="Edit name"
+          {/* Header Vector Background - No Text Content */}
+        </div>
+      </div>
+
+      {/* Customer Info and Place Order Section - Below Header */}
+      <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-3 md:py-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
+            {!isEditingName ? (
+              <>
+                <h1 className="text-lg md:text-2xl font-bold text-gray-800 flex items-center gap-2">
+                  <span>Hi, {customerName}!</span>
+                  <button
+                    onClick={handleEditName}
+                    className="inline-flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full bg-primary-100 hover:bg-primary-200 active:bg-primary-300 transition-all active:scale-95 p-1"
+                    aria-label="Edit name"
+                  >
+                    <svg 
+                      className="w-3 h-3 md:w-4 md:h-4 text-primary-600" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor" 
+                      strokeWidth={2.5}
                     >
-                      <svg 
-                        className="w-3 h-3 md:w-4 md:h-4 text-white" 
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        stroke="currentColor" 
-                        strokeWidth={2.5}
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" 
-                        />
-                      </svg>
-                    </button>
-                    <span className="text-xl md:text-3xl">👋</span>
-                  </h1>
-                  <p className="text-white text-xs md:text-sm font-semibold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] mt-0.5 md:mt-1" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.5)' }}>Choose your favorites from our menu</p>
-                </>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={editedName}
-                      onChange={(e) => setEditedName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleSaveName();
-                        } else if (e.key === 'Escape') {
-                          handleCancelEditName();
-                        }
-                      }}
-                      className="flex-1 px-3 py-2 bg-white/95 rounded-lg text-base font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-white/50"
-                      placeholder="Enter your name"
-                      autoFocus
-                      style={{ fontSize: '16px' }}
-                    />
-                    <button
-                      onClick={handleSaveName}
-                      className="inline-flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-lg bg-green-500 hover:bg-green-600 active:bg-green-700 transition-all active:scale-95"
-                      aria-label="Save name"
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" 
+                      />
+                    </svg>
+                  </button>
+                  <span className="text-xl md:text-3xl">👋</span>
+                </h1>
+                <p className="text-gray-600 text-xs md:text-sm font-semibold mt-0.5 md:mt-1">Choose from menu</p>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSaveName();
+                      } else if (e.key === 'Escape') {
+                        handleCancelEditName();
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 bg-white rounded-lg text-base font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400 border border-gray-300"
+                    placeholder="Enter your name"
+                    autoFocus
+                    style={{ fontSize: '16px' }}
+                  />
+                  <button
+                    onClick={handleSaveName}
+                    className="inline-flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-lg bg-green-500 hover:bg-green-600 active:bg-green-700 transition-all active:scale-95"
+                    aria-label="Save name"
+                  >
+                    <svg 
+                      className="w-4 h-4 md:w-5 md:h-5 text-white" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor" 
+                      strokeWidth={2.5}
                     >
-                      <svg 
-                        className="w-4 h-4 md:w-5 md:h-5 text-white" 
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        stroke="currentColor" 
-                        strokeWidth={2.5}
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          d="M5 13l4 4L19 7" 
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={handleCancelEditName}
-                      className="inline-flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-lg bg-red-500 hover:bg-red-600 active:bg-red-700 transition-all active:scale-95"
-                      aria-label="Cancel editing"
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        d="M5 13l4 4L19 7" 
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={handleCancelEditName}
+                    className="inline-flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-lg bg-red-500 hover:bg-red-600 active:bg-red-700 transition-all active:scale-95"
+                    aria-label="Cancel editing"
+                  >
+                    <svg 
+                      className="w-4 h-4 md:w-5 md:h-5 text-white" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor" 
+                      strokeWidth={2.5}
                     >
-                      <svg 
-                        className="w-4 h-4 md:w-5 md:h-5 text-white" 
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        stroke="currentColor" 
-                        strokeWidth={2.5}
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          d="M6 18L18 6M6 6l12 12" 
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                  <p className="text-white text-xs font-semibold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.5)' }}>Press Enter to save, Esc to cancel</p>
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        d="M6 18L18 6M6 6l12 12" 
+                      />
+                    </svg>
+                  </button>
                 </div>
-              )}
-            </div>
-            {/* Place Order Button - Vertically Centered */}
-            <div className="flex items-center">
-              <button
-                onClick={handlePlaceOrder}
-                disabled={selectedItems.length === 0}
-                className="relative px-4 py-2 md:px-5 md:py-2.5 rounded-xl font-bold text-sm md:text-base transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group/order active:scale-95 border-2 border-white/30"
-                style={{
-                  boxShadow: selectedItems.length > 0 
-                    ? '0 4px 20px rgba(249, 115, 22, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2)' 
-                    : '0 2px 10px rgba(0, 0, 0, 0.2)',
-                }}
-              >
-                <div className="absolute inset-0 gradient-primary group-hover/order:opacity-90 transition-all"></div>
-                <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent"></div>
-                <span className="relative z-10 text-white flex items-center gap-1.5 font-extrabold drop-shadow-lg" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
-                  <span className="text-base md:text-lg">🍽️</span>
-                  <span>Place Order</span>
-                </span>
-              </button>
-            </div>
+                <p className="text-gray-600 text-xs font-semibold">Press Enter to save, Esc to cancel</p>
+              </div>
+            )}
+          </div>
+          {/* Place Order Button - Vertically Centered */}
+          <div className="flex items-center">
+            <button
+              onClick={handlePlaceOrder}
+              disabled={selectedItems.length === 0}
+              className="relative px-4 py-2 md:px-5 md:py-2.5 rounded-xl font-bold text-sm md:text-base transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group/order active:scale-95 border-2 border-primary-300"
+              style={{
+                boxShadow: selectedItems.length > 0 
+                  ? '0 4px 20px rgba(249, 115, 22, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2)' 
+                  : '0 2px 10px rgba(0, 0, 0, 0.2)',
+              }}
+            >
+              <div className="absolute inset-0 gradient-primary group-hover/order:opacity-90 transition-all"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent"></div>
+              <span className="relative z-10 text-white flex items-center gap-1.5 font-extrabold drop-shadow-lg" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+                <span className="text-base md:text-lg">🍽️</span>
+                <span>Place Order</span>
+              </span>
+            </button>
           </div>
         </div>
       </div>
