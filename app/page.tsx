@@ -951,7 +951,7 @@ export default function SocialXMenuApp() {
       </div>
 
       {/* Customer Info and Place Order Section - Below Header */}
-      <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-3 md:py-4">
+      <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-1.5 md:py-2">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
             {!isEditingName ? (
@@ -1070,10 +1070,11 @@ export default function SocialXMenuApp() {
       {selectedItems.length > 0 && (
         <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 sticky z-[9999]" style={{ top: 'calc(140px + env(safe-area-inset-top, 0px))' }}>
           <div 
-            className="backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-primary-200/50 overflow-hidden mb-3"
+            className="backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-primary-200/50 overflow-hidden mb-2"
             style={{
               background: 'linear-gradient(to bottom, rgba(255, 237, 213, 0.95), rgba(254, 215, 170, 0.95), rgba(251, 191, 36, 0.90))',
-              maxHeight: '140px',
+              maxHeight: '120px', // Reduced from 140px
+              marginBottom: '8px', // Reduced by 50% from 16px
             }}
           >
             {/* Header - Smaller */}
@@ -1083,9 +1084,9 @@ export default function SocialXMenuApp() {
             
             {/* Scrollable Items List - Smaller height, scrollable when items exceed */}
             <div 
-              className="px-3 py-1.5 space-y-1.5"
+              className="px-3 py-1 space-y-1"
               style={{
-                maxHeight: '100px',
+                maxHeight: '90px', // Reduced from 100px
                 overflowY: 'auto',
                 overflowX: 'hidden',
                 WebkitOverflowScrolling: 'touch',
@@ -1093,39 +1094,39 @@ export default function SocialXMenuApp() {
               }}
             >
               {selectedItems.map(({ item, quantity }) => (
-                <div key={item.id} className="flex items-center gap-2 bg-gradient-to-br from-white via-white to-orange-50/60 p-2 rounded-lg border border-primary-100 shadow-sm">
+                <div key={item.id} className="flex items-center gap-1.5 bg-gradient-to-br from-white via-white to-orange-50/60 p-1.5 rounded-lg border border-primary-100 shadow-sm">
                   {/* Icon - Smaller */}
                   {item.icon && (
-                    <div className="flex-shrink-0 w-6 h-6 rounded-md bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100">
+                    <div className="flex-shrink-0 w-5 h-5 rounded-md bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100">
                       {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
                         <Image 
                           src={item.icon} 
                           alt={item.name}
-                          width={18}
-                          height={18}
+                          width={14}
+                          height={14}
                           className="object-contain"
                         />
                       ) : (
-                        <span className="text-xs">{item.icon}</span>
+                        <span className="text-[10px]">{item.icon}</span>
                       )}
                     </div>
                   )}
                   
                   {/* Item name - Smaller */}
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-gray-800 truncate text-xs">{item.name}</h4>
-                    <p className="text-[10px] text-gray-500">₹{item.price} × {quantity}</p>
+                    <h4 className="font-bold text-gray-800 truncate text-[11px] leading-tight">{item.name}</h4>
+                    <p className="text-[9px] text-gray-500 leading-tight">₹{item.price} × {quantity}</p>
                   </div>
                   
                   {/* Quantity controls - Smaller */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         removeItem(item.id);
                       }}
-                      className="w-5 h-5 rounded-md bg-gradient-to-br from-red-500 to-red-600 text-white font-bold shadow-sm hover:shadow-soft transition-all active:scale-95 flex items-center justify-center text-xs touch-manipulation"
+                      className="w-4 h-4 rounded-md bg-gradient-to-br from-red-500 to-red-600 text-white font-bold shadow-sm hover:shadow-soft transition-all active:scale-95 flex items-center justify-center text-[10px] touch-manipulation"
                       style={{
                         WebkitTapHighlightColor: 'transparent',
                         touchAction: 'manipulation',
@@ -1134,7 +1135,7 @@ export default function SocialXMenuApp() {
                     >
                       −
                     </button>
-                    <span className="min-w-[24px] text-center px-1.5 py-0.5 bg-gradient-to-br from-primary-50 to-accent-50 rounded-md font-bold text-primary-600 border border-primary-200 text-xs">
+                    <span className="min-w-[20px] text-center px-1 py-0 bg-gradient-to-br from-primary-50 to-accent-50 rounded-md font-bold text-primary-600 border border-primary-200 text-[10px]">
                       {quantity}
                     </span>
                     <button
@@ -1143,7 +1144,7 @@ export default function SocialXMenuApp() {
                         e.stopPropagation();
                         addItem(item);
                       }}
-                      className="w-5 h-5 rounded-md bg-gradient-to-br from-green-500 to-green-600 text-white font-bold shadow-sm hover:shadow-soft transition-all active:scale-95 flex items-center justify-center text-xs touch-manipulation"
+                      className="w-4 h-4 rounded-md bg-gradient-to-br from-green-500 to-green-600 text-white font-bold shadow-sm hover:shadow-soft transition-all active:scale-95 flex items-center justify-center text-[10px] touch-manipulation"
                       style={{
                         WebkitTapHighlightColor: 'transparent',
                         touchAction: 'manipulation',
@@ -1158,7 +1159,7 @@ export default function SocialXMenuApp() {
                         e.stopPropagation();
                         removeItemCompletely(item.id);
                       }}
-                      className="w-5 h-5 rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white font-bold shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center justify-center text-[10px] touch-manipulation ml-0.5"
+                      className="w-4 h-4 rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white font-bold shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center justify-center text-[9px] touch-manipulation ml-0.5"
                       style={{
                         WebkitTapHighlightColor: 'transparent',
                         touchAction: 'manipulation',
