@@ -95,13 +95,14 @@ export default function SocialXMenuApp() {
     }
   }, [currentView]);
 
-  // Set body data attribute for CSS targeting and reset zoom
+  // Set body data attribute for CSS targeting and reset zoom/scroll
   useEffect(() => {
     if (currentView === 'menu') {
       document.body.setAttribute('data-view', 'menu');
+      document.documentElement.setAttribute('data-view', 'menu');
       
-      // Aggressive zoom reset function
-      const resetZoom = () => {
+      // Comprehensive scroll and zoom reset function
+      const resetScrollAndZoom = () => {
         // Blur any focused elements
         const activeElement = document.activeElement as HTMLElement;
         if (activeElement && activeElement.blur) {
@@ -114,16 +115,29 @@ export default function SocialXMenuApp() {
           document.documentElement.style.zoom = '1';
         }
         
-        // Force scroll to top
-        window.scrollTo({ top: 0, behavior: 'instant' });
+        // Force scroll to top - multiple methods for maximum compatibility
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        window.scrollTo(0, 0);
         document.documentElement.scrollTop = 0;
+        document.documentElement.scrollLeft = 0;
         document.body.scrollTop = 0;
+        document.body.scrollLeft = 0;
         
-        // Scroll main element
+        // Scroll all possible scrollable elements
         const mainElement = document.querySelector('main');
         if (mainElement) {
           mainElement.scrollTop = 0;
+          mainElement.scrollLeft = 0;
         }
+        
+        // Scroll any other scrollable containers
+        const scrollableElements = document.querySelectorAll('[class*="overflow"], [style*="overflow"]');
+        scrollableElements.forEach((el) => {
+          if (el instanceof HTMLElement) {
+            el.scrollTop = 0;
+            el.scrollLeft = 0;
+          }
+        });
         
         // Reset viewport scale temporarily
         const viewport = document.querySelector('meta[name="viewport"]');
@@ -133,15 +147,15 @@ export default function SocialXMenuApp() {
       };
       
       // Execute immediately
-      resetZoom();
+      resetScrollAndZoom();
       
       // Use requestAnimationFrame for next frame
       requestAnimationFrame(() => {
-        resetZoom();
+        resetScrollAndZoom();
         
         // Also use setTimeout as backup
         setTimeout(() => {
-          resetZoom();
+          resetScrollAndZoom();
           
           // Restore viewport after reset
           const viewport = document.querySelector('meta[name="viewport"]');
@@ -155,8 +169,10 @@ export default function SocialXMenuApp() {
             document.documentElement.style.zoom = '';
           }
           
-          // Final scroll check
-          window.scrollTo({ top: 0, behavior: 'instant' });
+          // Final scroll check - ensure we're at top
+          window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+          document.documentElement.scrollTop = 0;
+          document.body.scrollTop = 0;
           
           // Ensure header is visible
           const headerElement = document.querySelector('[class*="sticky top-0"]');
@@ -166,20 +182,33 @@ export default function SocialXMenuApp() {
         }, 100);
       });
       
-      // Additional check after a longer delay
+      // Additional checks at various intervals to catch any delayed rendering
       setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'instant' });
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
         document.body.style.zoom = '1';
         setTimeout(() => {
           document.body.style.zoom = '';
+          // One more scroll reset
+          window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
         }, 50);
       }, 300);
+      
+      // Final check after content is fully rendered
+      setTimeout(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      }, 500);
     } else {
       document.body.removeAttribute('data-view');
+      document.documentElement.removeAttribute('data-view');
     }
     
     return () => {
       document.body.removeAttribute('data-view');
+      document.documentElement.removeAttribute('data-view');
     };
   }, [currentView]);
 
@@ -757,7 +786,10 @@ export default function SocialXMenuApp() {
   const cameFromOrderPlaced = navigationHistory.includes('orderPlaced');
   
   return (
-    <main className="min-h-screen gradient-soft flex flex-col items-center w-full overflow-x-hidden">
+    <main 
+      className="min-h-screen gradient-soft flex flex-col items-center w-full overflow-x-hidden"
+      style={{ scrollBehavior: 'auto' }}
+    >
       {/* Back Button - Left Arrow (to Name Entry) - Mid Screen */}
       <button
         onClick={navigateBack}

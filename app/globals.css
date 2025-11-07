@@ -34,6 +34,22 @@ body[data-view="menu"] {
   transform: scale(1) !important;
 }
 
+/* Ensure menu page always starts at top */
+body[data-view="menu"] main {
+  scroll-behavior: auto;
+}
+
+/* Prevent scroll position restoration on menu view */
+html[data-view="menu"] {
+  scroll-behavior: auto;
+}
+
+html[data-view="menu"],
+body[data-view="menu"] {
+  overflow-x: hidden;
+  scroll-padding-top: 0;
+}
+
 /* Ensure inputs don't trigger zoom on iOS */
 input[type="text"],
 input[type="email"],
