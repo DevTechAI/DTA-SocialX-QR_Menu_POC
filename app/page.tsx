@@ -872,21 +872,21 @@ export default function SocialXMenuApp() {
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
-            // Increase height by 40% - calculate based on device padding
+            // Increase height by 40% + 30% more = 82% total increase (1.4 * 1.3 = 1.82)
             paddingTop: deviceInfo.isMobile 
               ? deviceInfo.screenWidth <= 375 
-                ? 'calc(0.625rem * 1.4)' // py-2.5 * 1.4 = 14px
+                ? 'calc(0.625rem * 1.82)' // py-2.5 * 1.82 = 18.2px
                 : deviceInfo.screenWidth <= 428
-                ? 'calc(0.75rem * 1.4)' // py-3 * 1.4 = 16.8px
-                : 'calc(0.875rem * 1.4)' // py-3.5 * 1.4 = 19.6px
-              : 'calc(1.5rem * 1.4)', // md:py-6 * 1.4 = 33.6px
+                ? 'calc(0.75rem * 1.82)' // py-3 * 1.82 = 21.84px
+                : 'calc(0.875rem * 1.82)' // py-3.5 * 1.82 = 25.48px
+              : 'calc(1.5rem * 1.82)', // md:py-6 * 1.82 = 43.68px
             paddingBottom: deviceInfo.isMobile 
               ? deviceInfo.screenWidth <= 375 
-                ? 'calc(0.625rem * 1.4)' // py-2.5 * 1.4 = 14px
+                ? 'calc(0.625rem * 1.82)' // py-2.5 * 1.82 = 18.2px
                 : deviceInfo.screenWidth <= 428
-                ? 'calc(0.75rem * 1.4)' // py-3 * 1.4 = 16.8px
-                : 'calc(0.875rem * 1.4)' // py-3.5 * 1.4 = 19.6px
-              : 'calc(1.5rem * 1.4)', // md:py-6 * 1.4 = 33.6px
+                ? 'calc(0.75rem * 1.82)' // py-3 * 1.82 = 21.84px
+                : 'calc(0.875rem * 1.82)' // py-3.5 * 1.82 = 25.48px
+              : 'calc(1.5rem * 1.82)', // md:py-6 * 1.82 = 43.68px
           }}
         >
           {/* Fogged Glossy Overlay - Extremely light tint */}
