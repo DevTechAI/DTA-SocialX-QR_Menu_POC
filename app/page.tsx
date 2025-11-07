@@ -21,8 +21,8 @@ export default function SocialXMenuApp() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
   
-  // Menu state
-  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  // Menu state - expand all categories by default
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(categories);
   const [selectedItems, setSelectedItems] = useState<{ item: MenuItem; quantity: number }[]>([]);
   const [waiterCalled, setWaiterCalled] = useState(false);
   
@@ -61,6 +61,10 @@ export default function SocialXMenuApp() {
     }
     if (savedOrderId) {
       setOrderId(savedOrderId);
+    }
+    // Ensure all categories are expanded by default when menu view loads
+    if (savedView === 'menu' || !savedView) {
+      setExpandedCategories(categories);
     }
   }, []);
 
@@ -255,9 +259,9 @@ export default function SocialXMenuApp() {
       localStorage.removeItem('orderId');
       localStorage.setItem('customerName', customerName.trim());
       
-      // Reset menu state
+      // Reset menu state - expand all categories by default
       setSelectedItems([]);
-      setExpandedCategories([]);
+      setExpandedCategories(categories);
       
       // Navigate immediately - zoom reset will be handled in useEffect
       navigateToView('menu');
@@ -787,8 +791,12 @@ export default function SocialXMenuApp() {
   
   return (
     <main 
-      className="min-h-screen gradient-soft flex flex-col items-center w-full overflow-x-hidden"
-      style={{ scrollBehavior: 'auto' }}
+      className="gradient-soft flex flex-col items-center w-full overflow-x-hidden"
+      style={{ 
+        scrollBehavior: 'auto',
+        height: '100vh',
+        overflowY: 'hidden', // Prevent main scroll, let menu container handle it
+      }}
     >
       {/* Back Button - Left Arrow (to Name Entry) - Mid Screen */}
       <button
@@ -982,7 +990,18 @@ export default function SocialXMenuApp() {
       </div>
 
       {/* Expandable Category Accordion - Mobile Container */}
-      <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-2 md:py-3 pb-48 md:pb-64 space-y-1.5">
+      <div 
+        className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-2 md:py-3 space-y-1.5 flex-1"
+        style={{
+          // Calculate max height: viewport height - header height (approx 120px) - bottom bar height (approx 80-120px) - margins
+          // Only show scrollbar when content exceeds this height
+          maxHeight: 'calc(100vh - 140px - 100px)',
+          minHeight: 0, // Allow flex shrinking
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+        }}
+      >
         {categories.map(category => {
           const isExpanded = expandedCategories.includes(category);
           const categoryItems = getMenuItemsByCategory(category);
