@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { menuItems, categories, getMenuItemsByCategory, type MenuItem } from '@/lib/data/menu-items';
 import { useDeviceDetection, getDevicePadding } from '@/hooks/useDeviceDetection';
@@ -32,6 +32,9 @@ export default function SocialXMenuApp() {
   const [orderId, setOrderId] = useState('');
   
   const [mounted, setMounted] = useState(false);
+  
+  // Ref for selected items scroll container
+  const selectedItemsScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -99,6 +102,17 @@ export default function SocialXMenuApp() {
       return () => clearInterval(timer);
     }
   }, [currentView]);
+
+  // Auto-scroll selected items window to show latest added item
+  useEffect(() => {
+    if (selectedItemsScrollRef.current && selectedItems.length > 0) {
+      // Scroll to bottom to show latest item
+      selectedItemsScrollRef.current.scrollTo({
+        top: selectedItemsScrollRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [selectedItems]);
 
   // Auto-refresh once every time menu page is reached for better header fit
   useEffect(() => {
@@ -951,7 +965,7 @@ export default function SocialXMenuApp() {
       </div>
 
       {/* Customer Info and Place Order Section - Below Header */}
-      <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-1.5 md:py-2">
+      <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-1.5 md:py-2 pb-1">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
             {!isEditingName ? (
@@ -1068,13 +1082,14 @@ export default function SocialXMenuApp() {
 
       {/* Selected Items Section - Between Place Order and Tabs - Sticky, overlays menu items */}
       {selectedItems.length > 0 && (
-        <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 sticky z-[9999]" style={{ top: 'calc(140px + env(safe-area-inset-top, 0px))' }}>
+        <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 sticky z-[9999] mt-1" style={{ top: 'calc(140px + env(safe-area-inset-top, 0px))' }}>
           <div 
-            className="backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-primary-200/50 overflow-hidden mb-4"
+            className="backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-primary-200/50 overflow-hidden mb-6"
             style={{
               background: 'linear-gradient(to bottom, rgba(255, 237, 213, 0.95), rgba(254, 215, 170, 0.95), rgba(251, 191, 36, 0.90))',
               maxHeight: '120px', // Reduced from 140px
-              marginBottom: '20px', // Increased spacing to prevent overlap with HOT tab
+              marginBottom: '24px', // Increased spacing between selected items and HOT tab
+              marginTop: '4px', // Small top margin to create minimal gap from Place Order button
             }}
           >
             {/* Header - Smaller */}
@@ -1084,6 +1099,7 @@ export default function SocialXMenuApp() {
             
             {/* Scrollable Items List - Smaller height, scrollable when items exceed */}
             <div 
+              ref={selectedItemsScrollRef}
               className="px-3 py-1 space-y-1"
               style={{
                 maxHeight: '90px', // Reduced from 100px
@@ -1181,7 +1197,7 @@ export default function SocialXMenuApp() {
         className="w-full md:max-w-2xl lg:max-w-3xl space-y-1.5"
         style={{
           // Add top margin to create space from selected items window
-          marginTop: selectedItems.length > 0 ? '12px' : '8px',
+          marginTop: selectedItems.length > 0 ? '16px' : '8px', // Increased gap when selected items visible
           paddingTop: '8px',
           paddingBottom: '20px', // Single paddingBottom value
           // Reduced horizontal padding by 20% + additional 15% = 32% total reduction (0.8 * 0.85 = 0.68)
