@@ -833,8 +833,8 @@ export default function SocialXMenuApp() {
       className="gradient-soft flex flex-col items-center w-full overflow-x-hidden"
       style={{ 
         scrollBehavior: 'auto',
-        height: '100vh',
-        overflowY: 'hidden', // Prevent main scroll, let menu container handle it
+        minHeight: '100vh',
+        overflowY: 'visible', // Allow natural flow, show all tabs without main scroll
       }}
     >
       {/* Back Button - Left Arrow (to Name Entry) - Mid Screen */}
@@ -1063,7 +1063,7 @@ export default function SocialXMenuApp() {
         </div>
       </div>
 
-      {/* Expandable Category Accordion - Mobile Container */}
+      {/* Expandable Category Accordion - Mobile Container - No scrolling, show all tabs */}
       <div 
         className="w-full md:max-w-2xl lg:max-w-3xl py-2 md:py-3 space-y-1.5 flex-1"
         style={{
@@ -1079,18 +1079,11 @@ export default function SocialXMenuApp() {
             : deviceInfo.screenWidth >= 1024
             ? 'calc(2.5rem * 0.68)' // 27.2px (32% less than 40px)
             : 'calc(1.5rem * 0.68)', // 16.32px (32% less than 24px)
-          // Calculate max height: viewport height - header height (approx 140px) - footer height (reduced by 50%, now ~30-40px) - selected items section (184px when visible) - margins
-          // Footer height reduced by 50%: approximately 30-40px now
-          // Selected items section: header (40px) + content (144px) = 184px
-          maxHeight: selectedItems.length > 0 
-            ? 'calc(100vh - 160px - 40px - 184px)' // Account for header, footer (reduced), and selected items section
-            : 'calc(100vh - 160px - 40px)', // Account for header and footer (reduced)
-          minHeight: 0, // Allow flex shrinking
-          overflowY: 'auto',
+          // No maxHeight or overflowY - show all tabs in single view
+          overflowY: 'visible',
           overflowX: 'hidden',
-          WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
-          paddingBottom: selectedItems.length > 0 ? '180px' : '60px', // Add padding for footer (reduced) + selected items when visible
-          transition: 'padding-bottom 0.3s ease-in-out, max-height 0.3s ease-in-out, padding-left 0.3s ease-in-out, padding-right 0.3s ease-in-out',
+          paddingBottom: selectedItems.length > 0 ? '200px' : '80px', // Add padding for footer + selected items when visible
+          transition: 'padding-bottom 0.3s ease-in-out, padding-left 0.3s ease-in-out, padding-right 0.3s ease-in-out',
         }}
       >
         {categories.map(category => {
@@ -1131,9 +1124,19 @@ export default function SocialXMenuApp() {
                 </div>
               </button>
 
-              {/* Expanded Menu Items */}
+              {/* Expanded Menu Items - Scrollable if items exceed viewport */}
               {isExpanded && (
-                <div className="mt-1.5 space-y-1.5" style={{ paddingLeft: 'calc(0.25rem * 0.68)' }}>
+                <div 
+                  className="mt-1.5 space-y-1.5" 
+                  style={{ 
+                    paddingLeft: 'calc(0.25rem * 0.68)',
+                    // Add scrolling only if items exceed a reasonable height
+                    maxHeight: 'calc(100vh - 300px)', // Allow scrolling if items are too tall
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    WebkitOverflowScrolling: 'touch',
+                  }}
+                >
                   {categoryItems.map(item => {
                     const selectedItem = selectedItems.find(i => i.item.id === item.id);
                     const quantity = selectedItem?.quantity || 0;
