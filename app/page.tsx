@@ -858,12 +858,27 @@ export default function SocialXMenuApp() {
       <div className="w-full md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         {/* Content Layer with Banner Background */}
         <div 
-          className={`relative z-10 w-full ${devicePadding.horizontal} ${devicePadding.vertical} md:px-6 md:py-6`}
+          className={`relative z-10 w-full ${devicePadding.horizontal} md:px-6`}
           style={{
             backgroundImage: 'url(/Menu_Header_OR_Footer_BG.png)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
+            // Increase height by 40% - calculate based on device padding
+            paddingTop: deviceInfo.isMobile 
+              ? deviceInfo.screenWidth <= 375 
+                ? 'calc(0.625rem * 1.4)' // py-2.5 * 1.4 = 14px
+                : deviceInfo.screenWidth <= 428
+                ? 'calc(0.75rem * 1.4)' // py-3 * 1.4 = 16.8px
+                : 'calc(0.875rem * 1.4)' // py-3.5 * 1.4 = 19.6px
+              : 'calc(1.5rem * 1.4)', // md:py-6 * 1.4 = 33.6px
+            paddingBottom: deviceInfo.isMobile 
+              ? deviceInfo.screenWidth <= 375 
+                ? 'calc(0.625rem * 1.4)' // py-2.5 * 1.4 = 14px
+                : deviceInfo.screenWidth <= 428
+                ? 'calc(0.75rem * 1.4)' // py-3 * 1.4 = 16.8px
+                : 'calc(0.875rem * 1.4)' // py-3.5 * 1.4 = 19.6px
+              : 'calc(1.5rem * 1.4)', // md:py-6 * 1.4 = 33.6px
           }}
         >
           {/* Fogged Glossy Overlay - Extremely light tint */}
