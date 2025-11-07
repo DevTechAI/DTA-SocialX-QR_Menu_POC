@@ -1150,20 +1150,41 @@ export default function SocialXMenuApp() {
       </div>
 
 
-      {/* Footer - Subtle Bottom Banner */}
-      <footer className="fixed bottom-0 left-0 right-0 z-0">
-        <div className="w-full bg-white/60 backdrop-blur-sm border-t border-gray-200/50 py-2 shadow-sm">
-          <p className="text-xs text-gray-500 text-center">
-            Powered by{' '}
-            <a
-              href="https://www.devtechai.org"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary-500 hover:text-primary-600 font-semibold underline"
-            >
-              DevTechAi.Org
-            </a>
-          </p>
+      {/* Footer with Inverted Header Vector - Mobile Container */}
+      <footer className="fixed bottom-0 left-0 right-0 z-20">
+        <div className="w-full md:max-w-2xl lg:max-w-3xl mx-auto shadow-soft-lg relative overflow-hidden gradient-primary rounded-t-2xl" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          {/* Content Layer with Banner Background - Inverted */}
+          <div 
+            className={`relative z-10 w-full ${devicePadding.horizontal} md:px-6`}
+            style={{
+              backgroundImage: 'url(/Menu_Header_OR_Footer_BG.png)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              transform: 'scaleY(-1)', // Invert vertically
+              // Increase height by 40% + 30% more = 82% total increase (1.4 * 1.3 = 1.82)
+              paddingTop: deviceInfo.isMobile 
+                ? deviceInfo.screenWidth <= 375 
+                  ? 'calc(0.625rem * 1.82)' // py-2.5 * 1.82 = 18.2px
+                  : deviceInfo.screenWidth <= 428
+                  ? 'calc(0.75rem * 1.82)' // py-3 * 1.82 = 21.84px
+                  : 'calc(0.875rem * 1.82)' // py-3.5 * 1.82 = 25.48px
+                : 'calc(1.5rem * 1.82)', // md:py-6 * 1.82 = 43.68px
+              paddingBottom: deviceInfo.isMobile 
+                ? deviceInfo.screenWidth <= 375 
+                  ? 'calc(0.625rem * 1.82)' // py-2.5 * 1.82 = 18.2px
+                  : deviceInfo.screenWidth <= 428
+                  ? 'calc(0.75rem * 1.82)' // py-3 * 1.82 = 21.84px
+                  : 'calc(0.875rem * 1.82)' // py-3.5 * 1.82 = 25.48px
+                : 'calc(1.5rem * 1.82)', // md:py-6 * 1.82 = 43.68px
+            }}
+          >
+            {/* Fogged Glossy Overlay - Extremely light tint */}
+            <div className="absolute inset-0 bg-gradient-to-r from-primary-500/8 via-accent-500/5 to-primary-500/8"></div>
+            
+            {/* Shiny Glass Effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/8 via-transparent to-transparent"></div>
+          </div>
         </div>
       </footer>
     </main>
