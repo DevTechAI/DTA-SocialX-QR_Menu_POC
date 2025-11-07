@@ -22,7 +22,7 @@ export default function SocialXMenuApp() {
   const [editedName, setEditedName] = useState('');
   
   // Menu state - expand all categories by default
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(categories);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([...categories]);
   const [selectedItems, setSelectedItems] = useState<{ item: MenuItem; quantity: number }[]>([]);
   const [waiterCalled, setWaiterCalled] = useState(false);
   
@@ -64,7 +64,7 @@ export default function SocialXMenuApp() {
     }
     // Ensure all categories are expanded by default when menu view loads
     if (savedView === 'menu' || !savedView) {
-      setExpandedCategories(categories);
+      setExpandedCategories([...categories]);
     }
   }, []);
 
@@ -261,7 +261,7 @@ export default function SocialXMenuApp() {
       
       // Reset menu state - expand all categories by default
       setSelectedItems([]);
-      setExpandedCategories(categories);
+      setExpandedCategories([...categories]);
       
       // Navigate immediately - zoom reset will be handled in useEffect
       navigateToView('menu');
