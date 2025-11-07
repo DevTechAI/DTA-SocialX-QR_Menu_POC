@@ -21,8 +21,8 @@ export default function SocialXMenuApp() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
   
-  // Menu state - expand all categories by default
-  const [expandedCategories, setExpandedCategories] = useState<string[]>([...categories]);
+  // Menu state - keep categories collapsed by default
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [selectedItems, setSelectedItems] = useState<{ item: MenuItem; quantity: number }[]>([]);
   const [waiterCalled, setWaiterCalled] = useState(false);
   
@@ -62,9 +62,9 @@ export default function SocialXMenuApp() {
     if (savedOrderId) {
       setOrderId(savedOrderId);
     }
-    // Ensure all categories are expanded by default when menu view loads
+    // Keep categories collapsed by default when menu view loads
     if (savedView === 'menu' || !savedView) {
-      setExpandedCategories([...categories]);
+      setExpandedCategories([]);
     }
   }, []);
 
@@ -259,9 +259,9 @@ export default function SocialXMenuApp() {
       localStorage.removeItem('orderId');
       localStorage.setItem('customerName', customerName.trim());
       
-      // Reset menu state - expand all categories by default
+      // Reset menu state - keep categories collapsed
       setSelectedItems([]);
-      setExpandedCategories([...categories]);
+      setExpandedCategories([]);
       
       // Navigate immediately - zoom reset will be handled in useEffect
       navigateToView('menu');
@@ -896,106 +896,128 @@ export default function SocialXMenuApp() {
           <div className="absolute inset-0 bg-gradient-to-br from-white/8 via-transparent to-transparent"></div>
           
           {/* Text Content */}
-          <div className="relative z-10">
-            {!isEditingName ? (
-              <>
-                <h1 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.95), 0 4px 12px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,1)' }}>
-                  <span>Hi, {customerName}!</span>
-                  <button
-                    onClick={handleEditName}
-                    className="inline-flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-all active:scale-95 p-1"
-                    aria-label="Edit name"
-                  >
-                    <svg 
-                      className="w-3 h-3 md:w-4 md:h-4 text-white" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor" 
-                      strokeWidth={2.5}
+          <div className="relative z-10 flex items-center justify-between gap-4">
+            <div className="flex-1">
+              {!isEditingName ? (
+                <>
+                  <h1 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.95), 0 4px 12px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,1)' }}>
+                    <span>Hi, {customerName}!</span>
+                    <button
+                      onClick={handleEditName}
+                      className="inline-flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-all active:scale-95 p-1"
+                      aria-label="Edit name"
                     >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" 
-                      />
-                    </svg>
-                  </button>
-                  <span className="text-xl md:text-3xl">👋</span>
-                </h1>
-                <p className="text-white text-xs md:text-sm mt-0.5 md:mt-1 font-semibold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.5)' }}>Choose your favorites from our menu</p>
-              </>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={editedName}
-                    onChange={(e) => setEditedName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSaveName();
-                      } else if (e.key === 'Escape') {
-                        handleCancelEditName();
-                      }
-                    }}
-                    className="flex-1 px-3 py-2 bg-white/95 rounded-lg text-base font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-white/50"
-                    placeholder="Enter your name"
-                    autoFocus
-                    style={{ fontSize: '16px' }}
-                  />
-                  <button
-                    onClick={handleSaveName}
-                    className="inline-flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-lg bg-green-500 hover:bg-green-600 active:bg-green-700 transition-all active:scale-95"
-                    aria-label="Save name"
-                  >
-                    <svg 
-                      className="w-4 h-4 md:w-5 md:h-5 text-white" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor" 
-                      strokeWidth={2.5}
+                      <svg 
+                        className="w-3 h-3 md:w-4 md:h-4 text-white" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor" 
+                        strokeWidth={2.5}
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" 
+                        />
+                      </svg>
+                    </button>
+                    <span className="text-xl md:text-3xl">👋</span>
+                  </h1>
+                  <p className="text-white text-xs md:text-sm font-semibold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] mt-0.5 md:mt-1" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.5)' }}>Choose your favorites from our menu</p>
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSaveName();
+                        } else if (e.key === 'Escape') {
+                          handleCancelEditName();
+                        }
+                      }}
+                      className="flex-1 px-3 py-2 bg-white/95 rounded-lg text-base font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-white/50"
+                      placeholder="Enter your name"
+                      autoFocus
+                      style={{ fontSize: '16px' }}
+                    />
+                    <button
+                      onClick={handleSaveName}
+                      className="inline-flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-lg bg-green-500 hover:bg-green-600 active:bg-green-700 transition-all active:scale-95"
+                      aria-label="Save name"
                     >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        d="M5 13l4 4L19 7" 
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={handleCancelEditName}
-                    className="inline-flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-lg bg-red-500 hover:bg-red-600 active:bg-red-700 transition-all active:scale-95"
-                    aria-label="Cancel editing"
-                  >
-                    <svg 
-                      className="w-4 h-4 md:w-5 md:h-5 text-white" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor" 
-                      strokeWidth={2.5}
+                      <svg 
+                        className="w-4 h-4 md:w-5 md:h-5 text-white" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor" 
+                        strokeWidth={2.5}
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          d="M5 13l4 4L19 7" 
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={handleCancelEditName}
+                      className="inline-flex items-center justify-center w-8 h-8 md:w-9 md:h-9 rounded-lg bg-red-500 hover:bg-red-600 active:bg-red-700 transition-all active:scale-95"
+                      aria-label="Cancel editing"
                     >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        d="M6 18L18 6M6 6l12 12" 
-                      />
-                    </svg>
-                  </button>
+                      <svg 
+                        className="w-4 h-4 md:w-5 md:h-5 text-white" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor" 
+                        strokeWidth={2.5}
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          d="M6 18L18 6M6 6l12 12" 
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <p className="text-white text-xs font-semibold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.5)' }}>Press Enter to save, Esc to cancel</p>
                 </div>
-                <p className="text-white text-xs font-semibold drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.5)' }}>Press Enter to save, Esc to cancel</p>
-              </div>
-            )}
+              )}
+            </div>
+            {/* Place Order Button - Vertically Centered */}
+            <div className="flex items-center">
+              <button
+                onClick={handlePlaceOrder}
+                disabled={selectedItems.length === 0}
+                className="relative px-4 py-2 md:px-5 md:py-2.5 rounded-xl font-bold text-sm md:text-base transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group/order active:scale-95 border-2 border-white/30"
+                style={{
+                  boxShadow: selectedItems.length > 0 
+                    ? '0 4px 20px rgba(249, 115, 22, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2)' 
+                    : '0 2px 10px rgba(0, 0, 0, 0.2)',
+                }}
+              >
+                <div className="absolute inset-0 gradient-primary group-hover/order:opacity-90 transition-all"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent"></div>
+                <span className="relative z-10 text-white flex items-center gap-1.5 font-extrabold drop-shadow-lg" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+                  <span className="text-base md:text-lg">🍽️</span>
+                  <span>Place Order</span>
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Expandable Category Accordion - Mobile Container */}
       <div 
-        className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-2 md:py-3 space-y-1.5 flex-1"
+        className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-2 md:py-3 pb-4 space-y-1.5 flex-1"
         style={{
-          // Calculate max height: viewport height - header height (approx 120px) - bottom bar height (approx 80-120px) - margins
+          // Calculate max height: viewport height - header height (approx 140px) - margins
           // Only show scrollbar when content exceeds this height
-          maxHeight: 'calc(100vh - 140px - 100px)',
+          maxHeight: 'calc(100vh - 160px)',
           minHeight: 0, // Allow flex shrinking
           overflowY: 'auto',
           overflowX: 'hidden',
@@ -1123,73 +1145,6 @@ export default function SocialXMenuApp() {
         })}
       </div>
 
-      {/* Fixed Bottom Bar - Fully Opaque - Mobile Container */}
-      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full md:max-w-2xl lg:max-w-3xl bg-white shadow-soft-xl border-t-2 border-primary-100 rounded-t-3xl safe-area-inset-bottom z-20">
-        <div className="flex flex-col bg-white rounded-t-3xl">
-          {/* Scrollable Order Summary - Fixed height to show 2 items */}
-          {selectedItems.length > 0 && (
-            <div className="relative group/summary rounded-t-3xl overflow-hidden bg-gradient-to-br from-primary-50 via-accent-50 to-orange-50">
-              {/* Content */}
-              <div className="relative z-10 p-4 rounded-t-3xl">
-                {/* Items List - Max height to show 2 items */}
-                <div className="text-xs text-gray-600 space-y-2 max-h-[96px] overflow-y-auto mb-3">
-                  {selectedItems.map(({ item, quantity }) => (
-                    <div key={item.id} className="flex justify-between bg-white rounded-xl p-2 border border-primary-100 shadow-sm">
-                      <span className="font-semibold">{item.name} × {quantity}</span>
-                      <span className="font-bold text-primary-600">₹{item.price * quantity}</span>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Clear Button - Centered */}
-                <div className="flex justify-center">
-                  <button
-                    onClick={handleClearSelection}
-                    className="group/clear text-xs font-semibold text-red-500 hover:text-red-600 px-4 py-1.5 rounded-lg bg-white/80 hover:bg-red-50 border border-red-200 hover:border-red-300 transition-all shadow-sm active:scale-95"
-                  >
-                    <span className="flex items-center gap-1">
-                      <span>🗑️</span>
-                      <span>Clear All</span>
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Fixed Buttons at Bottom */}
-          <div className="flex gap-3 bg-white p-4 border-t border-primary-100">
-            <button
-              onClick={handleCallWaiter}
-              disabled={waiterCalled}
-              className={`relative flex-1 py-3 px-4 rounded-xl font-bold transition-all shadow-soft overflow-hidden group/waiter ${
-                waiterCalled ? '' : 'active:scale-95'
-              }`}
-            >
-              {waiterCalled ? (
-                <>
-                  <div className="absolute inset-0 gradient-primary"></div>
-                  <span className="relative z-10 text-white">✓ Help Requested</span>
-                </>
-              ) : (
-                <>
-                  <div className="absolute inset-0 bg-white border-2 border-primary-500 group-hover/waiter:bg-gradient-to-br group-hover/waiter:from-primary-50 group-hover/waiter:to-accent-50 transition-all"></div>
-                  <span className="relative z-10 text-primary-600">🙋 Call Waiter</span>
-                </>
-              )}
-            </button>
-            
-            <button
-              onClick={handlePlaceOrder}
-              disabled={selectedItems.length === 0}
-              className="relative flex-1 py-3 px-4 rounded-xl font-bold transition-all shadow-soft disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group/order active:scale-95"
-            >
-              <div className="absolute inset-0 gradient-primary group-hover/order:shadow-soft-lg transition-all"></div>
-              <span className="relative z-10 text-white">🍽️ Place Order</span>
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* Footer - Subtle Bottom Banner */}
       <footer className="fixed bottom-0 left-0 right-0 z-0">
