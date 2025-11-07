@@ -310,13 +310,16 @@ export default function SocialXMenuApp() {
     }
   };
 
-  // Menu Handlers
+  // Menu Handlers - Only one tab expanded at a time
   const toggleCategory = (category: string) => {
-    setExpandedCategories(prev => 
-      prev.includes(category)
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
-    );
+    setExpandedCategories(prev => {
+      // If the clicked category is already expanded, collapse it
+      if (prev.includes(category)) {
+        return [];
+      }
+      // Otherwise, collapse all others and expand only the clicked one
+      return [category];
+    });
   };
 
   const addItem = (item: MenuItem) => {
@@ -834,7 +837,7 @@ export default function SocialXMenuApp() {
       style={{ 
         scrollBehavior: 'auto',
         minHeight: '100vh',
-        overflowY: 'visible', // Allow natural flow, show all tabs without main scroll
+        overflowY: 'auto', // Allow scrolling if unexpanded tabs don't fit on screen
       }}
     >
       {/* Back Button - Left Arrow (to Name Entry) - Mid Screen */}
@@ -1063,9 +1066,9 @@ export default function SocialXMenuApp() {
         </div>
       </div>
 
-      {/* Expandable Category Accordion - Mobile Container - No scrolling, show all tabs */}
+      {/* Expandable Category Accordion - Mobile Container - Scrolls behind selected items window */}
       <div 
-        className="w-full md:max-w-2xl lg:max-w-3xl py-2 md:py-3 space-y-1.5 flex-1"
+        className="w-full md:max-w-2xl lg:max-w-3xl py-2 md:py-3 space-y-1.5"
         style={{
           // Reduced horizontal padding by 20% + additional 15% = 32% total reduction (0.8 * 0.85 = 0.68)
           // Mobile: 16px * 0.68 = 10.88px, Tablet: 24px * 0.68 = 16.32px, Desktop: 40px * 0.68 = 27.2px
@@ -1079,11 +1082,14 @@ export default function SocialXMenuApp() {
             : deviceInfo.screenWidth >= 1024
             ? 'calc(2.5rem * 0.68)' // 27.2px (32% less than 40px)
             : 'calc(1.5rem * 0.68)', // 16.32px (32% less than 24px)
-          // No maxHeight or overflowY - show all tabs in single view
-          overflowY: 'visible',
+          // No maxHeight - allow natural flow, main page will scroll if unexpanded tabs don't fit
           overflowX: 'hidden',
-          paddingBottom: selectedItems.length > 0 ? '200px' : '80px', // Add padding for footer + selected items when visible
-          transition: 'padding-bottom 0.3s ease-in-out, padding-left 0.3s ease-in-out, padding-right 0.3s ease-in-out',
+          // Add bottom padding so content scrolls behind selected items window but isn't hidden
+          paddingBottom: selectedItems.length > 0 ? '200px' : '20px', // Space for selected items overlay
+          transition: 'padding-left 0.3s ease-in-out, padding-right 0.3s ease-in-out', // Remove padding-bottom transition to prevent movement
+          // Ensure menu items scroll behind selected items window
+          position: 'relative',
+          zIndex: 1, // Lower than selected items window
         }}
       >
         {categories.map(category => {
@@ -1124,17 +1130,23 @@ export default function SocialXMenuApp() {
                 </div>
               </button>
 
-              {/* Expanded Menu Items - Scrollable if items exceed viewport */}
+              {/* Expanded Menu Items - Scrollable if items exceed viewport - Behind selected items window */}
               {isExpanded && (
                 <div 
                   className="mt-1.5 space-y-1.5" 
                   style={{ 
                     paddingLeft: 'calc(0.25rem * 0.68)',
-                    // Add scrolling only if items exceed a reasonable height
-                    maxHeight: 'calc(100vh - 300px)', // Allow scrolling if items are too tall
-                    overflowY: 'auto',
+                    // Add scrolling for tab-specific items - max height based on available space
+                    // Account for header, footer, selected items, and other tabs
+                    maxHeight: selectedItems.length > 0 
+                      ? 'calc(100vh - 200px)' // More space when selected items visible
+                      : 'calc(100vh - 180px)', // Less space when no selected items
+                    overflowY: 'auto', // Scroll items within this tab
                     overflowX: 'hidden',
-                    WebkitOverflowScrolling: 'touch',
+                    WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+                    // Ensure menu items stay behind selected items window
+                    position: 'relative',
+                    zIndex: 1, // Lower than selected items window (9999)
                   }}
                 >
                   {categoryItems.map(item => {
@@ -1227,159 +1239,142 @@ export default function SocialXMenuApp() {
         })}
       </div>
 
-      {/* Selected Items Section - Fixed Above Footer */}
-          {selectedItems.length > 0 && (
+      {/* Selected Items Section - Fixed Overlay - Always on top, overlays expanded menu items */}
+      {selectedItems.length > 0 && (
         <div 
-          className="fixed left-0 right-0 z-30" 
+          className="fixed left-0 right-0" 
           style={{ 
-            // Position above footer - footer height reduced by 50% (now using 0.91 multiplier)
-            bottom: deviceInfo.isMobile 
-              ? deviceInfo.screenWidth <= 375 
-                ? 'calc(calc(0.625rem * 0.91) * 2 + env(safe-area-inset-bottom, 0px))' // Footer height (reduced by 50%) + safe area
-                : deviceInfo.screenWidth <= 428
-                ? 'calc(calc(0.75rem * 0.91) * 2 + env(safe-area-inset-bottom, 0px))'
-                : 'calc(calc(0.875rem * 0.91) * 2 + env(safe-area-inset-bottom, 0px))'
-              : 'calc(calc(1.5rem * 0.91) * 2 + env(safe-area-inset-bottom, 0px))',
+            // Fixed position - completely independent, overlays ALL menu items including expanded tabs
+            position: 'fixed',
+            zIndex: 99999, // Extremely high z-index to ensure it's always on top of everything
+            // Fixed to bottom of viewport - completely independent of content, constant position
+            bottom: '0px', // Fixed at bottom, safe area handled by container
+            left: '0px',
+            right: '0px',
+            width: '100%',
+            // Ensure it overlays content, not pushed by it
+            pointerEvents: 'auto',
+            // Make sure it's always visible and doesn't move
+            display: 'block',
+            // Prevent any transforms or movements - stays fixed
+            transform: 'translateZ(0)', // Force hardware acceleration
+            // Explicitly prevent any position changes
+            top: 'auto',
+            // Ensure it's above all other content
+            isolation: 'isolate', // Create new stacking context
           }}
         >
-          <div className="w-full md:max-w-2xl lg:max-w-3xl mx-auto px-4 md:px-6">
-            <div className="bg-white/95 backdrop-blur-xl rounded-t-2xl shadow-2xl border-t-2 border-x-2 border-primary-200/50 overflow-hidden">
-              {/* Header */}
-              <div className="px-4 py-2 border-b border-primary-100 flex-shrink-0">
-                <h3 className="text-sm font-bold text-gray-700">Selected Items ({selectedItems.reduce((sum, { quantity }) => sum + quantity, 0)})</h3>
+          <div className="w-full md:max-w-2xl lg:max-w-3xl mx-auto px-4 md:px-6" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+            <div 
+              className="backdrop-blur-xl rounded-t-2xl shadow-2xl border-t-2 border-x-2 border-primary-200/50 overflow-hidden"
+              style={{
+                background: 'linear-gradient(to bottom, rgba(255, 237, 213, 0.95), rgba(254, 215, 170, 0.95), rgba(251, 191, 36, 0.90))',
+                // Smaller height - reduced from previous size
+                maxHeight: '140px', // Reduced height for smaller window
+              }}
+            >
+              {/* Header - Smaller */}
+              <div className="px-3 py-1.5 border-b border-primary-100 flex-shrink-0">
+                <h3 className="text-xs font-bold text-gray-700">Selected Items ({selectedItems.reduce((sum, { quantity }) => sum + quantity, 0)})</h3>
               </div>
               
-              {/* Scrollable Items List - Max 2 items visible */}
+              {/* Scrollable Items List - Smaller height, scrollable when items exceed */}
               <div 
-                className="px-4 py-2 space-y-2"
+                className="px-3 py-1.5 space-y-1.5"
                 style={{
-                  maxHeight: 'calc(2 * (64px + 8px))', // 2 items (64px each + 8px gap) = 144px
+                  maxHeight: '100px', // Smaller height - shows ~1.5 items, scrolls for more
                   overflowY: 'auto',
                   overflowX: 'hidden',
                   WebkitOverflowScrolling: 'touch',
+                  // Ensure smooth scrolling
+                  scrollBehavior: 'smooth',
                 }}
               >
-                  {selectedItems.map(({ item, quantity }) => (
-                  <div key={item.id} className="flex items-center gap-3 bg-gradient-to-br from-white via-white to-orange-50/60 p-3 rounded-xl border border-primary-100 shadow-sm">
-                    {/* Icon */}
-                    {item.icon && (
-                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100">
-                        {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
-                          <Image 
-                            src={item.icon} 
-                            alt={item.name}
-                            width={24}
-                            height={24}
-                            className="object-contain"
-                          />
-                        ) : (
-                          <span className="text-base">{item.icon}</span>
-                        )}
-                    </div>
-                    )}
-                    
-                    {/* Item name */}
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-gray-800 truncate text-sm">{item.name}</h4>
-                      <p className="text-xs text-gray-500">₹{item.price} × {quantity}</p>
-                </div>
-                
-                    {/* Quantity controls */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                  <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          removeItem(item.id);
-                        }}
-                        className="w-6 h-6 rounded-lg bg-gradient-to-br from-red-500 to-red-600 text-white font-bold shadow-sm hover:shadow-soft transition-all active:scale-95 flex items-center justify-center text-sm touch-manipulation"
-                        style={{
-                          WebkitTapHighlightColor: 'transparent',
-                          touchAction: 'manipulation',
-                        }}
-                        aria-label={`Decrease ${item.name}`}
-                      >
-                        −
-                  </button>
-                      <span className="min-w-[30px] text-center px-2 py-0.5 bg-gradient-to-br from-primary-50 to-accent-50 rounded-lg font-bold text-primary-600 border border-primary-200 text-sm">
-                        {quantity}
-                      </span>
-            <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          addItem(item);
-                        }}
-                        className="w-6 h-6 rounded-lg bg-gradient-to-br from-green-500 to-green-600 text-white font-bold shadow-sm hover:shadow-soft transition-all active:scale-95 flex items-center justify-center text-sm touch-manipulation"
-                        style={{
-                          WebkitTapHighlightColor: 'transparent',
-                          touchAction: 'manipulation',
-                        }}
-                        aria-label={`Increase ${item.name}`}
-                      >
-                        +
-            </button>
-            <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          removeItemCompletely(item.id);
-                        }}
-                        className="w-6 h-6 rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white font-bold shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center justify-center text-xs touch-manipulation ml-1"
-                        style={{
-                          WebkitTapHighlightColor: 'transparent',
-                          touchAction: 'manipulation',
-                        }}
-                        aria-label={`Remove ${item.name}`}
-                      >
-                        ×
-            </button>
-          </div>
-        </div>
-                ))}
+                   {selectedItems.map(({ item, quantity }) => (
+                   <div key={item.id} className="flex items-center gap-2 bg-gradient-to-br from-white via-white to-orange-50/60 p-2 rounded-lg border border-primary-100 shadow-sm">
+                     {/* Icon - Smaller */}
+                     {item.icon && (
+                       <div className="flex-shrink-0 w-6 h-6 rounded-md bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100">
+                         {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
+                           <Image 
+                             src={item.icon} 
+                             alt={item.name}
+                             width={18}
+                             height={18}
+                             className="object-contain"
+                           />
+                         ) : (
+                           <span className="text-xs">{item.icon}</span>
+                         )}
+                     </div>
+                     )}
+                     
+                     {/* Item name - Smaller */}
+                     <div className="flex-1 min-w-0">
+                       <h4 className="font-bold text-gray-800 truncate text-xs">{item.name}</h4>
+                       <p className="text-[10px] text-gray-500">₹{item.price} × {quantity}</p>
+                 </div>
+                 
+                     {/* Quantity controls - Smaller */}
+                     <div className="flex items-center gap-1.5 flex-shrink-0">
+                   <button
+                         onClick={(e) => {
+                           e.preventDefault();
+                           e.stopPropagation();
+                           removeItem(item.id);
+                         }}
+                         className="w-5 h-5 rounded-md bg-gradient-to-br from-red-500 to-red-600 text-white font-bold shadow-sm hover:shadow-soft transition-all active:scale-95 flex items-center justify-center text-xs touch-manipulation"
+                         style={{
+                           WebkitTapHighlightColor: 'transparent',
+                           touchAction: 'manipulation',
+                         }}
+                         aria-label={`Decrease ${item.name}`}
+                       >
+                         −
+                   </button>
+                       <span className="min-w-[24px] text-center px-1.5 py-0.5 bg-gradient-to-br from-primary-50 to-accent-50 rounded-md font-bold text-primary-600 border border-primary-200 text-xs">
+                         {quantity}
+                       </span>
+             <button
+                         onClick={(e) => {
+                           e.preventDefault();
+                           e.stopPropagation();
+                           addItem(item);
+                         }}
+                         className="w-5 h-5 rounded-md bg-gradient-to-br from-green-500 to-green-600 text-white font-bold shadow-sm hover:shadow-soft transition-all active:scale-95 flex items-center justify-center text-xs touch-manipulation"
+                         style={{
+                           WebkitTapHighlightColor: 'transparent',
+                           touchAction: 'manipulation',
+                         }}
+                         aria-label={`Increase ${item.name}`}
+                       >
+                         +
+             </button>
+             <button
+                         onClick={(e) => {
+                           e.preventDefault();
+                           e.stopPropagation();
+                           removeItemCompletely(item.id);
+                         }}
+                         className="w-5 h-5 rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white font-bold shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center justify-center text-[10px] touch-manipulation ml-0.5"
+                         style={{
+                           WebkitTapHighlightColor: 'transparent',
+                           touchAction: 'manipulation',
+                         }}
+                         aria-label={`Remove ${item.name}`}
+                       >
+                         ×
+             </button>
+           </div>
+         </div>
+                 ))}
       </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Footer with Inverted Header Vector - Mobile Container - Always at Bottom */}
-      <footer className="fixed bottom-0 left-0 right-0 z-20">
-        <div className="w-full md:max-w-2xl lg:max-w-3xl mx-auto shadow-soft-lg relative overflow-hidden gradient-primary rounded-t-2xl" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-          {/* Content Layer with Banner Background - Inverted */}
-          <div 
-            className={`relative z-10 w-full ${devicePadding.horizontal} md:px-6`}
-            style={{
-              backgroundImage: 'url(/Menu_Header_OR_Footer_BG.png)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              transform: 'scaleY(-1)', // Invert vertically
-              // Reduced by 50%: original 1.82 multiplier becomes 0.91 (1.82 * 0.5 = 0.91)
-              paddingTop: deviceInfo.isMobile 
-                ? deviceInfo.screenWidth <= 375 
-                  ? 'calc(0.625rem * 0.91)' // py-2.5 * 0.91 = 9.1px (50% of 18.2px)
-                  : deviceInfo.screenWidth <= 428
-                  ? 'calc(0.75rem * 0.91)' // py-3 * 0.91 = 10.92px (50% of 21.84px)
-                  : 'calc(0.875rem * 0.91)' // py-3.5 * 0.91 = 12.74px (50% of 25.48px)
-                : 'calc(1.5rem * 0.91)', // md:py-6 * 0.91 = 21.84px (50% of 43.68px)
-              paddingBottom: deviceInfo.isMobile 
-                ? deviceInfo.screenWidth <= 375 
-                  ? 'calc(0.625rem * 0.91)' // py-2.5 * 0.91 = 9.1px (50% of 18.2px)
-                  : deviceInfo.screenWidth <= 428
-                  ? 'calc(0.75rem * 0.91)' // py-3 * 0.91 = 10.92px (50% of 21.84px)
-                  : 'calc(0.875rem * 0.91)' // py-3.5 * 0.91 = 12.74px (50% of 25.48px)
-                : 'calc(1.5rem * 0.91)', // md:py-6 * 0.91 = 21.84px (50% of 43.68px)
-            }}
-          >
-            {/* Fogged Glossy Overlay - Extremely light tint */}
-            <div className="absolute inset-0 bg-gradient-to-r from-primary-500/8 via-accent-500/5 to-primary-500/8"></div>
-            
-            {/* Shiny Glass Effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/8 via-transparent to-transparent"></div>
-          </div>
-        </div>
-      </footer>
+      {/* Footer removed in menu page - Selected items window now at bottom */}
     </main>
   );
 }
