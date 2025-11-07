@@ -21,9 +21,17 @@ html, body {
   box-sizing: border-box;
   /* Prevent zoom on input focus - ensure inputs are at least 16px */
   touch-action: pan-y pinch-zoom;
-  /* Support safe area insets for mobile browsers */
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
+  /* Reset zoom on navigation */
+  zoom: 1;
+  -webkit-transform: scale(1);
+  transform: scale(1);
+}
+
+/* Force reset zoom on menu view */
+body[data-view="menu"] {
+  zoom: 1 !important;
+  -webkit-transform: scale(1) !important;
+  transform: scale(1) !important;
 }
 
 /* Ensure inputs don't trigger zoom on iOS */

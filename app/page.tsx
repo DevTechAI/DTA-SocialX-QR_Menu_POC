@@ -2,10 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { menuItems, categories, getMenuItemsByCategory, type MenuItem } from '@/lib/data/menu-items';
+import { useDeviceDetection, getDevicePadding } from '@/hooks/useDeviceDetection';
 
 type ViewState = 'nameEntry' | 'menu' | 'orderPlaced';
 
 export default function SocialXMenuApp() {
+  // Device detection
+  const deviceInfo = useDeviceDetection();
+  const devicePadding = getDevicePadding(deviceInfo);
+  
   // View state
   const [currentView, setCurrentView] = useState<ViewState>('nameEntry');
   const [navigationHistory, setNavigationHistory] = useState<ViewState[]>([]);
@@ -89,38 +94,92 @@ export default function SocialXMenuApp() {
     }
   }, [currentView]);
 
-  // Reset zoom and scroll to top when menu view loads (fix mobile zoom issue)
+  // Set body data attribute for CSS targeting and reset zoom
   useEffect(() => {
     if (currentView === 'menu') {
-      // Reset any zoom by blurring any focused elements first
-      const activeElement = document.activeElement as HTMLElement;
-      if (activeElement && activeElement.blur) {
-        activeElement.blur();
-      }
+      document.body.setAttribute('data-view', 'menu');
       
-      // Force scroll to top immediately to ensure header is visible
-      window.scrollTo({ top: 0, behavior: 'instant' });
-      
-      // Also scroll the main element to top
-      const mainElement = document.querySelector('main');
-      if (mainElement) {
-        mainElement.scrollTop = 0;
-      }
-      
-      // Force a reflow to reset any zoom state (works on some browsers)
-      document.body.style.zoom = '1';
-      setTimeout(() => {
-        document.body.style.zoom = '';
-        // Double-check scroll position - ensure header is visible
-        window.scrollTo({ top: 0, behavior: 'instant' });
-        
-        // Ensure header with z-10 is visible below browser edge
-        const headerElement = document.querySelector('[class*="sticky top-0"]');
-        if (headerElement) {
-          headerElement.scrollIntoView({ behavior: 'instant', block: 'start' });
+      // Aggressive zoom reset function
+      const resetZoom = () => {
+        // Blur any focused elements
+        const activeElement = document.activeElement as HTMLElement;
+        if (activeElement && activeElement.blur) {
+          activeElement.blur();
         }
-      }, 150);
+        
+        // Reset zoom on body and html
+        document.body.style.zoom = '1';
+        if (document.documentElement) {
+          document.documentElement.style.zoom = '1';
+        }
+        
+        // Force scroll to top
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        
+        // Scroll main element
+        const mainElement = document.querySelector('main');
+        if (mainElement) {
+          mainElement.scrollTop = 0;
+        }
+        
+        // Reset viewport scale temporarily
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+          viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+        }
+      };
+      
+      // Execute immediately
+      resetZoom();
+      
+      // Use requestAnimationFrame for next frame
+      requestAnimationFrame(() => {
+        resetZoom();
+        
+        // Also use setTimeout as backup
+        setTimeout(() => {
+          resetZoom();
+          
+          // Restore viewport after reset
+          const viewport = document.querySelector('meta[name="viewport"]');
+          if (viewport) {
+            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, viewport-fit=cover, user-scalable=yes');
+          }
+          
+          // Clear zoom styles
+          document.body.style.zoom = '';
+          if (document.documentElement) {
+            document.documentElement.style.zoom = '';
+          }
+          
+          // Final scroll check
+          window.scrollTo({ top: 0, behavior: 'instant' });
+          
+          // Ensure header is visible
+          const headerElement = document.querySelector('[class*="sticky top-0"]');
+          if (headerElement) {
+            headerElement.scrollIntoView({ behavior: 'instant', block: 'start' });
+          }
+        }, 100);
+      });
+      
+      // Additional check after a longer delay
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        document.body.style.zoom = '1';
+        setTimeout(() => {
+          document.body.style.zoom = '';
+        }, 50);
+      }, 300);
+    } else {
+      document.body.removeAttribute('data-view');
     }
+    
+    return () => {
+      document.body.removeAttribute('data-view');
+    };
   }, [currentView]);
 
   // Navigation helpers
@@ -141,10 +200,22 @@ export default function SocialXMenuApp() {
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (customerName.trim()) {
-      // Blur input to reset zoom on mobile
+      // Aggressively reset zoom before navigation
       const input = document.activeElement as HTMLElement;
-      if (input) {
+      if (input && input.blur) {
         input.blur();
+      }
+      
+      // Force zoom reset immediately
+      document.body.style.zoom = '1';
+      if (document.documentElement) {
+        document.documentElement.style.zoom = '1';
+      }
+      
+      // Reset viewport scale
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
       }
       
       // Clear all previous order data for a fresh start
@@ -158,10 +229,15 @@ export default function SocialXMenuApp() {
       setSelectedItems([]);
       setExpandedCategories([]);
       
-      // Small delay to allow zoom reset before navigation
+      // Navigate immediately - zoom reset will be handled in useEffect
+      navigateToView('menu');
+      
+      // Restore viewport after navigation
       setTimeout(() => {
-        navigateToView('menu');
-      }, 100);
+        if (viewport) {
+          viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, viewport-fit=cover, user-scalable=yes');
+        }
+      }, 300);
     }
   };
 
@@ -747,7 +823,7 @@ export default function SocialXMenuApp() {
       <div className="w-full md:max-w-2xl lg:max-w-3xl shadow-soft-lg sticky top-0 z-50 relative overflow-hidden gradient-primary rounded-b-2xl" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         {/* Content Layer with Banner Background */}
         <div 
-          className="relative z-10 w-full px-4 py-3 md:px-6 md:py-6"
+          className={`relative z-10 w-full ${devicePadding.horizontal} ${devicePadding.vertical} md:px-6 md:py-6`}
           style={{
             backgroundImage: 'url(/Menu_Header_OR_Footer_BG.png)',
             backgroundSize: 'cover',
