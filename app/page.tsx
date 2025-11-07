@@ -1183,7 +1183,7 @@ export default function SocialXMenuApp() {
           // Add top margin to create space from selected items window
           marginTop: selectedItems.length > 0 ? '12px' : '8px',
           paddingTop: '8px',
-          paddingBottom: '8px',
+          paddingBottom: '20px', // Single paddingBottom value
           // Reduced horizontal padding by 20% + additional 15% = 32% total reduction (0.8 * 0.85 = 0.68)
           // Mobile: 16px * 0.68 = 10.88px, Tablet: 24px * 0.68 = 16.32px, Desktop: 40px * 0.68 = 27.2px
           paddingLeft: deviceInfo.isMobile 
@@ -1198,8 +1198,6 @@ export default function SocialXMenuApp() {
             : 'calc(1.5rem * 0.68)', // 16.32px (32% less than 24px)
           // No maxHeight - allow natural flow, main page will scroll if unexpanded tabs don't fit
           overflowX: 'hidden',
-          // No bottom padding needed since selected items window is now between sections, not at bottom
-          paddingBottom: '20px',
           transition: 'padding-left 0.3s ease-in-out, padding-right 0.3s ease-in-out',
           // Ensure menu items scroll behind selected items window
           position: 'relative',
