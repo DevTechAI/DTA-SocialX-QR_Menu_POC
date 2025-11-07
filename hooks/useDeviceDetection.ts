@@ -41,7 +41,7 @@ export function useDeviceDetection(): DeviceInfo {
     let isDesktop = false;
 
     // Detect iPhone
-    if (/iPhone/.test(userAgent) && !window.MSStream) {
+    if (/iPhone/.test(userAgent) && !(window as any).MSStream) {
       deviceType = 'iphone';
       isMobile = true;
       brand = 'Apple';

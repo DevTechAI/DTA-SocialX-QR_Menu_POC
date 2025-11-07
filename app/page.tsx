@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { menuItems, categories, getMenuItemsByCategory, type MenuItem } from '@/lib/data/menu-items';
 import { useDeviceDetection, getDevicePadding } from '@/hooks/useDeviceDetection';
 
@@ -678,10 +679,12 @@ export default function SocialXMenuApp() {
                           {item.icon && (
                             <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100">
                               {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
-                                <img 
+                                <Image 
                                   src={item.icon} 
                                   alt={item.name}
-                                  className="w-8 h-8 object-contain"
+                                  width={32}
+                                  height={32}
+                                  className="object-contain"
                                 />
                               ) : (
                                 <span className="text-xl">{item.icon}</span>
@@ -992,10 +995,12 @@ export default function SocialXMenuApp() {
                               {item.icon && (
                                 <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100">
                                   {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
-                                    <img 
+                                    <Image 
                                       src={item.icon} 
                                       alt={item.name}
-                                      className="w-6 h-6 object-contain"
+                                      width={24}
+                                      height={24}
+                                      className="object-contain"
                                     />
                                   ) : (
                                     <span className="text-lg">{item.icon}</span>
