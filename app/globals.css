@@ -19,6 +19,20 @@ html, body {
   -webkit-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%;
   box-sizing: border-box;
+  /* Prevent zoom on input focus - ensure inputs are at least 16px */
+  touch-action: pan-y pinch-zoom;
+}
+
+/* Ensure inputs don't trigger zoom on iOS */
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="number"],
+textarea,
+select {
+  font-size: 16px !important;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 *, *::before, *::after {

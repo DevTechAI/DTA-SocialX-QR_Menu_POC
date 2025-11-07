@@ -87,6 +87,34 @@ export default function SocialXMenuApp() {
     }
   }, [currentView]);
 
+  // Reset zoom and scroll to top when menu view loads (fix mobile zoom issue)
+  useEffect(() => {
+    if (currentView === 'menu') {
+      // Reset any zoom by blurring any focused elements first
+      const activeElement = document.activeElement as HTMLElement;
+      if (activeElement && activeElement.blur) {
+        activeElement.blur();
+      }
+      
+      // Force scroll to top immediately to ensure header is visible
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      
+      // Also scroll the main element to top
+      const mainElement = document.querySelector('main');
+      if (mainElement) {
+        mainElement.scrollTop = 0;
+      }
+      
+      // Force a reflow to reset any zoom state (works on some browsers)
+      document.body.style.zoom = '1';
+      setTimeout(() => {
+        document.body.style.zoom = '';
+        // Double-check scroll position
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }, 150);
+    }
+  }, [currentView]);
+
   // Navigation helpers
   const navigateToView = (view: ViewState) => {
     setNavigationHistory(prev => [...prev, currentView]);
@@ -105,6 +133,12 @@ export default function SocialXMenuApp() {
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (customerName.trim()) {
+      // Blur input to reset zoom on mobile
+      const input = document.activeElement as HTMLElement;
+      if (input) {
+        input.blur();
+      }
+      
       // Clear all previous order data for a fresh start
       localStorage.removeItem('orderPlaced');
       localStorage.removeItem('selectedItems');
@@ -116,7 +150,10 @@ export default function SocialXMenuApp() {
       setSelectedItems([]);
       setExpandedCategories([]);
       
-      navigateToView('menu');
+      // Small delay to allow zoom reset before navigation
+      setTimeout(() => {
+        navigateToView('menu');
+      }, 100);
     }
   };
 
@@ -302,7 +339,8 @@ export default function SocialXMenuApp() {
                           value={customerName}
                           onChange={(e) => setCustomerName(e.target.value)}
                           placeholder="Please enter your name"
-                          className="relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                          className="relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                          style={{ fontSize: '16px' }}
                           required
                           autoFocus
                         />
