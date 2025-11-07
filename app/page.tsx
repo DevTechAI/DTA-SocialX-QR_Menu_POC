@@ -99,6 +99,24 @@ export default function SocialXMenuApp() {
     }
   }, [currentView]);
 
+  // Auto-refresh once when menu page loads for better header fit
+  useEffect(() => {
+    if (currentView === 'menu') {
+      const hasRefreshed = sessionStorage.getItem('menuPageRefreshed');
+      if (!hasRefreshed) {
+        sessionStorage.setItem('menuPageRefreshed', 'true');
+        // Small delay to ensure state is set, then refresh
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
+        return;
+      }
+    } else {
+      // Clear refresh flag when leaving menu view
+      sessionStorage.removeItem('menuPageRefreshed');
+    }
+  }, [currentView]);
+
   // Set body data attribute for CSS targeting and reset zoom/scroll
   useEffect(() => {
     if (currentView === 'menu') {
