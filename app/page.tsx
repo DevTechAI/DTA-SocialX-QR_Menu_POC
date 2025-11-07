@@ -1070,11 +1070,11 @@ export default function SocialXMenuApp() {
       {selectedItems.length > 0 && (
         <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 sticky z-[9999]" style={{ top: 'calc(140px + env(safe-area-inset-top, 0px))' }}>
           <div 
-            className="backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-primary-200/50 overflow-hidden mb-2"
+            className="backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-primary-200/50 overflow-hidden mb-4"
             style={{
               background: 'linear-gradient(to bottom, rgba(255, 237, 213, 0.95), rgba(254, 215, 170, 0.95), rgba(251, 191, 36, 0.90))',
               maxHeight: '120px', // Reduced from 140px
-              marginBottom: '8px', // Reduced by 50% from 16px
+              marginBottom: '20px', // Increased spacing to prevent overlap with HOT tab
             }}
           >
             {/* Header - Smaller */}
@@ -1178,8 +1178,12 @@ export default function SocialXMenuApp() {
 
       {/* Expandable Category Accordion - Mobile Container - Scrolls behind selected items window */}
       <div 
-        className="w-full md:max-w-2xl lg:max-w-3xl py-2 md:py-3 space-y-1.5"
+        className="w-full md:max-w-2xl lg:max-w-3xl space-y-1.5"
         style={{
+          // Add top margin to create space from selected items window
+          marginTop: selectedItems.length > 0 ? '12px' : '8px',
+          paddingTop: '8px',
+          paddingBottom: '8px',
           // Reduced horizontal padding by 20% + additional 15% = 32% total reduction (0.8 * 0.85 = 0.68)
           // Mobile: 16px * 0.68 = 10.88px, Tablet: 24px * 0.68 = 16.32px, Desktop: 40px * 0.68 = 27.2px
           paddingLeft: deviceInfo.isMobile 
