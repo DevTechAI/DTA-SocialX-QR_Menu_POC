@@ -36,6 +36,15 @@ export default function SocialXMenuApp() {
   useEffect(() => {
     setMounted(true);
     
+    // Check if we just refreshed - if so, mark as refreshed to prevent loop
+    const refreshKey = 'menuPageAutoRefreshed';
+    const wasRefreshed = sessionStorage.getItem(refreshKey);
+    if (wasRefreshed === 'true') {
+      // Page was refreshed, clear the flag so it doesn't refresh again
+      // But keep a marker that refresh happened in this session
+      sessionStorage.setItem('menuPageRefreshedComplete', 'true');
+    }
+    
     // Restore state from localStorage
     const savedName = localStorage.getItem('customerName');
     const savedView = localStorage.getItem('currentView') as ViewState;
@@ -45,7 +54,6 @@ export default function SocialXMenuApp() {
     const savedOrderId = localStorage.getItem('orderId');
     
     if (savedName) setCustomerName(savedName);
-    if (savedView) setCurrentView(savedView);
     if (savedItems) {
       try {
         setSelectedItems(JSON.parse(savedItems));
@@ -55,6 +63,8 @@ export default function SocialXMenuApp() {
     }
     if (savedOrderPlaced === 'true' && savedView === 'orderPlaced') {
       setCurrentView('orderPlaced');
+    } else if (savedView) {
+      setCurrentView(savedView);
     }
     if (savedOrderStatus) {
       setOrderStatus(savedOrderStatus as any);
@@ -101,21 +111,30 @@ export default function SocialXMenuApp() {
 
   // Auto-refresh once when menu page loads for better header fit
   useEffect(() => {
-    if (currentView === 'menu') {
-      const hasRefreshed = sessionStorage.getItem('menuPageRefreshed');
-      if (!hasRefreshed) {
-        sessionStorage.setItem('menuPageRefreshed', 'true');
-        // Small delay to ensure state is set, then refresh
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
-        return;
+    if (currentView === 'menu' && mounted) {
+      const refreshKey = 'menuPageAutoRefreshed';
+      const refreshComplete = sessionStorage.getItem('menuPageRefreshedComplete');
+      const hasRefreshed = sessionStorage.getItem(refreshKey);
+      
+      // Only refresh if:
+      // 1. We haven't set the refresh flag yet
+      // 2. AND we haven't completed a refresh in this session
+      if (!hasRefreshed && !refreshComplete) {
+        // Set flag immediately to prevent multiple refreshes
+        sessionStorage.setItem(refreshKey, 'true');
+        
+        // Small delay to ensure everything is ready, then refresh
+        const timeoutId = setTimeout(() => {
+          // Final check before refreshing
+          if (sessionStorage.getItem(refreshKey) === 'true') {
+            window.location.reload();
+          }
+        }, 150);
+        
+        return () => clearTimeout(timeoutId);
       }
-    } else {
-      // Clear refresh flag when leaving menu view
-      sessionStorage.removeItem('menuPageRefreshed');
     }
-  }, [currentView]);
+  }, [currentView, mounted]);
 
   // Set body data attribute for CSS targeting and reset zoom/scroll
   useEffect(() => {
