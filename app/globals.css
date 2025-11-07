@@ -21,6 +21,9 @@ html, body {
   box-sizing: border-box;
   /* Prevent zoom on input focus - ensure inputs are at least 16px */
   touch-action: pan-y pinch-zoom;
+  /* Support safe area insets for mobile browsers */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Ensure inputs don't trigger zoom on iOS */
