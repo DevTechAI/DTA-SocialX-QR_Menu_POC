@@ -36,15 +36,6 @@ export default function SocialXMenuApp() {
   useEffect(() => {
     setMounted(true);
     
-    // Check if we just refreshed - if so, mark as refreshed to prevent loop
-    const refreshKey = 'menuPageAutoRefreshed';
-    const wasRefreshed = sessionStorage.getItem(refreshKey);
-    if (wasRefreshed === 'true') {
-      // Page was refreshed, clear the flag so it doesn't refresh again
-      // But keep a marker that refresh happened in this session
-      sessionStorage.setItem('menuPageRefreshedComplete', 'true');
-    }
-    
     // Restore state from localStorage
     const savedName = localStorage.getItem('customerName');
     const savedView = localStorage.getItem('currentView') as ViewState;
@@ -109,30 +100,31 @@ export default function SocialXMenuApp() {
     }
   }, [currentView]);
 
-  // Auto-refresh once when menu page loads for better header fit
+  // Auto-refresh once every time menu page is reached for better header fit
   useEffect(() => {
     if (currentView === 'menu' && mounted) {
       const refreshKey = 'menuPageAutoRefreshed';
-      const refreshComplete = sessionStorage.getItem('menuPageRefreshedComplete');
-      const hasRefreshed = sessionStorage.getItem(refreshKey);
+      const wasRefreshed = sessionStorage.getItem(refreshKey);
       
-      // Only refresh if:
-      // 1. We haven't set the refresh flag yet
-      // 2. AND we haven't completed a refresh in this session
-      if (!hasRefreshed && !refreshComplete) {
-        // Set flag immediately to prevent multiple refreshes
-        sessionStorage.setItem(refreshKey, 'true');
-        
-        // Small delay to ensure everything is ready, then refresh
-        const timeoutId = setTimeout(() => {
-          // Final check before refreshing
-          if (sessionStorage.getItem(refreshKey) === 'true') {
-            window.location.reload();
-          }
-        }, 150);
-        
-        return () => clearTimeout(timeoutId);
+      // If flag exists, it means we just refreshed - clear it for next time
+      if (wasRefreshed === 'true') {
+        sessionStorage.removeItem(refreshKey);
+        return;
       }
+      
+      // No flag means we navigated to menu (not from refresh) - refresh once
+      // Set flag immediately to prevent multiple refreshes
+      sessionStorage.setItem(refreshKey, 'true');
+      
+      // Small delay to ensure everything is ready, then refresh
+      const timeoutId = setTimeout(() => {
+        // Final check before refreshing
+        if (sessionStorage.getItem(refreshKey) === 'true') {
+          window.location.reload();
+        }
+      }, 150);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [currentView, mounted]);
 
@@ -260,10 +252,15 @@ export default function SocialXMenuApp() {
   };
 
   const navigateBack = () => {
+    // If we have navigation history, use it
     if (navigationHistory.length > 0) {
       const previousView = navigationHistory[navigationHistory.length - 1];
       setNavigationHistory(prev => prev.slice(0, -1));
       setCurrentView(previousView);
+    } else {
+      // Fallback: if no history, go to nameEntry (welcome page)
+      // This handles cases where navigationHistory might be empty
+      setCurrentView('nameEntry');
     }
   };
 
@@ -301,6 +298,7 @@ export default function SocialXMenuApp() {
       setExpandedCategories([]);
       
       // Navigate immediately - zoom reset will be handled in useEffect
+      // Refresh will happen automatically when menu view loads
       navigateToView('menu');
       
       // Restore viewport after navigation
@@ -347,6 +345,10 @@ export default function SocialXMenuApp() {
       }
       return prev.filter(i => i.item.id !== itemId);
     });
+  };
+
+  const removeItemCompletely = (itemId: string) => {
+    setSelectedItems(prev => prev.filter(i => i.item.id !== itemId));
   };
 
   const getTotalAmount = () => {
@@ -763,12 +765,12 @@ export default function SocialXMenuApp() {
                           )}
                           
                           {/* Item name */}
-                          <div className="flex-1">
-                            <h4 className="font-bold text-gray-800">{item.name}</h4>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-gray-800 truncate">{item.name}</h4>
                           </div>
                           
-                          {/* Quantity only */}
-                          <div className="text-right">
+                          {/* Quantity */}
+                          <div className="text-right flex-shrink-0">
                             <p className="text-lg font-bold text-primary-600">× {quantity}</p>
                           </div>
                         </div>
@@ -837,8 +839,17 @@ export default function SocialXMenuApp() {
     >
       {/* Back Button - Left Arrow (to Name Entry) - Mid Screen */}
       <button
-        onClick={navigateBack}
-        className="fixed top-1/2 left-2 md:left-4 -translate-y-1/2 z-[60] group/back"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          navigateBack();
+        }}
+        className="fixed top-1/2 left-2 md:left-4 -translate-y-1/2 z-[60] group/back touch-manipulation"
+        style={{ 
+          WebkitTapHighlightColor: 'transparent',
+          touchAction: 'manipulation',
+        }}
+        aria-label="Go back to welcome page"
       >
         <div className="relative transition-all active:scale-90 hover:scale-110">
           {/* Glossy orange arrow with border */}
@@ -1054,15 +1065,32 @@ export default function SocialXMenuApp() {
 
       {/* Expandable Category Accordion - Mobile Container */}
       <div 
-        className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-2 md:py-3 pb-4 space-y-1.5 flex-1"
+        className="w-full md:max-w-2xl lg:max-w-3xl py-2 md:py-3 space-y-1.5 flex-1"
         style={{
-          // Calculate max height: viewport height - header height (approx 140px) - margins
-          // Only show scrollbar when content exceeds this height
-          maxHeight: 'calc(100vh - 160px)',
+          // Reduced horizontal padding by 20% from both sides
+          // Mobile: 16px * 0.8 = 12.8px, Tablet: 24px * 0.8 = 19.2px, Desktop: 40px * 0.8 = 32px
+          paddingLeft: deviceInfo.isMobile 
+            ? 'calc(1rem * 0.8)' // 12.8px (20% less than 16px)
+            : deviceInfo.screenWidth >= 1024
+            ? 'calc(2.5rem * 0.8)' // 32px (20% less than 40px)
+            : 'calc(1.5rem * 0.8)', // 19.2px (20% less than 24px)
+          paddingRight: deviceInfo.isMobile 
+            ? 'calc(1rem * 0.8)' // 12.8px (20% less than 16px)
+            : deviceInfo.screenWidth >= 1024
+            ? 'calc(2.5rem * 0.8)' // 32px (20% less than 40px)
+            : 'calc(1.5rem * 0.8)', // 19.2px (20% less than 24px)
+          // Calculate max height: viewport height - header height (approx 140px) - footer height (reduced by 50%, now ~30-40px) - selected items section (184px when visible) - margins
+          // Footer height reduced by 50%: approximately 30-40px now
+          // Selected items section: header (40px) + content (144px) = 184px
+          maxHeight: selectedItems.length > 0 
+            ? 'calc(100vh - 160px - 40px - 184px)' // Account for header, footer (reduced), and selected items section
+            : 'calc(100vh - 160px - 40px)', // Account for header and footer (reduced)
           minHeight: 0, // Allow flex shrinking
           overflowY: 'auto',
           overflowX: 'hidden',
           WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+          paddingBottom: selectedItems.length > 0 ? '180px' : '60px', // Add padding for footer (reduced) + selected items when visible
+          transition: 'padding-bottom 0.3s ease-in-out, max-height 0.3s ease-in-out, padding-left 0.3s ease-in-out, padding-right 0.3s ease-in-out',
         }}
       >
         {categories.map(category => {
@@ -1085,7 +1113,7 @@ export default function SocialXMenuApp() {
                   <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-orange-50/80 backdrop-blur-xl"></div>
                   
                   {/* Content */}
-                  <div className="relative z-10 px-5 py-3 flex items-center justify-between">
+                  <div className="relative z-10 py-3 flex items-center justify-between" style={{ paddingLeft: 'calc(1.25rem * 0.8)', paddingRight: 'calc(1.25rem * 0.8)' }}>
                     <span className="text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
                       {category}
                     </span>
@@ -1105,7 +1133,7 @@ export default function SocialXMenuApp() {
 
               {/* Expanded Menu Items */}
               {isExpanded && (
-                <div className="mt-1.5 space-y-1.5 pl-1">
+                <div className="mt-1.5 space-y-1.5" style={{ paddingLeft: 'calc(0.25rem * 0.8)' }}>
                   {categoryItems.map(item => {
                     const selectedItem = selectedItems.find(i => i.item.id === item.id);
                     const quantity = selectedItem?.quantity || 0;
@@ -1143,8 +1171,18 @@ export default function SocialXMenuApp() {
                                   <h3 className="text-sm font-bold text-gray-800 truncate">{item.name}</h3>
                                   {quantity === 0 ? (
                                     <button
-                                      onClick={() => addItem(item)}
-                                      className="flex-shrink-0 px-3 py-1.5 text-xs rounded-lg font-bold transition-all shadow-sm hover:shadow-soft active:scale-95 bg-gradient-to-r from-primary-500 to-accent-500 text-white"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        addItem(item);
+                                      }}
+                                      className="flex-shrink-0 py-1.5 text-xs rounded-lg font-bold transition-all shadow-sm hover:shadow-soft active:scale-95 bg-gradient-to-r from-primary-500 to-accent-500 text-white touch-manipulation min-w-[72px]"
+                                      style={{
+                                        WebkitTapHighlightColor: 'transparent',
+                                        touchAction: 'manipulation',
+                                        paddingLeft: '1.2rem', // 19.2px - 20% more than previous 16px (1rem)
+                                        paddingRight: '1.2rem', // 19.2px - 20% more than previous 16px (1rem)
+                                      }}
                                     >
                                       Add
                                     </button>
@@ -1186,8 +1224,123 @@ export default function SocialXMenuApp() {
         })}
       </div>
 
+      {/* Selected Items Section - Fixed Above Footer */}
+      {selectedItems.length > 0 && (
+        <div 
+          className="fixed left-0 right-0 z-30" 
+          style={{ 
+            // Position above footer - footer height reduced by 50% (now using 0.91 multiplier)
+            bottom: deviceInfo.isMobile 
+              ? deviceInfo.screenWidth <= 375 
+                ? 'calc(calc(0.625rem * 0.91) * 2 + env(safe-area-inset-bottom, 0px))' // Footer height (reduced by 50%) + safe area
+                : deviceInfo.screenWidth <= 428
+                ? 'calc(calc(0.75rem * 0.91) * 2 + env(safe-area-inset-bottom, 0px))'
+                : 'calc(calc(0.875rem * 0.91) * 2 + env(safe-area-inset-bottom, 0px))'
+              : 'calc(calc(1.5rem * 0.91) * 2 + env(safe-area-inset-bottom, 0px))',
+          }}
+        >
+          <div className="w-full md:max-w-2xl lg:max-w-3xl mx-auto px-4 md:px-6">
+            <div className="bg-white/95 backdrop-blur-xl rounded-t-2xl shadow-2xl border-t-2 border-x-2 border-primary-200/50 overflow-hidden">
+              {/* Header */}
+              <div className="px-4 py-2 border-b border-primary-100 flex-shrink-0">
+                <h3 className="text-sm font-bold text-gray-700">Selected Items ({selectedItems.reduce((sum, { quantity }) => sum + quantity, 0)})</h3>
+              </div>
+              
+              {/* Scrollable Items List - Max 2 items visible */}
+              <div 
+                className="px-4 py-2 space-y-2"
+                style={{
+                  maxHeight: 'calc(2 * (64px + 8px))', // 2 items (64px each + 8px gap) = 144px
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  WebkitOverflowScrolling: 'touch',
+                }}
+              >
+                {selectedItems.map(({ item, quantity }) => (
+                  <div key={item.id} className="flex items-center gap-3 bg-gradient-to-br from-white via-white to-orange-50/60 p-3 rounded-xl border border-primary-100 shadow-sm">
+                    {/* Icon */}
+                    {item.icon && (
+                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100">
+                        {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
+                          <Image 
+                            src={item.icon} 
+                            alt={item.name}
+                            width={24}
+                            height={24}
+                            className="object-contain"
+                          />
+                        ) : (
+                          <span className="text-base">{item.icon}</span>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Item name */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-gray-800 truncate text-sm">{item.name}</h4>
+                      <p className="text-xs text-gray-500">₹{item.price} × {quantity}</p>
+                    </div>
+                    
+                    {/* Quantity controls */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          removeItem(item.id);
+                        }}
+                        className="w-6 h-6 rounded-lg bg-gradient-to-br from-red-500 to-red-600 text-white font-bold shadow-sm hover:shadow-soft transition-all active:scale-95 flex items-center justify-center text-sm touch-manipulation"
+                        style={{
+                          WebkitTapHighlightColor: 'transparent',
+                          touchAction: 'manipulation',
+                        }}
+                        aria-label={`Decrease ${item.name}`}
+                      >
+                        −
+                      </button>
+                      <span className="min-w-[30px] text-center px-2 py-0.5 bg-gradient-to-br from-primary-50 to-accent-50 rounded-lg font-bold text-primary-600 border border-primary-200 text-sm">
+                        {quantity}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          addItem(item);
+                        }}
+                        className="w-6 h-6 rounded-lg bg-gradient-to-br from-green-500 to-green-600 text-white font-bold shadow-sm hover:shadow-soft transition-all active:scale-95 flex items-center justify-center text-sm touch-manipulation"
+                        style={{
+                          WebkitTapHighlightColor: 'transparent',
+                          touchAction: 'manipulation',
+                        }}
+                        aria-label={`Increase ${item.name}`}
+                      >
+                        +
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          removeItemCompletely(item.id);
+                        }}
+                        className="w-6 h-6 rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white font-bold shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center justify-center text-xs touch-manipulation ml-1"
+                        style={{
+                          WebkitTapHighlightColor: 'transparent',
+                          touchAction: 'manipulation',
+                        }}
+                        aria-label={`Remove ${item.name}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Footer with Inverted Header Vector - Mobile Container */}
+      {/* Footer with Inverted Header Vector - Mobile Container - Always at Bottom */}
       <footer className="fixed bottom-0 left-0 right-0 z-20">
         <div className="w-full md:max-w-2xl lg:max-w-3xl mx-auto shadow-soft-lg relative overflow-hidden gradient-primary rounded-t-2xl" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           {/* Content Layer with Banner Background - Inverted */}
@@ -1199,21 +1352,21 @@ export default function SocialXMenuApp() {
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
               transform: 'scaleY(-1)', // Invert vertically
-              // Increase height by 40% + 30% more = 82% total increase (1.4 * 1.3 = 1.82)
+              // Reduced by 50%: original 1.82 multiplier becomes 0.91 (1.82 * 0.5 = 0.91)
               paddingTop: deviceInfo.isMobile 
                 ? deviceInfo.screenWidth <= 375 
-                  ? 'calc(0.625rem * 1.82)' // py-2.5 * 1.82 = 18.2px
+                  ? 'calc(0.625rem * 0.91)' // py-2.5 * 0.91 = 9.1px (50% of 18.2px)
                   : deviceInfo.screenWidth <= 428
-                  ? 'calc(0.75rem * 1.82)' // py-3 * 1.82 = 21.84px
-                  : 'calc(0.875rem * 1.82)' // py-3.5 * 1.82 = 25.48px
-                : 'calc(1.5rem * 1.82)', // md:py-6 * 1.82 = 43.68px
+                  ? 'calc(0.75rem * 0.91)' // py-3 * 0.91 = 10.92px (50% of 21.84px)
+                  : 'calc(0.875rem * 0.91)' // py-3.5 * 0.91 = 12.74px (50% of 25.48px)
+                : 'calc(1.5rem * 0.91)', // md:py-6 * 0.91 = 21.84px (50% of 43.68px)
               paddingBottom: deviceInfo.isMobile 
                 ? deviceInfo.screenWidth <= 375 
-                  ? 'calc(0.625rem * 1.82)' // py-2.5 * 1.82 = 18.2px
+                  ? 'calc(0.625rem * 0.91)' // py-2.5 * 0.91 = 9.1px (50% of 18.2px)
                   : deviceInfo.screenWidth <= 428
-                  ? 'calc(0.75rem * 1.82)' // py-3 * 1.82 = 21.84px
-                  : 'calc(0.875rem * 1.82)' // py-3.5 * 1.82 = 25.48px
-                : 'calc(1.5rem * 1.82)', // md:py-6 * 1.82 = 43.68px
+                  ? 'calc(0.75rem * 0.91)' // py-3 * 0.91 = 10.92px (50% of 21.84px)
+                  : 'calc(0.875rem * 0.91)' // py-3.5 * 0.91 = 12.74px (50% of 25.48px)
+                : 'calc(1.5rem * 0.91)', // md:py-6 * 0.91 = 21.84px (50% of 43.68px)
             }}
           >
             {/* Fogged Glossy Overlay - Extremely light tint */}
