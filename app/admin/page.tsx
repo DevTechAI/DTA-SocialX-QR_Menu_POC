@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase/client';
+import Link from 'next/link';
 
 interface OrderItem {
   menu_item_id: string;
@@ -55,12 +58,18 @@ const statusConfig = {
 };
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [isItemMetricsExpanded, setIsItemMetricsExpanded] = useState(false);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [amountView, setAmountView] = useState<'ordered' | 'settled'>('settled');
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/auth/signin');
+  };
 
   useEffect(() => {
     fetchOrders();
@@ -223,8 +232,23 @@ export default function AdminDashboard() {
                 <p className="text-white text-base md:text-lg mt-2 font-bold drop-shadow-lg">SocialX Community Café - Order Management</p>
               </div>
               
-              {/* Right side - Date and Time */}
+              {/* Right side - Date and Time + Actions */}
               <div className="flex-1 flex flex-col items-end gap-2">
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/admin/menu"
+                    className="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-lg border border-white/30 hover:bg-white/30 transition-colors font-semibold text-sm"
+                  >
+                    📝 Menu Editor
+                  </Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-lg border border-white/30 hover:bg-white/30 transition-colors font-semibold text-sm"
+                  >
+                    Sign Out
+                  </button>
+                </div>
                 {/* Date and Time */}
                 <div className="flex items-center gap-3 bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30">
                   <span className="text-white font-bold text-sm md:text-base">
