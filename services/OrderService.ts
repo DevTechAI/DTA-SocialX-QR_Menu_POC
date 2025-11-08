@@ -114,6 +114,25 @@ export class OrderService {
     if (error) throw new Error(`Failed to delete order: ${error.message}`);
   }
 
+  async deleteAllOrders(): Promise<void> {
+    // Delete all orders by selecting all IDs first, then deleting them
+    const { data: allOrders, error: fetchError } = await this.supabase
+      .from('orders')
+      .select('id');
+
+    if (fetchError) throw new Error(`Failed to fetch orders: ${fetchError.message}`);
+
+    if (allOrders && allOrders.length > 0) {
+      const ids = allOrders.map(order => order.id);
+      const { error } = await this.supabase
+        .from('orders')
+        .delete()
+        .in('id', ids);
+
+      if (error) throw new Error(`Failed to delete all orders: ${error.message}`);
+    }
+  }
+
   async getOrderHistory(customerName?: string): Promise<Order[]> {
     let query = this.supabase
       .from('orders')

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OrderService } from '@/services/OrderService';
-import { getMockOrders, addMockOrder } from '@/lib/mock/orders';
+import { AuthService } from '@/services/AuthService';
+import { getMockOrders, addMockOrder, clearMockOrders } from '@/lib/mock/orders';
 
 export async function GET(request: NextRequest) {
   try {
@@ -107,6 +108,39 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    // Check if Supabase is configured
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    // Require manager role for deleting all orders
+    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
+      // For mock data, just clear it
+      console.log('🗑️ Clearing all mock orders');
+      clearMockOrders();
+      return NextResponse.json({ success: true, message: 'All orders cleared' });
+    }
+
+    const authService = new AuthService();
+    await authService.requireRole('manager');
+
+    const orderService = new OrderService();
+    await orderService.deleteAllOrders();
+
+    return NextResponse.json({ success: true, message: 'All orders cleared' });
+  } catch (error: any) {
+    if (error.message.includes('Unauthorized')) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    console.error('Error deleting all orders:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to delete all orders' },
       { status: 500 }
     );
   }

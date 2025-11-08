@@ -81,6 +81,42 @@ export default function AdminDashboard() {
     setAuthChecked(true);
   };
 
+  const handleClearAllOrders = async () => {
+    const confirmed = window.confirm(
+      '⚠️ Are you sure you want to clear ALL orders?\n\n' +
+      'This will reset:\n' +
+      '• Total Order Value\n' +
+      '• Number of Orders\n' +
+      '• Amount Settled\n' +
+      '• All orders in the dashboard\n' +
+      '• Item-wise metrics\n\n' +
+      'This action cannot be undone!'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      const response = await fetch('/api/orders', {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to clear orders');
+      }
+
+      // Refresh orders after clearing
+      await fetchOrders();
+      alert('✅ All orders have been cleared successfully!');
+    } catch (error: any) {
+      console.error('Error clearing orders:', error);
+      alert(`❌ Failed to clear orders: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Check authentication on mount
   useEffect(() => {
     // Check if bypass is enabled
@@ -320,7 +356,14 @@ export default function AdminDashboard() {
               {/* Right side - Date and Time + Actions */}
               <div className="flex-1 flex flex-col items-end gap-2">
                 {/* Action Buttons */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={handleClearAllOrders}
+                    className="px-4 py-2 bg-red-500/80 backdrop-blur-md text-white rounded-lg border border-red-400/50 hover:bg-red-600/90 transition-colors font-semibold text-sm shadow-lg"
+                    title="Clear all orders and reset statistics"
+                  >
+                    🗑️ Clear All
+                  </button>
                   <Link
                     href="/admin/menu"
                     className="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-lg border border-white/30 hover:bg-white/30 transition-colors font-semibold text-sm"
