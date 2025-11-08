@@ -1065,11 +1065,16 @@ export default function SocialXMenuApp() {
               className="relative px-4 py-2 md:px-5 md:py-2.5 rounded-xl font-bold text-sm md:text-base transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group/order active:scale-95 border-2 border-primary-300"
               style={{
                 boxShadow: selectedItems.length > 0 
-                  ? '0 4px 20px rgba(249, 115, 22, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2)' 
+                  ? '0 4px 20px rgba(168, 85, 247, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2)' 
                   : '0 2px 10px rgba(0, 0, 0, 0.2)',
               }}
             >
-              <div className="absolute inset-0 gradient-primary group-hover/order:opacity-90 transition-all"></div>
+              <div 
+                className="absolute inset-0 group-hover/order:opacity-90 transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)'
+                }}
+              ></div>
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent"></div>
               <span className="relative z-10 text-white flex items-center gap-1.5 font-extrabold drop-shadow-lg" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
                 <span className="text-base md:text-lg">🍽️</span>
@@ -1231,8 +1236,17 @@ export default function SocialXMenuApp() {
                 onClick={() => toggleCategory(category)}
                 className="w-full relative group/header"
               >
-                {/* Glowing border effect */}
-                <div className="absolute -inset-0.5 gradient-primary rounded-xl opacity-0 group-hover/header:opacity-75 blur-sm transition duration-300"></div>
+                {/* Glowing border effect - Purple/Violet on hover and when expanded */}
+                <div 
+                  className={`absolute -inset-0.5 rounded-xl blur-sm transition duration-300 ${
+                    isExpanded 
+                      ? 'opacity-100' 
+                      : 'opacity-0 group-hover/header:opacity-100'
+                  }`}
+                  style={{
+                    background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)'
+                  }}
+                ></div>
                 
                 {/* Main header bar */}
                 <div className="relative rounded-xl overflow-hidden shadow-soft hover:shadow-soft-lg transition-all duration-300">
@@ -1241,11 +1255,11 @@ export default function SocialXMenuApp() {
                   
                   {/* Content */}
                   <div className="relative z-10 py-3 flex items-center justify-between" style={{ paddingLeft: 'calc(1.25rem * 0.68)', paddingRight: 'calc(1.25rem * 0.68)' }}>
-                    <span className="text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
+                    <span className="text-lg font-bold text-orange-600">
                       {category}
                     </span>
                     <svg
-                      className={`w-5 h-5 text-primary-600 transition-transform duration-300 ${
+                      className={`w-5 h-5 text-orange-600 transition-transform duration-300 ${
                         isExpanded ? 'rotate-180' : ''
                       }`}
                       fill="none"
@@ -1319,8 +1333,9 @@ export default function SocialXMenuApp() {
                                         e.stopPropagation();
                                         addItem(item);
                                       }}
-                                      className="flex-shrink-0 py-1.5 text-xs rounded-lg font-bold transition-all shadow-sm hover:shadow-soft active:scale-95 bg-gradient-to-r from-primary-500 to-accent-500 text-white touch-manipulation min-w-[72px]"
+                                      className="flex-shrink-0 py-1.5 text-xs rounded-lg font-bold transition-all shadow-sm hover:shadow-soft active:scale-95 text-white touch-manipulation min-w-[72px]"
                                       style={{
+                                        background: 'linear-gradient(135deg, #f97316 0%, #fb923c 100%)',
                                         WebkitTapHighlightColor: 'transparent',
                                         touchAction: 'manipulation',
                                         paddingLeft: '1.2rem', // 19.2px - 20% more than previous 16px (1rem)
