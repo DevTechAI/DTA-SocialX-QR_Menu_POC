@@ -9,9 +9,11 @@ export default function AuthErrorPage() {
   useEffect(() => {
     // Get error details from sessionStorage
     const errorStr = sessionStorage.getItem('auth_error');
+    let parsedError: any = null;
+    
     if (errorStr) {
       try {
-        setErrorDetails(JSON.parse(errorStr));
+        parsedError = JSON.parse(errorStr);
         sessionStorage.removeItem('auth_error');
       } catch (e) {
         console.error('Error parsing error details:', e);
@@ -21,7 +23,10 @@ export default function AuthErrorPage() {
     // Also check URL params for error message
     const urlParams = new URLSearchParams(window.location.search);
     const errorParam = urlParams.get('error');
-    if (errorParam && !errorDetails) {
+    
+    if (parsedError) {
+      setErrorDetails(parsedError);
+    } else if (errorParam) {
       setErrorDetails({
         message: decodeURIComponent(errorParam),
         fromUrl: true

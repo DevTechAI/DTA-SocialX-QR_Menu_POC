@@ -53,9 +53,11 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  let status: string | undefined;
+  
   try {
     const body = await request.json();
-    const { status } = body;
+    status = body.status;
 
     if (!status) {
       return NextResponse.json(
@@ -94,15 +96,17 @@ export async function PATCH(
     return NextResponse.json(order);
   } catch (error: any) {
     console.error('Error updating order:', error);
-    // Fallback to mock data
-    const updatedOrder = updateMockOrderStatus(params.id, body.status);
-    if (!updatedOrder) {
-      return NextResponse.json(
-        { error: error.message || 'Internal server error' },
-        { status: 500 }
-      );
+    // Fallback to mock data only if we have a status
+    if (status) {
+      const updatedOrder = updateMockOrderStatus(params.id, status);
+      if (updatedOrder) {
+        return NextResponse.json(updatedOrder);
+      }
     }
-    return NextResponse.json(updatedOrder);
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
