@@ -71,12 +71,16 @@ export default function AdminDashboard() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     localStorage.removeItem('admin_bypass');
+    // Clear bypass cookie
+    document.cookie = 'admin_bypass=; path=/; max-age=0';
     router.push('/auth/signin');
   };
 
   const handleBypassLogin = () => {
     console.log('⚠️ Bypassing authentication (development mode)');
+    // Set both localStorage and cookie for middleware to check
     localStorage.setItem('admin_bypass', 'true');
+    document.cookie = 'admin_bypass=true; path=/; max-age=86400'; // 24 hours
     setBypassAuth(true);
     setAuthChecked(true);
   };
@@ -119,8 +123,15 @@ export default function AdminDashboard() {
 
   // Check authentication on mount
   useEffect(() => {
-    // Check if bypass is enabled
-    const bypassEnabled = localStorage.getItem('admin_bypass') === 'true';
+    // Check if bypass is enabled (check both localStorage and cookie)
+    const bypassEnabled = localStorage.getItem('admin_bypass') === 'true' || 
+                         document.cookie.includes('admin_bypass=true');
+    
+    // Also set cookie if localStorage has it but cookie doesn't
+    if (localStorage.getItem('admin_bypass') === 'true' && !document.cookie.includes('admin_bypass=true')) {
+      document.cookie = 'admin_bypass=true; path=/; max-age=86400';
+    }
+    
     if (bypassEnabled) {
       console.log('⚠️ Bypass mode enabled');
       setBypassAuth(true);

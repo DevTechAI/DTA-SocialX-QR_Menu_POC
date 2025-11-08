@@ -29,6 +29,15 @@ export async function middleware(request: NextRequest) {
 
   // Protect admin routes
   if (pathname.startsWith('/admin')) {
+    // Check for bypass cookie (only if enabled via environment variable)
+    const bypassCookie = request.cookies.get('admin_bypass');
+    const allowBypass = process.env.ALLOW_ADMIN_BYPASS === 'true' || process.env.NODE_ENV === 'development';
+    
+    if (allowBypass && bypassCookie?.value === 'true') {
+      console.log('🛡️ ⚠️ Bypass mode enabled');
+      return NextResponse.next();
+    }
+
     const supabase = createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
 
