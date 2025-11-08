@@ -91,14 +91,22 @@ export async function PATCH(
       return NextResponse.json(updatedOrder);
     }
 
-    // Require manager role for updating orders
-    try {
-      const authService = new AuthService();
-      await authService.requireRole('manager');
-    } catch (authError: any) {
-      if (authError.message.includes('Unauthorized')) {
-        return NextResponse.json({ error: authError.message }, { status: 401 });
+    // Check for bypass cookie (same logic as middleware)
+    const bypassCookie = request.cookies.get('admin_bypass');
+    const allowBypass = process.env.ALLOW_ADMIN_BYPASS === 'true' || process.env.NODE_ENV === 'development';
+    
+    // Require manager role for updating orders (unless bypassed)
+    if (!(allowBypass && bypassCookie?.value === 'true')) {
+      try {
+        const authService = new AuthService();
+        await authService.requireRole('manager');
+      } catch (authError: any) {
+        if (authError.message.includes('Unauthorized')) {
+          return NextResponse.json({ error: authError.message }, { status: 401 });
+        }
       }
+    } else {
+      console.log('✏️ ⚠️ Bypass mode enabled - updating order status');
     }
 
     const orderService = new OrderService();
@@ -137,8 +145,17 @@ export async function DELETE(
       );
     }
 
-    const authService = new AuthService();
-    await authService.requireRole('manager');
+    // Check for bypass cookie (same logic as middleware)
+    const bypassCookie = request.cookies.get('admin_bypass');
+    const allowBypass = process.env.ALLOW_ADMIN_BYPASS === 'true' || process.env.NODE_ENV === 'development';
+    
+    // Require manager role for deleting orders (unless bypassed)
+    if (!(allowBypass && bypassCookie?.value === 'true')) {
+      const authService = new AuthService();
+      await authService.requireRole('manager');
+    } else {
+      console.log('🗑️ ⚠️ Bypass mode enabled - deleting order');
+    }
 
     const orderService = new OrderService();
     await orderService.deleteOrder(params.id);

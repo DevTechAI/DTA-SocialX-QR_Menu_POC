@@ -119,14 +119,25 @@ export async function DELETE(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     
-    // Require manager role for deleting all orders
+    // For mock data, just clear it (no auth needed)
     if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
-      // For mock data, just clear it
       console.log('🗑️ Clearing all mock orders');
       clearMockOrders();
       return NextResponse.json({ success: true, message: 'All orders cleared' });
     }
 
+    // Check for bypass cookie (same logic as middleware)
+    const bypassCookie = request.cookies.get('admin_bypass');
+    const allowBypass = process.env.ALLOW_ADMIN_BYPASS === 'true' || process.env.NODE_ENV === 'development';
+    
+    if (allowBypass && bypassCookie?.value === 'true') {
+      console.log('🗑️ ⚠️ Bypass mode enabled - clearing all orders');
+      const orderService = new OrderService();
+      await orderService.deleteAllOrders();
+      return NextResponse.json({ success: true, message: 'All orders cleared' });
+    }
+
+    // Require manager role for deleting all orders (if not bypassed)
     const authService = new AuthService();
     await authService.requireRole('manager');
 

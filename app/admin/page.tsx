@@ -248,17 +248,27 @@ export default function AdminDashboard() {
   };
 
   // Calculate today's stats
-  const todayOrders = orders.filter(order => {
+  // Filter today's orders for stats (all orders, not limited)
+  const allTodayOrders = orders.filter(order => {
     const orderDate = new Date(order.created_at);
     const today = new Date();
     return orderDate.toDateString() === today.toDateString();
   });
 
-  const totalOrderValue = todayOrders.reduce((sum, order) => sum + order.total_amount, 0);
-  const numberOfOrders = todayOrders.length;
-  const amountSettled = todayOrders
+  // Calculate stats from all today's orders
+  const totalOrderValue = allTodayOrders.reduce((sum, order) => sum + order.total_amount, 0);
+  const numberOfOrders = allTodayOrders.length;
+  const amountSettled = allTodayOrders
     .filter(order => order.status === 'paid')
     .reduce((sum, order) => sum + order.total_amount, 0);
+
+  // Display orders: sort by created_at (oldest first) and limit to 20
+  const todayOrders = allTodayOrders
+    .sort((a, b) => {
+      // Sort by created_at ascending (oldest first)
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    })
+    .slice(0, 20); // Limit to 20 orders for display
 
   // Calculate item-wise metrics
   interface ItemMetrics {
@@ -273,7 +283,8 @@ export default function AdminDashboard() {
 
   const itemMetricsMap = new Map<string, ItemMetrics>();
 
-  todayOrders.forEach(order => {
+  // Calculate item metrics from all today's orders (not just displayed 20)
+  allTodayOrders.forEach(order => {
     order.items.forEach(item => {
       const key = item.menu_item_id || item.name;
       const existing = itemMetricsMap.get(key);
@@ -523,7 +534,14 @@ export default function AdminDashboard() {
             <span className="text-3xl md:text-4xl">📦</span>
             <span>Orders Dashboard</span>
           </h2>
-          <p className="text-gray-600 mt-2 text-sm md:text-base font-medium">Click on an order to expand and view details</p>
+          <p className="text-gray-600 mt-2 text-sm md:text-base font-medium">
+            Click on an order to expand and view details
+            {allTodayOrders.length > 20 && (
+              <span className="ml-2 text-orange-600 font-semibold">
+                (Showing first 20 orders, sorted by time - oldest first)
+              </span>
+            )}
+          </p>
         </div>
 
         {/* Empty State */}
