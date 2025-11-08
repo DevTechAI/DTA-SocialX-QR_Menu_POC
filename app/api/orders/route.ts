@@ -37,9 +37,17 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  let customer_name: string | undefined;
+  let items: any[] | undefined;
+  let total_amount: number | undefined;
+  let table_number: string | undefined;
+
   try {
     const body = await request.json();
-    const { customer_name, items, total_amount, table_number } = body;
+    customer_name = body.customer_name;
+    items = body.items;
+    total_amount = body.total_amount;
+    table_number = body.table_number;
 
     // Validate required fields
     if (!customer_name || !items || !total_amount) {
@@ -77,23 +85,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(order, { status: 201 });
   } catch (error: any) {
     console.error('Error creating order:', error);
-    // Fallback to mock data
-    const { addMockOrder } = await import('@/lib/mock/orders');
-    try {
-      const newOrder = addMockOrder({
-        customer_name: body.customer_name,
-        items: body.items,
-        total_amount: body.total_amount,
-        status: 'received',
-        table_number: body.table_number,
-      });
-      return NextResponse.json(newOrder, { status: 201 });
-    } catch {
-      return NextResponse.json(
-        { error: error.message || 'Internal server error' },
-        { status: 500 }
-      );
+    // Fallback to mock data only if we have the required fields
+    if (customer_name && items && total_amount) {
+      try {
+        const { addMockOrder } = await import('@/lib/mock/orders');
+        const newOrder = addMockOrder({
+          customer_name,
+          items,
+          total_amount,
+          status: 'received',
+          table_number,
+        });
+        return NextResponse.json(newOrder, { status: 201 });
+      } catch (fallbackError) {
+        // If fallback also fails, return error
+        return NextResponse.json(
+          { error: error.message || 'Internal server error' },
+          { status: 500 }
+        );
+      }
     }
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
