@@ -53,18 +53,29 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  let status: string | undefined;
+  let status: 'received' | 'delivered' | 'paid' | 'unpaid' | undefined;
   
   try {
     const body = await request.json();
-    status = body.status;
+    const statusValue = body.status;
 
-    if (!status) {
+    if (!statusValue) {
       return NextResponse.json(
         { error: 'Status is required' },
         { status: 400 }
       );
     }
+
+    // Validate status type
+    const validStatuses: ('received' | 'delivered' | 'paid' | 'unpaid')[] = ['received', 'delivered', 'paid', 'unpaid'];
+    if (!validStatuses.includes(statusValue)) {
+      return NextResponse.json(
+        { error: 'Invalid status. Must be one of: received, delivered, paid, unpaid' },
+        { status: 400 }
+      );
+    }
+
+    status = statusValue as 'received' | 'delivered' | 'paid' | 'unpaid';
 
     // Check if Supabase is configured
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
