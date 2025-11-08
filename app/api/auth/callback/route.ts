@@ -2,13 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const next = searchParams.get('next') ?? '/admin';
 
+  // Get the correct origin for redirects
+  // Priority: x-forwarded-host (production) > host header > origin
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const host = request.headers.get('host');
+  const protocol = request.headers.get('x-forwarded-proto') || 'https';
+  
+  let baseUrl: string;
+  if (forwardedHost) {
+    baseUrl = `${protocol}://${forwardedHost}`;
+  } else if (host) {
+    baseUrl = `${protocol}://${host}`;
+  } else {
+    const { origin } = new URL(request.url);
+    baseUrl = origin;
+  }
+
   if (!code) {
     console.error('❌ No code parameter in callback');
-    return NextResponse.redirect(`${origin}/auth/error`);
+    return NextResponse.redirect(`${baseUrl}/auth/error`);
   }
 
   try {
@@ -19,12 +35,12 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('❌ Code exchange error:', error);
       console.error('Error message:', error.message);
-      return NextResponse.redirect(`${origin}/auth/error?error=${encodeURIComponent(error.message)}`);
+      return NextResponse.redirect(`${baseUrl}/auth/error?error=${encodeURIComponent(error.message)}`);
     }
 
     if (!data?.user) {
       console.error('❌ No user data after code exchange');
-      return NextResponse.redirect(`${origin}/auth/error?error=no_user_data`);
+      return NextResponse.redirect(`${baseUrl}/auth/error?error=no_user_data`);
     }
 
     console.log('✅ User authenticated:', data.user.email);
@@ -53,25 +69,16 @@ export async function GET(request: NextRequest) {
       console.log('❌ User not authorized:', data.user.email);
       // User is not authorized, sign them out
       await supabase.auth.signOut();
-      return NextResponse.redirect(`${origin}/auth/unauthorized`);
+      return NextResponse.redirect(`${baseUrl}/auth/unauthorized`);
     }
 
     console.log('✅ User authorized with role:', authorizedEmail.role);
 
     // User is authorized, proceed to redirect
-    const forwardedHost = request.headers.get('x-forwarded-host');
-    const isLocalEnv = process.env.NODE_ENV === 'development';
-    
-    if (isLocalEnv) {
-      return NextResponse.redirect(`${origin}${next}`);
-    } else if (forwardedHost) {
-      return NextResponse.redirect(`https://${forwardedHost}${next}`);
-    } else {
-      return NextResponse.redirect(`${origin}${next}`);
-    }
+    return NextResponse.redirect(`${baseUrl}${next}`);
   } catch (err: any) {
     console.error('❌ Callback error:', err);
-    return NextResponse.redirect(`${origin}/auth/error?error=${encodeURIComponent(err.message || 'unknown_error')}`);
+    return NextResponse.redirect(`${baseUrl}/auth/error?error=${encodeURIComponent(err.message || 'unknown_error')}`);
   }
 }
 

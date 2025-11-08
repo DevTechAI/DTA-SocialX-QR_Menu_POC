@@ -33,12 +33,19 @@ If you want to enable Google sign-in, follow these steps:
    - **Client Secret (for OAuth)**: Paste your Google Client Secret
 6. Click **Save**
 
-### Step 3: Add Redirect URL
+### Step 3: Add Redirect URL (IMPORTANT FOR PRODUCTION)
 
 1. In Supabase, go to **Authentication** → **URL Configuration**
 2. Add to **Redirect URLs**:
    - `http://localhost:3000/auth/callback` (for development)
-   - `https://yourdomain.com/auth/callback` (for production)
+   - `https://yourdomain.com/auth/callback` (for production - **REPLACE with your actual domain**)
+   - `https://yourdomain.com/api/auth/callback` (if using API route directly)
+
+**⚠️ CRITICAL:** If you're deploying to production, you **MUST** add your production URL to the Redirect URLs list. If you only have `localhost:3000` configured, OAuth will redirect to localhost even in production!
+
+**Example for Vercel deployment:**
+- `https://your-app-name.vercel.app/auth/callback`
+- `https://your-custom-domain.com/auth/callback`
 
 ### Step 4: Test
 
@@ -60,6 +67,16 @@ If you want to enable Google sign-in, follow these steps:
 ### OAuth works but user not authorized
 - **Cause**: User's email not in `authorized_emails` table
 - **Solution**: Add the user's email to `authorized_emails` table with role `manager` or `superadmin`
+
+### OAuth redirects to localhost in production
+- **Cause**: Production URL not added to Supabase Redirect URLs
+- **Symptoms**: After Google sign-in, redirects to `http://localhost:3000/?code=...` even in production
+- **Solution**: 
+  1. Go to Supabase Dashboard → **Authentication** → **URL Configuration**
+  2. Add your production URL to **Redirect URLs**: `https://your-production-domain.com/auth/callback`
+  3. Make sure to replace `your-production-domain.com` with your actual domain
+  4. Save and try again
+- **Note**: The code already uses `window.location.origin` dynamically, but Supabase must have the production URL whitelisted
 
 ## Quick Fix: Disable Google Sign-In Button
 
