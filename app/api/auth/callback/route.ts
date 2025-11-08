@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -29,7 +29,55 @@ export async function GET(request: NextRequest) {
 
   try {
     console.log('🔐 Processing OAuth callback in API route...');
-    const supabase = createClient();
+    
+    // Create Supabase client with proper cookie handling for API routes
+    let response = NextResponse.next();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            request.cookies.set({
+              name,
+              value,
+              ...options,
+            });
+            response = NextResponse.next({
+              request: {
+                headers: request.headers,
+              },
+            });
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+            });
+          },
+          remove(name: string, options: CookieOptions) {
+            request.cookies.set({
+              name,
+              value: '',
+              ...options,
+            });
+            response = NextResponse.next({
+              request: {
+                headers: request.headers,
+              },
+            });
+            response.cookies.set({
+              name,
+              value: '',
+              ...options,
+            });
+          },
+        },
+      }
+    );
+    
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (error) {
@@ -83,10 +131,32 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('✅ Session verified, redirecting to:', `${baseUrl}${next}`);
+    console.log('📋 Redirect details:');
+    console.log('  - Base URL:', baseUrl);
+    console.log('  - Next path:', next);
+    console.log('  - Full URL:', `${baseUrl}${next}`);
+    console.log('  - User email:', verifiedUser.email);
 
     // User is authorized, proceed to redirect
-    // Use a 303 See Other redirect to ensure proper cookie handling
-    return NextResponse.redirect(`${baseUrl}${next}`, { status: 303 });
+    // Use the response object that has cookies set, and redirect
+    const redirectResponse = NextResponse.redirect(`${baseUrl}${next}`, { status: 303 });
+    
+    // Copy cookies from the session response to the redirect response
+    response.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, {
+        path: cookie.path || '/',
+        domain: cookie.domain,
+        sameSite: cookie.sameSite as any,
+        secure: cookie.secure,
+        httpOnly: cookie.httpOnly,
+        maxAge: cookie.maxAge,
+      });
+    });
+    
+    console.log('🍪 Setting redirect response with cookies');
+    console.log('🍪 Cookies being set:', response.cookies.getAll().map(c => c.name));
+    
+    return redirectResponse;
   } catch (err: any) {
     console.error('❌ Callback error:', err);
     return NextResponse.redirect(`${baseUrl}/auth/error?error=${encodeURIComponent(err.message || 'unknown_error')}`);

@@ -5,8 +5,9 @@ import { createClient } from '@/lib/supabase/server';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Allow auth callback route to pass through without checks
-  if (pathname.startsWith('/auth/callback')) {
+  // Allow auth callback routes to pass through without checks
+  if (pathname.startsWith('/auth/callback') || pathname.startsWith('/api/auth/callback')) {
+    console.log('🛡️ Allowing auth callback route:', pathname);
     return NextResponse.next();
   }
   
@@ -31,7 +32,13 @@ export async function middleware(request: NextRequest) {
     const supabase = createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
 
+    console.log('🛡️ Middleware: Checking admin route access');
+    console.log('🛡️ Path:', pathname);
+    console.log('🛡️ User:', user?.email || 'none');
+    console.log('🛡️ Error:', error?.message || 'none');
+
     if (error || !user) {
+      console.log('🛡️ ❌ No user found, redirecting to sign-in');
       return NextResponse.redirect(new URL('/auth/signin', request.url));
     }
 
@@ -42,9 +49,14 @@ export async function middleware(request: NextRequest) {
       .eq('email', user.email)
       .single();
 
+    console.log('🛡️ Authorized email check:', authorizedEmail?.role || 'not found');
+
     if (!authorizedEmail) {
+      console.log('🛡️ ❌ User not authorized, redirecting to unauthorized page');
       return NextResponse.redirect(new URL('/auth/unauthorized', request.url));
     }
+
+    console.log('🛡️ ✅ User authorized, allowing access to admin');
   }
 
   return response;

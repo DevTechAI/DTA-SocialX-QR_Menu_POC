@@ -76,36 +76,51 @@ export default function AdminDashboard() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        console.log('🔐 Admin page: Checking authentication...');
         const { data: { user }, error } = await supabase.auth.getUser();
         
+        console.log('🔐 Admin page: User check result');
+        console.log('  - User:', user?.email || 'none');
+        console.log('  - Error:', error?.message || 'none');
+        
         if (error || !user) {
-          console.log('❌ No authenticated user, redirecting to sign-in');
+          console.log('❌ Admin page: No authenticated user, redirecting to sign-in');
           router.push('/auth/signin');
           return;
         }
 
         // Check if user is authorized
-        const { data: authorizedEmail } = await supabase
+        console.log('🔐 Admin page: Checking authorization for:', user.email);
+        const { data: authorizedEmail, error: authError } = await supabase
           .from('authorized_emails')
           .select('role')
           .eq('email', user.email)
           .single();
 
+        console.log('🔐 Admin page: Authorization check result');
+        console.log('  - Authorized:', authorizedEmail?.role || 'not found');
+        console.log('  - Auth error:', authError?.message || 'none');
+
         if (!authorizedEmail) {
-          console.log('❌ User not authorized, redirecting to unauthorized page');
+          console.log('❌ Admin page: User not authorized, redirecting to unauthorized page');
           router.push('/auth/unauthorized');
           return;
         }
 
-        console.log('✅ User authenticated and authorized');
+        console.log('✅ Admin page: User authenticated and authorized with role:', authorizedEmail.role);
         setAuthChecked(true);
       } catch (err) {
-        console.error('Error checking auth:', err);
+        console.error('❌ Admin page: Error checking auth:', err);
         router.push('/auth/signin');
       }
     };
 
-    checkAuth();
+    // Add a small delay to ensure cookies are available after redirect
+    const timer = setTimeout(() => {
+      checkAuth();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [router]);
 
   useEffect(() => {
