@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { menuItems, categories, getMenuItemsByCategory, type MenuItem } from '@/lib/data/menu-items';
+import { type MenuItem } from '@/lib/data/menu-items';
 import { useDeviceDetection, getDevicePadding } from '@/hooks/useDeviceDetection';
 
 type ViewState = 'nameEntry' | 'menu' | 'orderPlaced';
@@ -26,6 +26,10 @@ export default function SocialXMenuApp() {
   const [selectedItems, setSelectedItems] = useState<{ item: MenuItem; quantity: number }[]>([]);
   const [waiterCalled, setWaiterCalled] = useState(false);
   
+  // Menu items from API
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [menuLoading, setMenuLoading] = useState(true);
+  
   // Order placed state
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
   const [orderStatus, setOrderStatus] = useState<'Received' | 'Accepted' | 'In-Progress' | 'Delivered' | 'Bill Generated' | 'Bill Paid'>('Received');
@@ -35,6 +39,29 @@ export default function SocialXMenuApp() {
   
   // Ref for selected items scroll container
   const selectedItemsScrollRef = useRef<HTMLDivElement>(null);
+
+  // Fetch menu items from API
+  useEffect(() => {
+    const fetchMenuItems = async () => {
+      try {
+        setMenuLoading(true);
+        const response = await fetch('/api/menu');
+        if (response.ok) {
+          const data = await response.json();
+          setMenuItems(data);
+          console.log('✅ Menu items loaded from database:', data.length);
+        } else {
+          console.error('Failed to fetch menu items');
+        }
+      } catch (error) {
+        console.error('Error fetching menu items:', error);
+      } finally {
+        setMenuLoading(false);
+      }
+    };
+
+    fetchMenuItems();
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -845,6 +872,23 @@ export default function SocialXMenuApp() {
   // ===== MENU VIEW =====
   const cameFromOrderPlaced = navigationHistory.includes('orderPlaced');
   
+  // Show loading state while fetching menu items
+  if (menuLoading && menuItems.length === 0) {
+    return (
+      <main className="gradient-soft flex flex-col items-center justify-center min-h-screen w-full">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl gradient-primary mb-4 shadow-soft-lg">
+            <div className="animate-pulse">
+              <span className="text-5xl text-white">☕</span>
+            </div>
+          </div>
+          <p className="text-gray-700 font-bold text-lg">Loading Menu...</p>
+          <p className="text-gray-500 text-sm mt-1">Fetching items from database</p>
+        </div>
+      </main>
+    );
+  }
+  
   return (
     <main 
       className="gradient-soft flex flex-col items-center w-full overflow-x-hidden"
@@ -1225,9 +1269,16 @@ export default function SocialXMenuApp() {
           zIndex: 1, // Lower than selected items window
         }}
       >
-        {categories.map(category => {
-          const isExpanded = expandedCategories.includes(category);
-          const categoryItems = getMenuItemsByCategory(category);
+        {/* Get unique categories from menu items */}
+        {(() => {
+          const uniqueCategories = Array.from(new Set(menuItems.map(item => item.category))).sort();
+          const getMenuItemsByCategory = (category: string) => {
+            return menuItems.filter(item => item.category === category);
+          };
+          
+          return uniqueCategories.map(category => {
+            const isExpanded = expandedCategories.includes(category);
+            const categoryItems = getMenuItemsByCategory(category);
 
           return (
             <div key={category} className="relative">
@@ -1379,7 +1430,8 @@ export default function SocialXMenuApp() {
               )}
             </div>
           );
-        })}
+          });
+        })()}
       </div>
 
       {/* Moved selected items section above - now between Place Order and tabs */}

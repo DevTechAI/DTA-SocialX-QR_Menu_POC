@@ -325,6 +325,9 @@ function MenuItemForm({
             <option value="HOT">HOT</option>
             <option value="COLD">COLD</option>
             <option value="NON-COFFEE">NON-COFFEE</option>
+            <option value="ADDON">ADDON (Coffee Addons)</option>
+            <option value="SNACK">SNACK (Snacks & Bites)</option>
+            <option value="DESSERT">DESSERT</option>
           </select>
         </div>
         <div>

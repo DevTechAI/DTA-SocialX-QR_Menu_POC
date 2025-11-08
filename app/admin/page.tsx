@@ -303,7 +303,7 @@ export default function AdminDashboard() {
 
   // Show loading state while checking authentication or fetching data
   if (!authChecked || loading) {
-    return (
+  return (
       <div className="min-h-screen gradient-soft flex items-center justify-center">
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl gradient-primary mb-4 shadow-soft-lg">

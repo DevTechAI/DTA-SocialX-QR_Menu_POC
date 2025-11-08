@@ -13,7 +13,7 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number;
-  category: 'HOT' | 'COLD' | 'NON-COFFEE';
+  category: 'HOT' | 'COLD' | 'NON-COFFEE' | 'ADDON' | 'SNACK' | 'DESSERT';
   available: boolean;
   image_url?: string;
   icon?: string;

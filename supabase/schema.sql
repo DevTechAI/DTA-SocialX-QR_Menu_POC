@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
   name TEXT NOT NULL,
   description TEXT,
   price NUMERIC(10, 2) NOT NULL,
-  category TEXT NOT NULL CHECK (category IN ('HOT', 'COLD', 'NON-COFFEE')),
+  category TEXT NOT NULL CHECK (category IN ('HOT', 'COLD', 'NON-COFFEE', 'ADDON', 'SNACK', 'DESSERT')),
   available BOOLEAN DEFAULT true,
   image_url TEXT,
   icon TEXT,
