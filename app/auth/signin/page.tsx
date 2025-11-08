@@ -105,6 +105,16 @@ export default function SignInPage() {
     }
   };
 
+  const handleBypassLogin = () => {
+    console.log('⚠️ Bypassing authentication (development mode)');
+    // Set both localStorage and cookie for middleware to check
+    localStorage.setItem('admin_bypass', 'true');
+    document.cookie = 'admin_bypass=true; path=/; max-age=86400'; // 24 hours
+    // Redirect to admin dashboard
+    router.push('/admin');
+    router.refresh();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border-2 border-orange-200">
@@ -188,6 +198,25 @@ export default function SignInPage() {
             className="mt-4 w-full py-3 border-2 border-orange-300 text-orange-700 rounded-lg hover:bg-orange-50 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Sign in with Google
+          </button>
+        </div>
+
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-orange-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-orange-600">Or</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleBypassLogin}
+            disabled={loading}
+            className="mt-4 w-full py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+          >
+            ⚠️ Bypass Login (Development)
           </button>
         </div>
 
