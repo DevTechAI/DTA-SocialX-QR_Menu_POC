@@ -66,14 +66,32 @@ export default function AdminDashboard() {
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [amountView, setAmountView] = useState<'ordered' | 'settled'>('settled');
   const [authChecked, setAuthChecked] = useState(false);
+  const [bypassAuth, setBypassAuth] = useState(false);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem('admin_bypass');
     router.push('/auth/signin');
+  };
+
+  const handleBypassLogin = () => {
+    console.log('⚠️ Bypassing authentication (development mode)');
+    localStorage.setItem('admin_bypass', 'true');
+    setBypassAuth(true);
+    setAuthChecked(true);
   };
 
   // Check authentication on mount
   useEffect(() => {
+    // Check if bypass is enabled
+    const bypassEnabled = localStorage.getItem('admin_bypass') === 'true';
+    if (bypassEnabled) {
+      console.log('⚠️ Bypass mode enabled');
+      setBypassAuth(true);
+      setAuthChecked(true);
+      return;
+    }
+
     const checkAuth = async () => {
       try {
         console.log('🔐 Admin page: Checking authentication...');
@@ -252,6 +270,14 @@ export default function AdminDashboard() {
           <p className="text-gray-500 text-sm mt-1">
             {!authChecked ? 'Please wait' : 'Fetching latest orders'}
           </p>
+          {!authChecked && (
+            <button
+              onClick={handleBypassLogin}
+              className="mt-6 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold shadow-lg"
+            >
+              ⚠️ Bypass Login (Development)
+            </button>
+          )}
         </div>
       </div>
     );
