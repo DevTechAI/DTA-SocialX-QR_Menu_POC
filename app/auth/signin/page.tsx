@@ -71,11 +71,16 @@ export default function SignInPage() {
     setLoading(true);
     setError('');
 
+    const redirectUrl = `${window.location.origin}/auth/callback?next=/admin`;
+    console.log('🔐 Initiating Google OAuth sign-in...');
+    console.log('📍 Current origin:', window.location.origin);
+    console.log('📍 Redirect URL:', redirectUrl);
+
     try {
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectUrl,
         },
       });
 

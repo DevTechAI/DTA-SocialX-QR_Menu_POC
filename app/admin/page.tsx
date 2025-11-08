@@ -65,17 +65,56 @@ export default function AdminDashboard() {
   const [isItemMetricsExpanded, setIsItemMetricsExpanded] = useState(false);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [amountView, setAmountView] = useState<'ordered' | 'settled'>('settled');
+  const [authChecked, setAuthChecked] = useState(false);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push('/auth/signin');
   };
 
+  // Check authentication on mount
   useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error || !user) {
+          console.log('❌ No authenticated user, redirecting to sign-in');
+          router.push('/auth/signin');
+          return;
+        }
+
+        // Check if user is authorized
+        const { data: authorizedEmail } = await supabase
+          .from('authorized_emails')
+          .select('role')
+          .eq('email', user.email)
+          .single();
+
+        if (!authorizedEmail) {
+          console.log('❌ User not authorized, redirecting to unauthorized page');
+          router.push('/auth/unauthorized');
+          return;
+        }
+
+        console.log('✅ User authenticated and authorized');
+        setAuthChecked(true);
+      } catch (err) {
+        console.error('Error checking auth:', err);
+        router.push('/auth/signin');
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
+  useEffect(() => {
+    if (!authChecked) return; // Wait for auth check before fetching orders
+    
     fetchOrders();
     const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [authChecked]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -182,8 +221,9 @@ export default function AdminDashboard() {
   const itemMetrics = Array.from(itemMetricsMap.values())
     .sort((a, b) => b.totalQuantity - a.totalQuantity); // Sort by total quantity (most popular first)
 
-  if (loading) {
-  return (
+  // Show loading state while checking authentication or fetching data
+  if (!authChecked || loading) {
+    return (
       <div className="min-h-screen gradient-soft flex items-center justify-center">
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl gradient-primary mb-4 shadow-soft-lg">
@@ -191,8 +231,12 @@ export default function AdminDashboard() {
               <span className="text-5xl text-white">⏳</span>
             </div>
           </div>
-          <p className="text-gray-700 font-bold text-lg">Loading Dashboard...</p>
-          <p className="text-gray-500 text-sm mt-1">Fetching latest orders</p>
+          <p className="text-gray-700 font-bold text-lg">
+            {!authChecked ? 'Verifying authentication...' : 'Loading Dashboard...'}
+          </p>
+          <p className="text-gray-500 text-sm mt-1">
+            {!authChecked ? 'Please wait' : 'Fetching latest orders'}
+          </p>
         </div>
       </div>
     );

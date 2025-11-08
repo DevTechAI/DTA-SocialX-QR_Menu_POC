@@ -74,8 +74,19 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ User authorized with role:', authorizedEmail.role);
 
+    // Ensure session is properly established by getting user again
+    // This ensures cookies are set correctly
+    const { data: { user: verifiedUser } } = await supabase.auth.getUser();
+    if (!verifiedUser) {
+      console.error('❌ Session not properly established after code exchange');
+      return NextResponse.redirect(`${baseUrl}/auth/error?error=session_not_established`);
+    }
+
+    console.log('✅ Session verified, redirecting to:', `${baseUrl}${next}`);
+
     // User is authorized, proceed to redirect
-    return NextResponse.redirect(`${baseUrl}${next}`);
+    // Use a 303 See Other redirect to ensure proper cookie handling
+    return NextResponse.redirect(`${baseUrl}${next}`, { status: 303 });
   } catch (err: any) {
     console.error('❌ Callback error:', err);
     return NextResponse.redirect(`${baseUrl}/auth/error?error=${encodeURIComponent(err.message || 'unknown_error')}`);
