@@ -52,7 +52,7 @@ export default function SignInPage() {
         }
 
         // Redirect to admin dashboard
-        router.push('/admin');
+        router.push('/order-admin');
         router.refresh();
       }
     } catch (err: any) {
@@ -71,7 +71,7 @@ export default function SignInPage() {
     setLoading(true);
     setError('');
 
-    const redirectUrl = `${window.location.origin}/auth/callback?next=/admin`;
+    const redirectUrl = `${window.location.origin}/auth/callback?next=/order-admin`;
     console.log('🔐 Initiating Google OAuth sign-in...');
     console.log('📍 Current origin:', window.location.origin);
     console.log('📍 Redirect URL:', redirectUrl);
@@ -111,7 +111,7 @@ export default function SignInPage() {
     localStorage.setItem('admin_bypass', 'true');
     document.cookie = 'admin_bypass=true; path=/; max-age=86400'; // 24 hours
     // Redirect to admin dashboard
-    router.push('/admin');
+    router.push('/order-admin');
     router.refresh();
   };
 

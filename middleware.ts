@@ -18,7 +18,7 @@ export async function middleware(request: NextRequest) {
   // Skip Supabase middleware if not configured (use mock data)
   if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
     // Still protect admin routes even without Supabase (redirect to signin)
-    if (pathname.startsWith('/admin')) {
+    if (pathname.startsWith('/order-admin')) {
       return NextResponse.redirect(new URL('/auth/signin', request.url));
     }
     return NextResponse.next();
@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest) {
   const response = await updateSession(request);
 
   // Protect admin routes
-  if (pathname.startsWith('/admin')) {
+  if (pathname.startsWith('/order-admin')) {
     // Check for bypass cookie (only if enabled via environment variable)
     const bypassCookie = request.cookies.get('admin_bypass');
     const allowBypass = process.env.ALLOW_ADMIN_BYPASS === 'true' || process.env.NODE_ENV === 'development';

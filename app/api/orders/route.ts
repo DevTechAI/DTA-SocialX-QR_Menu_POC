@@ -89,15 +89,15 @@ export async function POST(request: NextRequest) {
     // Fallback to mock data only if we have the required fields
     if (customer_name && items && total_amount) {
       try {
-        const { addMockOrder } = await import('@/lib/mock/orders');
-        const newOrder = addMockOrder({
-          customer_name,
-          items,
-          total_amount,
+      const { addMockOrder } = await import('@/lib/mock/orders');
+      const newOrder = addMockOrder({
+        customer_name,
+        items,
+        total_amount,
           status: 'received',
-          table_number,
-        });
-        return NextResponse.json(newOrder, { status: 201 });
+        table_number,
+      });
+      return NextResponse.json(newOrder, { status: 201 });
       } catch (fallbackError) {
         // If fallback also fails, return error
         return NextResponse.json(

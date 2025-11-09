@@ -11,7 +11,7 @@ function CallbackHandler() {
   useEffect(() => {
     const handleCallback = () => {
       const code = searchParams.get('code');
-      const next = searchParams.get('next') || '/admin';
+      const next = searchParams.get('next') || '/order-admin';
 
       if (code) {
         console.log('🔐 Processing OAuth callback...');

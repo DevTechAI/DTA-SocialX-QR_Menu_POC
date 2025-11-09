@@ -15,7 +15,7 @@ export default function UnauthorizedPage() {
           to request access.
         </p>
         <button
-          onClick={() => router.push('/')}
+          onClick={() => router.push('/order-menu')}
           className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold"
         >
           Go to Home

@@ -387,7 +387,7 @@ export default function AdminDashboard() {
                     🗑️ Clear All
                   </button>
                   <Link
-                    href="/admin/menu"
+                    href="/order-admin/menu-edit"
                     className="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-lg border border-white/30 hover:bg-white/30 transition-colors font-semibold text-sm"
                   >
                     📝 Menu Editor
