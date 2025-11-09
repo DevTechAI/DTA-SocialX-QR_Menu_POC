@@ -660,7 +660,7 @@ export default function SocialXMenuApp() {
                         />
                       </div>
                       <p className="text-xs text-gray-600 mt-1.5 italic font-bold">
-                        *You'll get a quick SMS/WhatsApp message once order is ready for pickup!
+                        *You&apos;ll get a quick SMS/WhatsApp message once order is ready for pickup!
                       </p>
                     </div>
 

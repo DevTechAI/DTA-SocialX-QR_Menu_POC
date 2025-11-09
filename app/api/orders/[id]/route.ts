@@ -103,7 +103,7 @@ export async function PATCH(
       } catch (authError: any) {
         if (authError.message.includes('Unauthorized')) {
           return NextResponse.json({ error: authError.message }, { status: 401 });
-        }
+      }
       }
     } else {
       console.log('✏️ ⚠️ Bypass mode enabled - updating order status');
@@ -143,7 +143,7 @@ export async function DELETE(
         { error: 'Supabase not configured. Cannot delete orders.' },
         { status: 503 }
       );
-    }
+      }
 
     // Check for bypass cookie (same logic as middleware)
     const bypassCookie = request.cookies.get('admin_bypass');
