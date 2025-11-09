@@ -619,7 +619,7 @@ export default function AdminDashboard() {
                                 {order.customer_name}
                               </h3>
                               <p className="text-xs text-gray-600 font-medium truncate">
-                                📞 {order.customer_phno || order.customer_phNo || 'N/A'}
+                                📞 {order.customer_phno || 'N/A'}
                               </p>
                               <p className="text-xs text-gray-600 font-medium truncate">
                                 #{order.id.slice(0, 8)}
