@@ -1443,7 +1443,27 @@ export default function SocialXMenuApp() {
       >
         {/* Get unique categories from menu items */}
         {(() => {
-          const uniqueCategories = Array.from(new Set(menuItems.map(item => item.category))).sort();
+          // Define category order: Hot coffee, Cold Coffee, Coffee Addons, Non-Coffee & Refreshers, Snacks & Bites, Desserts
+          const categoryOrder = ['HOT', 'COLD', 'ADDON', 'NON-COFFEE', 'SNACK', 'DESSERT'];
+          // Category display names
+          const categoryDisplayNames: Record<string, string> = {
+            'HOT': 'Hot Coffee',
+            'COLD': 'Cold Coffee',
+            'ADDON': 'Coffee Addons',
+            'NON-COFFEE': 'Non-Coffee & Refreshers',
+            'SNACK': 'Snacks & Bites',
+            'DESSERT': 'Desserts'
+          };
+          const uniqueCategories = Array.from(new Set(menuItems.map(item => item.category)))
+            .sort((a, b) => {
+              const indexA = categoryOrder.indexOf(a);
+              const indexB = categoryOrder.indexOf(b);
+              // If category is in order array, use its index, otherwise put it at the end
+              if (indexA === -1 && indexB === -1) return 0;
+              if (indexA === -1) return 1;
+              if (indexB === -1) return -1;
+              return indexA - indexB;
+            });
           const getMenuItemsByCategory = (category: string) => {
             return menuItems.filter(item => item.category === category);
           };
@@ -1479,7 +1499,7 @@ export default function SocialXMenuApp() {
                   {/* Content */}
                   <div className="relative z-10 py-3 flex items-center justify-between" style={{ paddingLeft: 'calc(1.25rem * 0.68)', paddingRight: 'calc(1.25rem * 0.68)' }}>
                     <span className="text-lg font-bold text-orange-600">
-                      {category}
+                      {categoryDisplayNames[category] || category}
                     </span>
                     <svg
                       className={`w-5 h-5 text-orange-600 transition-transform duration-300 ${

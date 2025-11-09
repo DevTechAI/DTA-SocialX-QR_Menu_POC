@@ -107,15 +107,15 @@ ON CONFLICT (id) DO UPDATE SET
 -- SNACKS & BITES [TAB]
 -- ============================================
 INSERT INTO menu_items (id, name, description, price, category, available, icon) VALUES
-  ('snack-nachos-bowl', 'Nachos Bowl', 'Crispy nachos with cheese and toppings', 90, 'SNACK', true, '🌮'),
+  ('snack-nachos-bowl', 'Nachos Bowl', 'Crispy nachos', 90, 'SNACK', true, '🌮'),
   ('snack-potato-wedges', 'Potato Wedges', 'Crispy potato wedges, perfectly seasoned', 139, 'SNACK', true, '🍟'),
   ('snack-potato-wedges-signature', 'Potato Wedges SocialX Signature', 'Our special signature potato wedges with unique seasoning', 169, 'SNACK', true, '🍟'),
   ('snack-garlic-chilli-pops', 'Garlic Chilli Pops', 'Spicy garlic chilli pops, crispy and flavorful', 119, 'SNACK', true, '🌶️'),
   ('snack-garlic-chilli-pops-signature', 'Garlic Chilli Pops SocialX Signature', 'Our special signature garlic chilli pops with unique twist', 149, 'SNACK', true, '🌶️'),
   ('snack-french-fries', 'French Fries', 'Classic crispy french fries', 129, 'SNACK', true, '🍟'),
   ('snack-french-fries-signature', 'French Fries SocialX Signature', 'Our special signature french fries with unique seasoning', 159, 'SNACK', true, '🍟'),
-  ('snack-chicken-nuggets-classic', 'Chicken Nuggets Classic', 'Classic crispy chicken nuggets', 119, 'SNACK', true, '🍗'),
-  ('snack-chicken-nuggets-signature', 'Chicken Nuggets SocialX Signature', 'Our special signature chicken nuggets with unique flavor', 159, 'SNACK', true, '🍗')
+  ('snack-chicken-nuggets-classic', 'Chicken Nuggets Classic', 'Classic crispy chicken nuggets', 139, 'SNACK', true, '🍗'),
+  ('snack-chicken-nuggets-signature', 'Chicken Nuggets SocialX Signature', 'Our special signature chicken nuggets with unique flavor', 169, 'SNACK', true, '🍗')
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,
