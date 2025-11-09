@@ -18,6 +18,7 @@ export default function SocialXMenuApp() {
   
   // Name entry state
   const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
   
@@ -36,9 +37,12 @@ export default function SocialXMenuApp() {
   const [orderId, setOrderId] = useState('');
   
   const [mounted, setMounted] = useState(false);
+  const [showOrderMessageDialog, setShowOrderMessageDialog] = useState(false);
   
   // Ref for selected items scroll container
   const selectedItemsScrollRef = useRef<HTMLDivElement>(null);
+  // Ref to track if dialog has been shown for current order
+  const dialogShownForOrderRef = useRef<string | null>(null);
 
   // Fetch menu items from API
   useEffect(() => {
@@ -68,6 +72,7 @@ export default function SocialXMenuApp() {
     
     // Restore state from localStorage
     const savedName = localStorage.getItem('customerName');
+    const savedPhone = localStorage.getItem('customerPhone');
     const savedView = localStorage.getItem('currentView') as ViewState;
     const savedItems = localStorage.getItem('selectedItems');
     const savedOrderPlaced = localStorage.getItem('orderPlaced');
@@ -75,6 +80,11 @@ export default function SocialXMenuApp() {
     const savedOrderId = localStorage.getItem('orderId');
     
     if (savedName) setCustomerName(savedName);
+    if (savedPhone) {
+      // Remove +91 prefix if present (for display in input field)
+      const phoneWithoutPrefix = savedPhone.startsWith('+91') ? savedPhone.slice(3) : savedPhone;
+      setCustomerPhone(phoneWithoutPrefix);
+    }
     if (savedItems) {
       try {
         setSelectedItems(JSON.parse(savedItems));
@@ -119,6 +129,18 @@ export default function SocialXMenuApp() {
       localStorage.setItem('orderStatus', orderStatus);
     }
   }, [orderStatus, mounted]);
+
+  // Show dialog when order is placed (on page load or when order is placed)
+  useEffect(() => {
+    if (currentView === 'orderPlaced' && orderId && dialogShownForOrderRef.current !== orderId) {
+      // Small delay to ensure smooth transition
+      const timer = setTimeout(() => {
+        setShowOrderMessageDialog(true);
+        dialogShownForOrderRef.current = orderId; // Mark as shown for this order
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentView, orderId]);
 
   // Update current time every second when order is placed
   useEffect(() => {
@@ -308,47 +330,62 @@ export default function SocialXMenuApp() {
   // Name Entry Handlers
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (customerName.trim()) {
-      // Aggressively reset zoom before navigation
-      const input = document.activeElement as HTMLElement;
-      if (input && input.blur) {
-        input.blur();
-      }
-      
-      // Force zoom reset immediately
-      document.body.style.zoom = '1';
-      if (document.documentElement) {
-        document.documentElement.style.zoom = '1';
-      }
-      
-      // Reset viewport scale
-      const viewport = document.querySelector('meta[name="viewport"]');
-      if (viewport) {
-        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-      }
-      
-      // Clear all previous order data for a fresh start
-      localStorage.removeItem('orderPlaced');
-      localStorage.removeItem('selectedItems');
-      localStorage.removeItem('orderStatus');
-      localStorage.removeItem('orderId');
-      localStorage.setItem('customerName', customerName.trim());
-      
-      // Reset menu state - keep categories collapsed
-      setSelectedItems([]);
-      setExpandedCategories([]);
-      
-      // Navigate immediately - zoom reset will be handled in useEffect
-      // Refresh will happen automatically when menu view loads
-      navigateToView('menu');
-      
-      // Restore viewport after navigation
-      setTimeout(() => {
-        if (viewport) {
-          viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, viewport-fit=cover, user-scalable=yes');
-        }
-      }, 300);
+    
+    // Validate name
+    if (!customerName.trim()) {
+      alert('Please enter your good Name');
+      return;
     }
+    
+    // Validate phone number - must be exactly 10 digits
+    const phoneDigits = customerPhone.replace(/\D/g, '');
+    if (!phoneDigits || phoneDigits.length !== 10) {
+      alert('Please enter your Phone Number (exactly 10 digits)');
+      return;
+    }
+    
+    // Aggressively reset zoom before navigation
+    const input = document.activeElement as HTMLElement;
+    if (input && input.blur) {
+      input.blur();
+    }
+    
+    // Force zoom reset immediately
+    document.body.style.zoom = '1';
+    if (document.documentElement) {
+      document.documentElement.style.zoom = '1';
+    }
+    
+    // Reset viewport scale
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+    }
+    
+    // Clear all previous order data for a fresh start
+    localStorage.removeItem('orderPlaced');
+    localStorage.removeItem('selectedItems');
+    localStorage.removeItem('orderStatus');
+    localStorage.removeItem('orderId');
+    localStorage.setItem('customerName', customerName.trim());
+    // Store phone number with +91 prefix (phoneDigits is already validated to be 10 digits)
+    const phoneWithPrefix = `+91${phoneDigits}`;
+    localStorage.setItem('customerPhone', phoneWithPrefix);
+    
+    // Reset menu state - keep categories collapsed
+    setSelectedItems([]);
+    setExpandedCategories([]);
+    
+    // Navigate immediately - zoom reset will be handled in useEffect
+    // Refresh will happen automatically when menu view loads
+    navigateToView('menu');
+    
+    // Restore viewport after navigation
+    setTimeout(() => {
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, viewport-fit=cover, user-scalable=yes');
+      }
+    }, 300);
   };
 
   // Menu Handlers - Only one tab expanded at a time
@@ -436,8 +473,13 @@ export default function SocialXMenuApp() {
       return;
     }
 
+    // Ensure phone number is exactly 10 digits with +91 prefix
+    const phoneDigits = customerPhone.replace(/\D/g, '');
+    const phoneWithPrefix = phoneDigits.length === 10 ? `+91${phoneDigits}` : `+91${customerPhone}`;
+
     const orderData = {
       customer_name: customerName,
+      customer_phno: phoneWithPrefix,
       items: selectedItems.map(({ item, quantity }) => ({
         menu_item_id: item.id,
         name: item.name,
@@ -461,6 +503,7 @@ export default function SocialXMenuApp() {
         localStorage.setItem('orderId', mockOrderId);
         localStorage.setItem('orderPlaced', 'true');
         navigateToView('orderPlaced');
+        // Dialog will be shown by useEffect
       }
     } catch (error) {
       console.error('Error placing order:', error);
@@ -469,6 +512,7 @@ export default function SocialXMenuApp() {
       localStorage.setItem('orderId', mockOrderId);
       localStorage.setItem('orderPlaced', 'true');
       navigateToView('orderPlaced');
+      // Dialog will be shown by useEffect
     }
   };
 
@@ -481,13 +525,17 @@ export default function SocialXMenuApp() {
   const handleStartNewOrder = () => {
     // Clear all data
     setCustomerName('');
+    setCustomerPhone('');
     setSelectedItems([]);
     setExpandedCategories([]);
     setOrderId('');
     setOrderStatus('Received');
     setNavigationHistory([]);
+    setShowOrderMessageDialog(false);
+    dialogShownForOrderRef.current = null; // Reset dialog tracking
     
     localStorage.removeItem('customerName');
+    localStorage.removeItem('customerPhone');
     localStorage.removeItem('selectedItems');
     localStorage.removeItem('orderPlaced');
     localStorage.removeItem('orderStatus');
@@ -551,6 +599,9 @@ export default function SocialXMenuApp() {
                   <form onSubmit={handleNameSubmit} className="space-y-4 sm:space-y-6">
                     {/* Name Input with elite styling */}
                     <div>
+                      <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Name <span className="text-red-500">*</span>
+                      </label>
                       <div className="relative group/input">
                         {/* Elite border frame */}
                         <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
@@ -565,8 +616,52 @@ export default function SocialXMenuApp() {
                           style={{ fontSize: '16px' }}
                           required
                           autoFocus
+                          onInvalid={(e) => {
+                            e.preventDefault();
+                            if (!customerName.trim()) {
+                              alert('Please enter your good Name');
+                            }
+                          }}
                         />
                       </div>
+                    </div>
+
+                    {/* Phone Number Input with elite styling */}
+                    <div>
+                      <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Phone Number <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative group/input">
+                        {/* Elite border frame */}
+                        <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
+                        
+                        {/* Phone prefix */}
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                          <span className="text-base font-medium text-gray-700">+91</span>
+                        </div>
+                        
+                        <input
+                          type="tel"
+                          id="phone"
+                          value={customerPhone}
+                          onChange={(e) => {
+                            // Only allow numbers, max 10 digits
+                            const numericValue = e.target.value.replace(/\D/g, '').slice(0, 10);
+                            setCustomerPhone(numericValue);
+                          }}
+                          placeholder="Enter 10 digit phone number"
+                          className="relative w-full pl-14 sm:pl-16 pr-4 sm:pr-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                          style={{ fontSize: '16px' }}
+                          inputMode="numeric"
+                          pattern="[0-9]{10}"
+                          required
+                          minLength={10}
+                          maxLength={10}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-600 mt-1.5 italic font-bold">
+                        *You'll get a quick SMS/WhatsApp message once order is ready for pickup!
+                      </p>
                     </div>
 
                     {/* Submit Button - Narrow & Shiny Transparent */}
@@ -767,7 +862,7 @@ export default function SocialXMenuApp() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-500">ETA Time</p>
-                    <p className="text-sm font-bold text-primary-600">15min</p>
+                    <p className="text-sm font-bold text-primary-600">25min</p>
                   </div>
                 </div>
 
@@ -778,6 +873,21 @@ export default function SocialXMenuApp() {
                       <span className="text-sm font-bold text-gray-700">Order Status</span>
                       <span className="text-lg font-bold text-primary-600">{orderStatus}</span>
                     </div>
+                  </div>
+                </div>
+
+                {/* Order Ready Message */}
+                <div className="mb-4">
+                  <div className="space-y-2">
+                    <p className="text-base font-bold text-gray-800">
+                      Your order will be ready soon!
+                    </p>
+                    <p className="text-sm font-semibold text-gray-700 leading-relaxed">
+                      Please collect it from the counter when you get a message.
+                    </p>
+                    <p className="text-sm font-semibold text-gray-700">
+                      SocialX is a self-serve space <span className="text-green-600 font-bold">💚</span>
+                    </p>
                   </div>
                 </div>
               </div>
@@ -865,6 +975,68 @@ export default function SocialXMenuApp() {
             </p>
           </div>
         </footer>
+
+        {/* Order Message Dialog Popup */}
+        {showOrderMessageDialog && (
+          <div 
+            className="fixed inset-0 z-[10000] flex items-center justify-center p-4 animate-in fade-in duration-300"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+            onClick={(e) => {
+              // Close when clicking outside
+              if (e.target === e.currentTarget) {
+                setShowOrderMessageDialog(false);
+              }
+            }}
+          >
+            <div 
+              className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full transform transition-all animate-in zoom-in-95 duration-300"
+            >
+              {/* Close Button - Red X */}
+              <button
+                onClick={() => setShowOrderMessageDialog(false)}
+                className="absolute top-4 right-4 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full p-1.5 transition-all"
+                aria-label="Close"
+              >
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-6 w-6" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* Message Content */}
+              <div className="pr-8">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">
+                  🎉 Order Confirmed!
+                </h3>
+                <div className="space-y-2">
+                  <p className="text-base font-bold text-gray-800">
+                    Your order will be ready soon!
+                  </p>
+                  <p className="text-sm font-semibold text-gray-700 leading-relaxed">
+                    Please collect it from the counter when you get a message.
+                  </p>
+                  <p className="text-sm font-semibold text-gray-700">
+                    SocialX is a self-serve space <span className="text-green-600 font-bold">💚</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Close Button at Bottom */}
+              <button
+                onClick={() => setShowOrderMessageDialog(false)}
+                className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

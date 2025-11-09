@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 
   // Get the correct origin for redirects
   // Priority: x-forwarded-host (production) > host header > origin
-  const forwardedHost = request.headers.get('x-forwarded-host');
+      const forwardedHost = request.headers.get('x-forwarded-host');
   const host = request.headers.get('host');
   const protocol = request.headers.get('x-forwarded-proto') || 'https';
   
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     baseUrl = `${protocol}://${forwardedHost}`;
   } else if (host) {
     baseUrl = `${protocol}://${host}`;
-  } else {
+      } else {
     const { origin } = new URL(request.url);
     baseUrl = origin;
   }

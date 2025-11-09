@@ -15,6 +15,7 @@ interface OrderItem {
 interface Order {
   id: string;
   customer_name: string;
+  customer_phno: string;
   items: OrderItem[];
   total_amount: number;
   status: 'received' | 'delivered' | 'paid' | 'unpaid';
@@ -208,10 +209,24 @@ export default function AdminDashboard() {
       const response = await fetch('/api/orders');
       if (response.ok) {
         const data = await response.json();
-        const parsedData = data.map((order: any) => ({
-          ...order,
-          items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
-        }));
+        const parsedData = data.map((order: any) => {
+          // Handle both customer_phno and customer_phNo (for backward compatibility)
+          const phoneNumber = order.customer_phno || order.customer_phNo || 'N/A';
+          return {
+            ...order,
+            customer_phno: phoneNumber, // Ensure it's always customer_phno
+            items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
+          };
+        });
+        console.log('📋 Fetched orders:', parsedData.length, 'orders');
+        if (parsedData.length > 0) {
+          console.log('📋 Sample order:', {
+            id: parsedData[0].id,
+            customer_name: parsedData[0].customer_name,
+            customer_phno: parsedData[0].customer_phno,
+            allKeys: Object.keys(parsedData[0])
+          });
+        }
         setOrders(parsedData);
       }
     } catch (error) {
@@ -602,7 +617,10 @@ export default function AdminDashboard() {
                             <div className="flex-1 min-w-0">
                               <h3 className="text-base md:text-lg font-bold text-gray-800 truncate">
                                 {order.customer_name}
-          </h3>
+                              </h3>
+                              <p className="text-xs text-gray-600 font-medium truncate">
+                                📞 {order.customer_phno || order.customer_phNo || 'N/A'}
+                              </p>
                               <p className="text-xs text-gray-600 font-medium truncate">
                                 #{order.id.slice(0, 8)}
                                 {order.table_number && ` • Table ${order.table_number}`}

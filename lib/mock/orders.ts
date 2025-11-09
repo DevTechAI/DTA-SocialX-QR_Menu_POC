@@ -5,6 +5,7 @@
 export interface MockOrder {
   id: string;
   customer_name: string;
+  customer_phNo: string; // Keep camelCase for mock data interface
   items: Array<{
     menu_item_id: string;
     name: string;
@@ -23,6 +24,7 @@ let mockOrders: MockOrder[] = [
   {
     id: 'mock-1',
     customer_name: 'Rahul Sharma',
+    customer_phNo: '+91 98765 43210',
     items: [
       { menu_item_id: 'hot-latte', name: 'Latte', quantity: 2, price: 228 },
       { menu_item_id: 'hot-mocha', name: 'Mocha', quantity: 1, price: 178 },
@@ -35,6 +37,7 @@ let mockOrders: MockOrder[] = [
   {
     id: 'mock-2',
     customer_name: 'Priya Patel',
+    customer_phNo: '+91 98765 43211',
     items: [
       { menu_item_id: 'cold-coffee', name: 'Cold Coffee', quantity: 1, price: 228 },
       { menu_item_id: 'nc-coke', name: 'Coke/Diet Coke', quantity: 1, price: 168 },
@@ -47,6 +50,7 @@ let mockOrders: MockOrder[] = [
   {
     id: 'mock-3',
     customer_name: 'Amit Kumar',
+    customer_phNo: '+91 98765 43212',
     items: [
       { menu_item_id: 'hot-cappuccino', name: 'Cappuccino', quantity: 3, price: 228 },
       { menu_item_id: 'nc-hot-chocolate', name: 'Hot Chocolate', quantity: 2, price: 78 },
@@ -59,6 +63,7 @@ let mockOrders: MockOrder[] = [
   {
     id: 'mock-4',
     customer_name: 'Sneha Reddy',
+    customer_phNo: '+91 98765 43213',
     items: [
       { menu_item_id: 'cold-cranberry', name: 'Cranberry Espresso', quantity: 1, price: 178 },
     ],
@@ -70,6 +75,7 @@ let mockOrders: MockOrder[] = [
   {
     id: 'mock-5',
     customer_name: 'Vikram Singh',
+    customer_phNo: '+91 98765 43214',
     items: [
       { menu_item_id: 'hot-vietnamese', name: 'Vietnamese Coffee', quantity: 2, price: 198 },
       { menu_item_id: 'cold-mocha', name: 'Iced Mocha', quantity: 1, price: 178 },
@@ -82,6 +88,7 @@ let mockOrders: MockOrder[] = [
   {
     id: 'mock-6',
     customer_name: 'Anjali Gupta',
+    customer_phNo: '+91 98765 43215',
     items: [
       { menu_item_id: 'cold-americano', name: 'Iced Americano', quantity: 1, price: 228 },
       { menu_item_id: 'nc-redbull', name: 'Redbull', quantity: 1, price: 198 },
@@ -140,6 +147,7 @@ export function resetMockOrders(): void {
     {
       id: 'mock-1',
       customer_name: 'Rahul Sharma',
+      customer_phNo: '+91 98765 43210',
       items: [
         { menu_item_id: 'hot-latte', name: 'Latte', quantity: 2, price: 228 },
         { menu_item_id: 'hot-mocha', name: 'Mocha', quantity: 1, price: 178 },
@@ -152,6 +160,7 @@ export function resetMockOrders(): void {
     {
       id: 'mock-2',
       customer_name: 'Priya Patel',
+      customer_phNo: '+91 98765 43211',
       items: [
         { menu_item_id: 'cold-coffee', name: 'Cold Coffee', quantity: 1, price: 228 },
         { menu_item_id: 'nc-coke', name: 'Coke/Diet Coke', quantity: 1, price: 168 },
@@ -164,6 +173,7 @@ export function resetMockOrders(): void {
     {
       id: 'mock-3',
       customer_name: 'Amit Kumar',
+      customer_phNo: '+91 98765 43212',
       items: [
         { menu_item_id: 'hot-cappuccino', name: 'Cappuccino', quantity: 3, price: 228 },
         { menu_item_id: 'nc-hot-chocolate', name: 'Hot Chocolate', quantity: 2, price: 78 },
@@ -176,6 +186,7 @@ export function resetMockOrders(): void {
     {
       id: 'mock-4',
       customer_name: 'Sneha Reddy',
+      customer_phNo: '+91 98765 43213',
       items: [
         { menu_item_id: 'cold-cranberry', name: 'Cranberry Espresso', quantity: 1, price: 178 },
       ],
@@ -187,6 +198,7 @@ export function resetMockOrders(): void {
     {
       id: 'mock-5',
       customer_name: 'Vikram Singh',
+      customer_phNo: '+91 98765 43214',
       items: [
         { menu_item_id: 'hot-vietnamese', name: 'Vietnamese Coffee', quantity: 2, price: 198 },
         { menu_item_id: 'cold-mocha', name: 'Iced Mocha', quantity: 1, price: 178 },
@@ -199,6 +211,7 @@ export function resetMockOrders(): void {
     {
       id: 'mock-6',
       customer_name: 'Anjali Gupta',
+      customer_phNo: '+91 98765 43215',
       items: [
         { menu_item_id: 'cold-americano', name: 'Iced Americano', quantity: 1, price: 228 },
         { menu_item_id: 'nc-redbull', name: 'Redbull', quantity: 1, price: 198 },

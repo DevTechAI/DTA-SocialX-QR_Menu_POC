@@ -24,6 +24,7 @@ export interface MenuItem {
 export interface Order {
   id: string;
   customer_name: string;
+  customer_phno: string;
   items: OrderItem[];
   total_amount: number;
   status: 'received' | 'delivered' | 'paid' | 'unpaid';

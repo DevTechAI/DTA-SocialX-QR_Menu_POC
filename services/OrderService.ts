@@ -6,6 +6,7 @@ export class OrderService {
 
   async createOrder(orderData: {
     customer_name: string;
+    customer_phNo: string;
     items: OrderItem[];
     total_amount: number;
     table_number?: string;
@@ -14,6 +15,7 @@ export class OrderService {
       .from('orders')
       .insert({
         customer_name: orderData.customer_name,
+        customer_phno: orderData.customer_phNo,
         items: JSON.stringify(orderData.items),
         total_amount: orderData.total_amount,
         status: 'received',
@@ -26,8 +28,11 @@ export class OrderService {
 
     if (error) throw new Error(`Failed to create order: ${error.message}`);
 
+    // Ensure customer_phno is properly mapped (handle both cases)
+    const phoneNumber = data.customer_phno || data.customer_phNo || 'N/A';
     return {
       ...data,
+      customer_phno: phoneNumber, // Always use lowercase to match interface
       items: typeof data.items === 'string' ? JSON.parse(data.items) : data.items,
     };
   }
@@ -40,10 +45,15 @@ export class OrderService {
 
     if (error) throw new Error(`Failed to fetch orders: ${error.message}`);
 
-    return (data || []).map(order => ({
-      ...order,
-      items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
-    }));
+    return (data || []).map(order => {
+      // Ensure customer_phno is properly mapped (handle both cases)
+      const phoneNumber = order.customer_phno || order.customer_phNo || 'N/A';
+      return {
+        ...order,
+        customer_phno: phoneNumber, // Always use lowercase to match interface
+        items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
+      };
+    });
   }
 
   async getOrdersByDate(date: Date): Promise<Order[]> {
@@ -61,10 +71,15 @@ export class OrderService {
 
     if (error) throw new Error(`Failed to fetch orders: ${error.message}`);
 
-    return (data || []).map(order => ({
-      ...order,
-      items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
-    }));
+    return (data || []).map(order => {
+      // Ensure customer_phno is properly mapped (handle both cases)
+      const phoneNumber = order.customer_phno || order.customer_phNo || 'N/A';
+      return {
+        ...order,
+        customer_phno: phoneNumber, // Always use lowercase to match interface
+        items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
+      };
+    });
   }
 
   async getOrderById(id: string): Promise<Order | null> {
@@ -80,8 +95,11 @@ export class OrderService {
     }
     if (!data) return null;
 
+    // Ensure customer_phno is properly mapped (handle both cases)
+    const phoneNumber = data.customer_phno || data.customer_phNo || 'N/A';
     return {
       ...data,
+      customer_phno: phoneNumber, // Always use lowercase to match interface
       items: typeof data.items === 'string' ? JSON.parse(data.items) : data.items,
     };
   }
@@ -147,10 +165,15 @@ export class OrderService {
 
     if (error) throw new Error(`Failed to fetch order history: ${error.message}`);
 
-    return (data || []).map(order => ({
-      ...order,
-      items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
-    }));
+    return (data || []).map(order => {
+      // Ensure customer_phno is properly mapped (handle both cases)
+      const phoneNumber = order.customer_phno || order.customer_phNo || 'N/A';
+      return {
+        ...order,
+        customer_phno: phoneNumber, // Always use lowercase to match interface
+        items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
+      };
+    });
   }
 }
 

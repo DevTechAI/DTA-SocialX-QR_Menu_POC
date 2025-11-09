@@ -28,6 +28,7 @@ CREATE POLICY "Service role can manage authorized emails" ON authorized_emails
 CREATE TABLE IF NOT EXISTS orders (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   customer_name TEXT NOT NULL,
+  customer_phNo TEXT NOT NULL,
   items JSONB NOT NULL,
   total_amount NUMERIC(10, 2) NOT NULL,
   status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received', 'delivered', 'paid', 'unpaid')),

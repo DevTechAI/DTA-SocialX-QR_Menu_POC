@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   let customer_name: string | undefined;
+  let customer_phno: string | undefined;
   let items: any[] | undefined;
   let total_amount: number | undefined;
   let table_number: string | undefined;
@@ -46,12 +47,14 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     customer_name = body.customer_name;
+    // Accept both customer_phNo (from frontend) and customer_phno (from database)
+    customer_phno = body.customer_phno || body.customer_phNo;
     items = body.items;
     total_amount = body.total_amount;
     table_number = body.table_number;
 
     // Validate required fields
-    if (!customer_name || !items || !total_amount) {
+    if (!customer_name || !customer_phno || !items || !total_amount) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -67,6 +70,7 @@ export async function POST(request: NextRequest) {
       console.log('📝 Adding order to mock data (Supabase not configured)');
       const newOrder = addMockOrder({
         customer_name,
+        customer_phNo: customer_phno,
         items,
         total_amount,
         status: 'received',
@@ -78,6 +82,7 @@ export async function POST(request: NextRequest) {
     const orderService = new OrderService();
     const order = await orderService.createOrder({
       customer_name,
+      customer_phNo: customer_phno,
       items,
       total_amount,
       table_number,
@@ -87,11 +92,12 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Error creating order:', error);
     // Fallback to mock data only if we have the required fields
-    if (customer_name && items && total_amount) {
+    if (customer_name && customer_phno && items && total_amount) {
       try {
       const { addMockOrder } = await import('@/lib/mock/orders');
       const newOrder = addMockOrder({
         customer_name,
+        customer_phNo: customer_phno,
         items,
         total_amount,
           status: 'received',
