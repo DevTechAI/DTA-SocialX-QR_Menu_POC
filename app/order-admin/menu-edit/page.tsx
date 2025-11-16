@@ -32,12 +32,12 @@ export default function MenuEditorPage() {
     }
   };
 
-  const handleToggleAvailability = async (id: string, currentStatus: boolean) => {
+  const handleToggleAvailability = async (id: string, name: string, currentStatus: boolean) => {
     try {
       const res = await fetch(`/api/menu/${id}/toggle-availability`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ available: !currentStatus }),
+        body: JSON.stringify({ available: !currentStatus, name }),
       });
       if (res.ok) {
         fetchMenuItems();
@@ -113,7 +113,12 @@ export default function MenuEditorPage() {
     return acc;
   }, {} as Record<string, MenuItem[]>);
 
-  const categories = ['HOT', 'COLD', 'NON-COFFEE'];
+  // Get all categories that have items, sorted to show common ones first
+  const categoryOrder = ['HOT', 'COLD', 'NON-COFFEE', 'ADDON', 'SNACK', 'DESSERT'];
+  const categories = [
+    ...categoryOrder.filter(cat => groupedItems[cat] && groupedItems[cat].length > 0),
+    ...Object.keys(groupedItems).filter(cat => !categoryOrder.includes(cat))
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50">
@@ -199,26 +204,52 @@ export default function MenuEditorPage() {
                         item.available ? 'border-orange-200' : 'border-gray-300 opacity-60'
                       }`}
                     >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex-1">
-                          <h4 className="font-bold text-lg text-orange-900">{item.name}</h4>
-                          <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                      {/* First Line: Icon, Name, and Toggle */}
+                      <div className="flex items-center gap-2 mb-2">
+                        {/* Icon - Left Top Corner */}
+                        {item.icon && (
+                          <span className="text-2xl flex-shrink-0">{item.icon}</span>
+                        )}
+                        
+                        {/* Item Name - Beside Icon */}
+                        <h4 className="font-bold text-lg text-orange-900 flex-1 min-w-0 truncate">
+                          {item.name}
+                        </h4>
+                        
+                        {/* Toggle - Right side of first line */}
+                        <div className="flex-shrink-0">
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={item.available}
+                              onChange={() => handleToggleAvailability(item.id, item.name, item.available)}
+                              className="sr-only peer"
+                            />
+                            <div className="relative w-[51px] h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-500 rounded-full peer peer-checked:after:translate-x-[33px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                              {/* Ready label - Left side */}
+                              <span className={`absolute left-1 top-1/2 -translate-y-1/2 text-[9px] font-bold transition-all ${
+                                item.available ? 'text-white opacity-100' : 'text-gray-500 opacity-50'
+                              }`}>
+                                Ready
+                              </span>
+                              {/* NA label - Right side */}
+                              <span className={`absolute right-1 top-1/2 -translate-y-1/2 text-[9px] font-bold transition-all ${
+                                !item.available ? 'text-gray-800 opacity-100' : 'text-gray-500 opacity-50'
+                              }`}>
+                                NA
+                              </span>
+                            </div>
+                          </label>
                         </div>
-                        {item.icon && <span className="text-2xl ml-2">{item.icon}</span>}
                       </div>
-                      <div className="flex items-center justify-between mt-4">
+                      
+                      {/* Description */}
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.description}</p>
+                      
+                      {/* Bottom Section: Price and Action Buttons */}
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
                         <span className="text-xl font-bold text-orange-600">₹{item.price}</span>
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => handleToggleAvailability(item.id, item.available)}
-                            className={`px-3 py-1 rounded text-xs font-semibold ${
-                              item.available
-                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                          >
-                            {item.available ? 'In Stock' : 'Out of Stock'}
-                          </button>
                           <button
                             onClick={() => {
                               setEditingItem(item);

@@ -135,7 +135,7 @@ export default function SignInPage() {
         console.log('  ℹ️  After Google authentication, you will be redirected to:', redirectUrl);
         console.log('  ⏳ Waiting for browser redirect...');
         console.log('═══════════════════════════════════════════════════════');
-        // If successful, user will be redirected, so don't set loading to false
+      // If successful, user will be redirected, so don't set loading to false
         // The browser will navigate away, so this code may not execute
       }
     } catch (err: any) {

@@ -879,10 +879,10 @@ export default function AdminDashboard() {
         {/* Orders List Header */}
         <div className="mb-6 md:mb-8">
           <div className="flex items-center justify-center gap-4 flex-wrap">
-            <h2 className="text-2xl md:text-3xl font-bold text-orange-600 flex items-center gap-3">
-              <span className="text-3xl md:text-4xl">📦</span>
-              <span>Orders Dashboard</span>
-            </h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-orange-600 flex items-center gap-3">
+            <span className="text-3xl md:text-4xl">📦</span>
+            <span>Orders Dashboard</span>
+          </h2>
             
             {/* Sound Notification Toggle */}
             <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-soft border border-orange-200">

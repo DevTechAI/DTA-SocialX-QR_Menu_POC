@@ -21,10 +21,13 @@ export async function PATCH(
     const authService = new AuthService();
     await authService.requireRole('manager');
 
-    const { available } = await request.json();
+    const { available, name } = await request.json();
+    console.log(`🔄 API: Toggling availability for item ID: ${params.id}, name: ${name}, new status: ${available}`);
+    
     const menuService = new MenuService();
-    const item = await menuService.toggleAvailability(params.id, available);
+    const item = await menuService.toggleAvailability(params.id, available, name);
 
+    console.log(`✅ API: Successfully toggled availability. Item "${item.name}" is now ${item.available ? 'available' : 'unavailable'}`);
     return NextResponse.json(item);
   } catch (error: any) {
     if (error.message.includes('Unauthorized')) {

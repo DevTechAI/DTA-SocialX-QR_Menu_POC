@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OrderService } from '@/services/OrderService';
 import { AuthService } from '@/services/AuthService';
+import { MenuService } from '@/services/MenuService';
 import { getMockOrders, addMockOrder, clearMockOrders } from '@/lib/mock/orders';
 
 export async function GET(request: NextRequest) {
@@ -83,6 +84,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(newOrder, { status: 201 });
     }
 
+    // Check availability of all items in the order
+    const menuService = new MenuService();
+    const itemIds = items.map((item: any) => item.menu_item_id);
+    const availabilityMap = await menuService.checkItemsAvailability(itemIds);
+
+    // Add Available flag to each item in the order
+    const itemsWithAvailability = items.map((item: any) => {
+      const isAvailable = availabilityMap[item.menu_item_id] === true;
+      return {
+        ...item,
+        Available: isAvailable,
+      };
+    });
+
+    // Check if any items are unavailable
+    const unavailableItems = itemsWithAvailability.filter((item: any) => item.Available === false);
+    
+    if (unavailableItems.length > 0) {
+      console.log(`⚠️ Order contains ${unavailableItems.length} unavailable items:`, 
+        unavailableItems.map((item: any) => item.name));
+      
+      // Return response with unavailable items information
+      return NextResponse.json({
+        error: 'Some items are no longer available',
+        unavailableItems: unavailableItems.map((item: any) => ({
+          menu_item_id: item.menu_item_id,
+          name: item.name,
+          Available: false,
+        })),
+        items: itemsWithAvailability, // Include all items with availability status
+      }, { status: 400 }); // 400 Bad Request - client needs to fix the order
+    }
+
+    // All items are available, proceed with order creation
     const orderService = new OrderService();
     const order = await orderService.createOrder({
       customer_name,
