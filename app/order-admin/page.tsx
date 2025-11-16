@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -95,6 +95,14 @@ export default function AdminDashboard() {
     }
     return true;
   });
+  
+  // Use ref to always have the current soundEnabled value (avoids stale closures)
+  const soundEnabledRef = useRef(soundEnabled);
+  
+  // Update ref whenever soundEnabled changes
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -376,8 +384,8 @@ export default function AdminDashboard() {
 
   // Play alert sound when new order is received (using MP3 file with fallback)
   const playAlertSound = () => {
-    // Check if sound is enabled
-    if (!soundEnabled) {
+    // Check if sound is enabled (use ref to get current value, avoiding stale closures)
+    if (!soundEnabledRef.current) {
       return;
     }
     
