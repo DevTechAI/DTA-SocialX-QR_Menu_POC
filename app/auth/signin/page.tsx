@@ -72,34 +72,80 @@ export default function SignInPage() {
     setError('');
 
     const redirectUrl = `${window.location.origin}/auth/callback?next=/order-admin`;
-    console.log('🔐 Initiating Google OAuth sign-in...');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔐 INITIATING GOOGLE OAUTH SIGN-IN');
+    console.log('═══════════════════════════════════════════════════════');
     console.log('📍 Current origin:', window.location.origin);
     console.log('📍 Redirect URL:', redirectUrl);
+    console.log('📍 Target page: /order-admin');
+    console.log('🔄 Calling supabase.auth.signInWithOAuth()...');
+    console.log('═══════════════════════════════════════════════════════');
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithOAuth({
+      console.log('📞 API CALL: supabase.auth.signInWithOAuth()');
+      console.log('  Provider: google');
+      console.log('  RedirectTo:', redirectUrl);
+      console.log('  ⏳ Waiting for response...');
+      
+      const result = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
         },
       });
 
-      if (signInError) {
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('📥 RESPONSE FROM signInWithOAuth()');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('📦 Full response object:', result);
+      console.log('  ✅ data:', result.data);
+      console.log('  ❌ error:', result.error);
+      console.log('  📊 Response keys:', Object.keys(result));
+      
+      if (result.data) {
+        console.log('  🔗 Provider URL:', result.data?.provider);
+        console.log('  🔗 URL:', result.data?.url);
+      }
+
+      if (result.error) {
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('❌ OAUTH ERROR DETECTED');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('  Error message:', result.error.message);
+        console.log('  Error status:', result.error.status || 'N/A');
+        console.log('  Full error object:', result.error);
+        
         // Check if it's a configuration error
         if (
-          signInError.message.includes('provider is not enabled') ||
-          signInError.message.includes('Unsupported provider') ||
-          signInError.message.includes('400') ||
-          signInError.message.includes('Bad Request')
+          result.error.message.includes('provider is not enabled') ||
+          result.error.message.includes('Unsupported provider') ||
+          result.error.message.includes('400') ||
+          result.error.message.includes('Bad Request')
         ) {
           setError('Google OAuth is not enabled in Supabase. Please enable it in Supabase Dashboard → Authentication → Providers → Google, or use email/password sign in.');
         } else {
-          throw signInError;
+          throw result.error;
         }
         setLoading(false);
+      } else {
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('✅ OAUTH INITIATION SUCCESSFUL');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('  ℹ️  Note: Browser will redirect to Google OAuth');
+        console.log('  ℹ️  After Google authentication, you will be redirected to:', redirectUrl);
+        console.log('  ⏳ Waiting for browser redirect...');
+        console.log('═══════════════════════════════════════════════════════');
+        // If successful, user will be redirected, so don't set loading to false
+        // The browser will navigate away, so this code may not execute
       }
-      // If successful, user will be redirected, so don't set loading to false
     } catch (err: any) {
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('❌ EXCEPTION CAUGHT');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('  Error type:', err?.constructor?.name || 'Unknown');
+      console.log('  Error message:', err?.message || 'Unknown error');
+      console.log('  Full error:', err);
+      console.log('═══════════════════════════════════════════════════════');
       setError(err.message || 'Failed to sign in with Google. Please use email/password sign in instead.');
       setLoading(false);
     }
@@ -201,6 +247,9 @@ export default function SignInPage() {
           </button>
         </div>
 
+        {/* Bypass button is disabled - authentication is required */}
+        {/* Uncomment below if you need to enable bypass for development */}
+        {/*
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -219,6 +268,7 @@ export default function SignInPage() {
             ⚠️ Bypass Login (Development)
           </button>
         </div>
+        */}
 
         <p className="mt-6 text-center text-sm text-gray-600">
           Only pre-authorized emails can access the admin panel.

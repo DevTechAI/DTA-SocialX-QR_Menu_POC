@@ -136,9 +136,9 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'All orders cleared' });
     }
 
-    // Check for bypass cookie (same logic as middleware)
+    // Check for bypass cookie (only if explicitly enabled via environment variable)
     const bypassCookie = request.cookies.get('admin_bypass');
-    const allowBypass = process.env.ALLOW_ADMIN_BYPASS === 'true' || process.env.NODE_ENV === 'development';
+    const allowBypass = process.env.ALLOW_ADMIN_BYPASS === 'true';
     
     if (allowBypass && bypassCookie?.value === 'true') {
       console.log('🗑️ ⚠️ Bypass mode enabled - clearing all orders');

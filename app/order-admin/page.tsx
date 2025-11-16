@@ -77,13 +77,11 @@ export default function AdminDashboard() {
     router.push('/auth/signin');
   };
 
+  // Bypass login is disabled - authentication is required
+  // This function is kept for reference but should not be used
   const handleBypassLogin = () => {
-    console.log('⚠️ Bypassing authentication (development mode)');
-    // Set both localStorage and cookie for middleware to check
-    localStorage.setItem('admin_bypass', 'true');
-    document.cookie = 'admin_bypass=true; path=/; max-age=86400'; // 24 hours
-    setBypassAuth(true);
-    setAuthChecked(true);
+    console.log('⚠️ Bypass login is disabled. Please use proper authentication.');
+    alert('Bypass login is disabled. Please sign in with Google or email/password.');
   };
 
   const handleClearAllOrders = async () => {
@@ -124,14 +122,53 @@ export default function AdminDashboard() {
 
   // Check authentication on mount
   useEffect(() => {
-    // Check if bypass is enabled (check both localStorage and cookie)
-    const bypassEnabled = localStorage.getItem('admin_bypass') === 'true' || 
-                         document.cookie.includes('admin_bypass=true');
-    
-    // Also set cookie if localStorage has it but cookie doesn't
-    if (localStorage.getItem('admin_bypass') === 'true' && !document.cookie.includes('admin_bypass=true')) {
-      document.cookie = 'admin_bypass=true; path=/; max-age=86400';
+    // Display stored OAuth logs from sessionStorage
+    const storedLogs = sessionStorage.getItem('oauth_logs');
+    if (storedLogs) {
+      try {
+        const logs = JSON.parse(storedLogs);
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('📋 OAUTH FLOW LOGS (from previous steps)');
+        console.log('═══════════════════════════════════════════════════════');
+        logs.forEach((log: { timestamp: string; message: string }) => {
+          console.log(`[${new Date(log.timestamp).toLocaleTimeString()}] ${log.message}`);
+        });
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('💡 TIP: Enable "Preserve log" in browser console to keep logs across page navigations');
+        console.log('═══════════════════════════════════════════════════════');
+      } catch (e) {
+        // Ignore parse errors
+      }
     }
+    
+    // Make logs accessible globally for debugging
+    if (typeof window !== 'undefined') {
+      (window as any).viewOAuthLogs = () => {
+        const logs = sessionStorage.getItem('oauth_logs');
+        if (logs) {
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('📋 ALL OAUTH LOGS');
+          console.log('═══════════════════════════════════════════════════════');
+          JSON.parse(logs).forEach((log: { timestamp: string; message: string }) => {
+            console.log(`[${new Date(log.timestamp).toLocaleString()}] ${log.message}`);
+          });
+          console.log('═══════════════════════════════════════════════════════');
+        } else {
+          console.log('No OAuth logs found in sessionStorage');
+        }
+      };
+      
+      (window as any).clearOAuthLogs = () => {
+        sessionStorage.removeItem('oauth_logs');
+        console.log('✅ OAuth logs cleared');
+      };
+    }
+
+    // Only check bypass if explicitly enabled via environment variable
+    // Note: We can't access process.env.ALLOW_ADMIN_BYPASS on client-side directly,
+    // but middleware will handle the actual protection. This is just for UI state.
+    // If bypass is disabled, we should always require proper authentication.
+    const bypassEnabled = false; // Bypass is disabled - always require authentication
     
     if (bypassEnabled) {
       console.log('⚠️ Bypass mode enabled');
@@ -141,42 +178,100 @@ export default function AdminDashboard() {
     }
 
     const checkAuth = async () => {
+      // Store logs in sessionStorage to persist across redirects
+      const logToStorage = (message: string) => {
+        try {
+          const logs = JSON.parse(sessionStorage.getItem('oauth_logs') || '[]');
+          logs.push({ timestamp: new Date().toISOString(), message });
+          sessionStorage.setItem('oauth_logs', JSON.stringify(logs.slice(-50))); // Keep last 50 logs
+        } catch (e) {
+          // Ignore storage errors
+        }
+      };
+      
       try {
-        console.log('🔐 Admin page: Checking authentication...');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('🔐 ORDER-ADMIN PAGE - Verifying access');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('🔄 Step 1: Checking authentication...');
+        
         const { data: { user }, error } = await supabase.auth.getUser();
         
-        console.log('🔐 Admin page: User check result');
-        console.log('  - User:', user?.email || 'none');
-        console.log('  - Error:', error?.message || 'none');
-        
         if (error || !user) {
-          console.log('❌ Admin page: No authenticated user, redirecting to sign-in');
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('❌ PAGE CHECK - Authentication failed');
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('  📧 User email: none');
+          console.log('  ❌ Error:', error?.message || 'No user found');
+          console.log('  🔒 Redirecting to sign-in page');
           router.push('/auth/signin');
           return;
         }
 
-        // Check if user is authorized
-        console.log('🔐 Admin page: Checking authorization for:', user.email);
+        console.log('✅ Step 1: User authenticated');
+        console.log('  📧 Email:', user.email);
+        console.log('  🆔 User ID:', user.id);
+        logToStorage(`✅ User authenticated: ${user.email}`);
+
+        // Check if user is authorized (case-insensitive)
+        console.log('🔄 Step 2: Checking authorization in database...');
+        const userEmail = user.email?.toLowerCase().trim();
+        console.log('  🔍 Searching for email:', userEmail);
         const { data: authorizedEmail, error: authError } = await supabase
           .from('authorized_emails')
           .select('role')
-          .eq('email', user.email)
+          .ilike('email', userEmail || '')
           .single();
 
-        console.log('🔐 Admin page: Authorization check result');
-        console.log('  - Authorized:', authorizedEmail?.role || 'not found');
-        console.log('  - Auth error:', authError?.message || 'none');
-
-        if (!authorizedEmail) {
-          console.log('❌ Admin page: User not authorized, redirecting to unauthorized page');
+        if (authError) {
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('❌ PAGE CHECK - Database query error');
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('  📧 Email:', user.email);
+          console.log('  ❌ Error:', authError.message);
+          console.log('  💡 This might be an RLS policy issue. Check Supabase RLS policies.');
+          console.log('  🔒 Redirecting to unauthorized page');
+          logToStorage(`❌ Authorization query error: ${authError.message}`);
           router.push('/auth/unauthorized');
           return;
         }
 
-        console.log('✅ Admin page: User authenticated and authorized with role:', authorizedEmail.role);
+        if (!authorizedEmail) {
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('❌ PAGE CHECK - Authorization failed');
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('  📧 Email:', user.email);
+          console.log('  ❌ Email not found in authorized_emails table');
+          console.log('  🔒 Redirecting to unauthorized page');
+          logToStorage(`❌ Authorization failed: ${user.email} not in authorized_emails`);
+          router.push('/auth/unauthorized');
+          return;
+        }
+
+        console.log('✅ Step 2: User is authorized');
+        console.log('  👤 Role:', authorizedEmail.role);
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('✅ ORDER-ADMIN PAGE - Access verified');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('  📧 User:', user.email);
+        console.log('  👤 Role:', authorizedEmail.role);
+        console.log('  ✅ Dashboard access granted');
+        console.log('  📊 Loading orders and dashboard data...');
+        console.log('═══════════════════════════════════════════════════════');
+        
+        // Store success in sessionStorage
+        logToStorage(`✅ OAuth login successful! User: ${user.email}, Role: ${authorizedEmail.role}`);
+        logToStorage(`✅ Access granted to /order-admin page`);
+        
+        // Clear logs after successful login (optional - comment out if you want to keep them)
+        // sessionStorage.removeItem('oauth_logs');
+        
         setAuthChecked(true);
       } catch (err) {
-        console.error('❌ Admin page: Error checking auth:', err);
+        console.error('═══════════════════════════════════════════════════════');
+        console.error('❌ PAGE CHECK - Error occurred');
+        console.error('═══════════════════════════════════════════════════════');
+        console.error('  Error:', err);
         router.push('/auth/signin');
       }
     };
@@ -340,14 +435,8 @@ export default function AdminDashboard() {
           <p className="text-gray-500 text-sm mt-1">
             {!authChecked ? 'Please wait' : 'Fetching latest orders'}
           </p>
-          {!authChecked && (
-            <button
-              onClick={handleBypassLogin}
-              className="mt-6 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold shadow-lg"
-            >
-              ⚠️ Bypass Login (Development)
-            </button>
-          )}
+          {/* Bypass login is disabled - authentication is required */}
+          {/* Bypass button removed for security */}
         </div>
       </div>
     );

@@ -91,9 +91,9 @@ export async function PATCH(
       return NextResponse.json(updatedOrder);
     }
 
-    // Check for bypass cookie (same logic as middleware)
+    // Check for bypass cookie (only if explicitly enabled via environment variable)
     const bypassCookie = request.cookies.get('admin_bypass');
-    const allowBypass = process.env.ALLOW_ADMIN_BYPASS === 'true' || process.env.NODE_ENV === 'development';
+    const allowBypass = process.env.ALLOW_ADMIN_BYPASS === 'true';
     
     // Require manager role for updating orders (unless bypassed)
     if (!(allowBypass && bypassCookie?.value === 'true')) {
@@ -145,9 +145,9 @@ export async function DELETE(
       );
       }
 
-    // Check for bypass cookie (same logic as middleware)
+    // Check for bypass cookie (only if explicitly enabled via environment variable)
     const bypassCookie = request.cookies.get('admin_bypass');
-    const allowBypass = process.env.ALLOW_ADMIN_BYPASS === 'true' || process.env.NODE_ENV === 'development';
+    const allowBypass = process.env.ALLOW_ADMIN_BYPASS === 'true';
     
     // Require manager role for deleting orders (unless bypassed)
     if (!(allowBypass && bypassCookie?.value === 'true')) {
