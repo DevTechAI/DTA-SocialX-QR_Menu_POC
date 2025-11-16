@@ -124,7 +124,7 @@ export default function MenuEditorPage() {
           <div className="flex items-center justify-between">
             <div className="flex-1 flex flex-col items-center text-center">
               <h1 className="text-2xl md:text-3xl font-bold text-white drop-shadow-lg mb-2">
-                👔 Admin Dashboard - Menu Editor
+                👨‍💼 Admin Dashboard - Menu Editor
               </h1>
               <p className="text-white/90 text-sm md:text-base font-semibold drop-shadow">
                 SocialX Community Café - Menu Management
