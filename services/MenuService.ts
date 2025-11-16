@@ -11,7 +11,14 @@ export class MenuService {
       .eq('available', true)
       .order('category', { ascending: true });
 
-    if (error) throw new Error(`Failed to fetch menu: ${error.message}`);
+    if (error) {
+      console.error('❌ Supabase error fetching menu items:', error);
+      console.error('   Error code:', error.code);
+      console.error('   Error message:', error.message);
+      console.error('   Error details:', error.details);
+      throw new Error(`Failed to fetch menu: ${error.message}`);
+    }
+    console.log(`✅ Fetched ${data?.length || 0} menu items from Supabase`);
     return data || [];
   }
 

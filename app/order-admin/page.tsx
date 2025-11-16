@@ -206,7 +206,8 @@ export default function AdminDashboard() {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('/api/orders');
+      // Fetch orders for current business day (8 AM to 8 AM)
+      const response = await fetch('/api/orders?business_day=true');
       if (response.ok) {
         const data = await response.json();
         const parsedData = data.map((order: any) => {
@@ -218,13 +219,13 @@ export default function AdminDashboard() {
             items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
           };
         });
-        console.log('📋 Fetched orders:', parsedData.length, 'orders');
+        console.log('📋 Fetched orders for business day:', parsedData.length, 'orders');
         if (parsedData.length > 0) {
           console.log('📋 Sample order:', {
             id: parsedData[0].id,
             customer_name: parsedData[0].customer_name,
             customer_phno: parsedData[0].customer_phno,
-            allKeys: Object.keys(parsedData[0])
+            created_at: parsedData[0].created_at
           });
         }
         setOrders(parsedData);
@@ -262,15 +263,11 @@ export default function AdminDashboard() {
     }
   };
 
-  // Calculate today's stats
-  // Filter today's orders for stats (all orders, not limited)
-  const allTodayOrders = orders.filter(order => {
-    const orderDate = new Date(order.created_at);
-    const today = new Date();
-    return orderDate.toDateString() === today.toDateString();
-  });
+  // Orders are already filtered by business day (8 AM to 8 AM) from the API
+  // So we can use them directly - no need for additional client-side filtering
+  const allTodayOrders = orders; // Already filtered by business day from server
 
-  // Calculate stats from all today's orders
+  // Calculate stats from all business day orders
   const totalOrderValue = allTodayOrders.reduce((sum, order) => sum + order.total_amount, 0);
   const numberOfOrders = allTodayOrders.length;
   const amountSettled = allTodayOrders

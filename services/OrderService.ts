@@ -43,8 +43,15 @@ export class OrderService {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) throw new Error(`Failed to fetch orders: ${error.message}`);
+    if (error) {
+      console.error('❌ Supabase error fetching orders:', error);
+      console.error('   Error code:', error.code);
+      console.error('   Error message:', error.message);
+      console.error('   Error details:', error.details);
+      throw new Error(`Failed to fetch orders: ${error.message}`);
+    }
 
+    console.log(`✅ Fetched ${data?.length || 0} orders from Supabase`);
     return (data || []).map(order => {
       // Ensure customer_phno is properly mapped (handle both cases)
       const phoneNumber = order.customer_phno || order.customer_phNo || 'N/A';
@@ -71,6 +78,50 @@ export class OrderService {
 
     if (error) throw new Error(`Failed to fetch orders: ${error.message}`);
 
+    return (data || []).map(order => {
+      // Ensure customer_phno is properly mapped (handle both cases)
+      const phoneNumber = order.customer_phno || order.customer_phNo || 'N/A';
+      return {
+        ...order,
+        customer_phno: phoneNumber, // Always use lowercase to match interface
+        items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
+      };
+    });
+  }
+
+  async getOrdersByBusinessDay(date: Date = new Date()): Promise<Order[]> {
+    const now = new Date(date);
+    
+    // Calculate 8 AM today
+    const startOfBusinessDay = new Date(now);
+    startOfBusinessDay.setHours(8, 0, 0, 0);
+    
+    // Calculate 8 AM tomorrow
+    const endOfBusinessDay = new Date(now);
+    endOfBusinessDay.setDate(endOfBusinessDay.getDate() + 1);
+    endOfBusinessDay.setHours(8, 0, 0, 0);
+    
+    // If current time is before 8 AM, use yesterday's 8 AM to today's 8 AM
+    if (now.getHours() < 8) {
+      startOfBusinessDay.setDate(startOfBusinessDay.getDate() - 1);
+      endOfBusinessDay.setDate(endOfBusinessDay.getDate() - 1);
+    }
+
+    const { data, error } = await this.supabase
+      .from('orders')
+      .select('*')
+      .gte('created_at', startOfBusinessDay.toISOString())
+      .lt('created_at', endOfBusinessDay.toISOString())
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Supabase error fetching business day orders:', error);
+      console.error('   Error code:', error.code);
+      console.error('   Error message:', error.message);
+      throw new Error(`Failed to fetch orders: ${error.message}`);
+    }
+
+    console.log(`✅ Fetched ${data?.length || 0} orders for business day (8 AM to 8 AM)`);
     return (data || []).map(order => {
       // Ensure customer_phno is properly mapped (handle both cases)
       const phoneNumber = order.customer_phno || order.customer_phNo || 'N/A';

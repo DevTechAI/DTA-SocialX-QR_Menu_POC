@@ -18,11 +18,15 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const date = searchParams.get('date');
     const customerName = searchParams.get('customer_name');
+    const businessDay = searchParams.get('business_day'); // New parameter for 8 AM to 8 AM window
 
     const orderService = new OrderService();
     
     let orders;
-    if (date) {
+    if (businessDay === 'true') {
+      // Use business day window (8 AM to 8 AM)
+      orders = await orderService.getOrdersByBusinessDay();
+    } else if (date) {
       orders = await orderService.getOrdersByDate(new Date(date));
     } else if (customerName) {
       orders = await orderService.getOrderHistory(customerName);
