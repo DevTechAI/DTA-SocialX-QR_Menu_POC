@@ -18,7 +18,7 @@ interface Order {
   customer_phno: string;
   items: OrderItem[];
   total_amount: number;
-  status: 'received' | 'delivered' | 'paid' | 'unpaid';
+  status: 'received' | 'accepted' | 'rejected' | 'delivered' | 'paid' | 'unpaid';
   created_at: string;
   table_number?: string;
 }
@@ -31,6 +31,22 @@ const statusConfig = {
     textColor: 'text-yellow-700',
     badge: 'bg-gradient-to-r from-yellow-500 to-orange-500',
     icon: '⏳',
+  },
+  accepted: {
+    label: 'Accepted',
+    color: 'border-blue-300',
+    cardBg: 'bg-gradient-to-br from-blue-50 via-blue-100/70 to-indigo-50/80',
+    textColor: 'text-blue-700',
+    badge: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+    icon: '✅',
+  },
+  rejected: {
+    label: 'Rejected',
+    color: 'border-red-400',
+    cardBg: 'bg-gradient-to-br from-red-50 via-red-100/70 to-rose-50/80',
+    textColor: 'text-red-800',
+    badge: 'bg-gradient-to-r from-red-600 to-rose-600',
+    icon: '❌',
   },
   delivered: {
     label: 'Delivered',
@@ -68,6 +84,9 @@ export default function AdminDashboard() {
   const [amountView, setAmountView] = useState<'ordered' | 'settled'>('settled');
   const [authChecked, setAuthChecked] = useState(false);
   const [bypassAuth, setBypassAuth] = useState(false);
+  const [newOrdersCount, setNewOrdersCount] = useState(0);
+  const [previousOrders, setPreviousOrders] = useState<Order[]>([]);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -287,7 +306,10 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!authChecked) return; // Wait for auth check before fetching orders
     
+    // Initial fetch
     fetchOrders();
+    
+    // Set up polling interval (every 10 seconds)
     const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
   }, [authChecked]);
@@ -298,6 +320,139 @@ export default function AdminDashboard() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Request notification permission on mount and register service worker for push notifications
+  useEffect(() => {
+    // Request notification permission
+    if ('Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          setNotificationPermission(permission);
+          if (permission === 'granted') {
+            console.log('✅ Notification permission granted');
+          }
+        });
+      } else {
+        setNotificationPermission(Notification.permission);
+      }
+    }
+
+    // Register service worker for better push notification support
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(registration => {
+          console.log('✅ Service Worker registered:', registration.scope);
+        })
+        .catch(error => {
+          console.log('⚠️ Service Worker registration failed (optional):', error);
+          // This is optional - notifications will still work without it
+        });
+    }
+  }, []);
+
+  // Update browser tab title with new orders count
+  const updateTabTitle = (count: number) => {
+    if (count > 0) {
+      document.title = `New Orders (${count}) - Order Admin`;
+    } else {
+      document.title = 'Order Admin Dashboard';
+    }
+  };
+
+  // Play alert sound when new order is received (using MP3 file with fallback)
+  const playAlertSound = () => {
+    try {
+      // Try to play the MP3 audio file first
+      const audio = new Audio('/sounds/order-alert.mp3');
+      audio.volume = 0.7; // 70% volume
+      
+      audio.play().catch((error) => {
+        console.warn('Could not play MP3 audio file, falling back to beep:', error);
+        // Fallback to generated beep sound if MP3 fails
+        playBeepSound();
+      });
+    } catch (error) {
+      console.warn('Could not initialize audio, falling back to beep:', error);
+      // Fallback to generated beep sound
+      playBeepSound();
+    }
+  };
+
+  // Fallback beep sound (used if MP3 file fails to load)
+  const playBeepSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Play 3 beeps for better attention
+      [0, 200, 400].forEach((delay, index) => {
+        setTimeout(() => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+
+          // Slightly different pitch for each beep (800Hz, 900Hz, 1000Hz)
+          oscillator.frequency.value = 800 + (index * 100);
+          oscillator.type = 'sine';
+
+          // Louder and longer for better noticeability
+          gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.4);
+        }, delay);
+      });
+    } catch (error) {
+      console.warn('Could not play fallback beep sound:', error);
+    }
+  };
+
+  // Show desktop notification for new order (works even when browser is in background)
+  const showNewOrderNotification = (order: Order) => {
+    if (notificationPermission === 'granted') {
+      const itemsSummary = order.items
+        .slice(0, 3)
+        .map(item => `${item.name} (x${item.quantity})`)
+        .join(', ');
+      const moreItems = order.items.length > 3 ? ` +${order.items.length - 3} more` : '';
+
+      const notificationBody = [
+        `Customer: ${order.customer_name}`,
+        `Items: ${itemsSummary}${moreItems}`,
+        `Total: ₹${order.total_amount}`,
+        order.table_number ? `Table: ${order.table_number}` : ''
+      ].filter(Boolean).join('\n');
+
+      const notificationOptions: NotificationOptions = {
+        body: notificationBody,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: `order-${order.id}`, // Prevent duplicate notifications
+        requireInteraction: false,
+        silent: false, // Ensure sound plays (browser may play notification sound)
+      };
+
+      // Add vibrate for mobile (TypeScript doesn't recognize it but browsers do)
+      if ('vibrate' in navigator) {
+        (notificationOptions as any).vibrate = [200, 100, 200];
+      }
+
+      const notification = new Notification('New Order Received! 🎉', notificationOptions);
+
+      // Handle notification click - focus the window
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+
+      // Auto-close after 10 seconds
+      setTimeout(() => {
+        notification.close();
+      }, 10000);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -314,6 +469,64 @@ export default function AdminDashboard() {
             items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
           };
         });
+        
+        // Detect new orders and track if we should play sound
+        let shouldPlaySound = false;
+        let newOrders: Order[] = [];
+        
+        if (previousOrders.length > 0 && parsedData.length > previousOrders.length) {
+          newOrders = parsedData.filter(
+            (newOrder: Order) => 
+              !previousOrders.some(prevOrder => prevOrder.id === newOrder.id)
+          );
+
+          // Play sound when new orders are detected
+          if (newOrders.length > 0) {
+            shouldPlaySound = true;
+            playAlertSound();
+          }
+          
+          newOrders.forEach((order: Order) => {
+            // Show notification (requires permission)
+            showNewOrderNotification(order);
+            
+            // Also send message to service worker for background notifications
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'NEW_ORDER',
+                order: {
+                  id: order.id,
+                  customer_name: order.customer_name,
+                  total_amount: order.total_amount,
+                  items: order.items.slice(0, 3).map(item => `${item.name} (x${item.quantity})`).join(', '),
+                  table_number: order.table_number,
+                }
+              });
+            }
+          });
+        }
+
+        setPreviousOrders(parsedData);
+        setOrders(parsedData);
+
+        // Calculate new orders count (received but not accepted)
+        const receivedCount = parsedData.filter(
+          (order: Order) => order.status === 'received'
+        ).length;
+        
+        // Play sound if count is 1 or greater (and count increased)
+        // This ensures sound plays when count goes from 0 to 1 or more
+        // Only play if we didn't already play for new orders detection above
+        const previousCount = newOrdersCount;
+        if (receivedCount >= 1 && receivedCount > previousCount && !shouldPlaySound) {
+          playAlertSound();
+        }
+        
+        setNewOrdersCount(receivedCount);
+
+        // Update browser tab title
+        updateTabTitle(receivedCount);
+
         console.log('📋 Fetched orders for business day:', parsedData.length, 'orders');
         if (parsedData.length > 0) {
           console.log('📋 Sample order:', {
@@ -323,7 +536,6 @@ export default function AdminDashboard() {
             created_at: parsedData[0].created_at
           });
         }
-        setOrders(parsedData);
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -342,11 +554,18 @@ export default function AdminDashboard() {
       });
 
       if (response.ok) {
-        setOrders(prev =>
-          prev.map(order =>
+        setOrders(prev => {
+          const updated = prev.map(order =>
             order.id === orderId ? { ...order, status: newStatus } : order
-          )
-        );
+          );
+          
+          // Recalculate new orders count
+          const receivedCount = updated.filter(order => order.status === 'received').length;
+          setNewOrdersCount(receivedCount);
+          updateTabTitle(receivedCount);
+          
+          return updated;
+        });
       }
     } catch (error) {
       console.error('Error updating order:', error);
@@ -470,7 +689,7 @@ export default function AdminDashboard() {
               {/* Centered Admin Dashboard */}
               <div className="flex-1 flex flex-col items-center text-center">
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white flex items-center gap-3 drop-shadow-lg">
-                  <span className="text-4xl md:text-5xl">👔</span>
+                  <span className="text-4xl md:text-5xl">👨‍💼</span>
                   <span>Admin Dashboard</span>
                 </h1>
                 <p className="text-white text-base md:text-lg mt-2 font-bold drop-shadow-lg">SocialX Community Café - Order Management</p>
@@ -631,11 +850,11 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-10 py-8 md:py-10 flex-1 flex flex-col items-center justify-center">
         {/* Orders List Header */}
         <div className="mb-6 md:mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-orange-600 flex items-center gap-3">
+          <h2 className="text-2xl md:text-3xl font-bold text-orange-600 flex items-center gap-3 justify-center">
             <span className="text-3xl md:text-4xl">📦</span>
             <span>Orders Dashboard</span>
           </h2>
-          <p className="text-gray-600 mt-2 text-sm md:text-base font-medium">
+          <p className="text-gray-600 mt-2 text-sm md:text-base font-medium text-center">
             Click on an order to expand and view details
             {allTodayOrders.length > 20 && (
               <span className="ml-2 text-orange-600 font-semibold">
@@ -787,7 +1006,7 @@ export default function AdminDashboard() {
                           </div>
 
                           {/* Status Update Buttons */}
-                          <div className="grid grid-cols-2 gap-2 md:gap-3">
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
                             <button
                               onClick={() => updateOrderStatus(order.id, 'received')}
                               disabled={order.status === 'received'}
@@ -799,6 +1018,32 @@ export default function AdminDashboard() {
                             >
                               <span className="block text-base md:text-lg mb-0.5">⏳</span>
                               <span>Received</span>
+                            </button>
+
+                            <button
+                              onClick={() => updateOrderStatus(order.id, 'accepted')}
+                              disabled={order.status === 'accepted'}
+                              className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                order.status === 'accepted'
+                                  ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-2 border-blue-400'
+                                  : 'bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-700 hover:from-blue-200 hover:to-indigo-200 border border-blue-300'
+                              }`}
+                            >
+                              <span className="block text-base md:text-lg mb-0.5">✅</span>
+                              <span>Accepted</span>
+                            </button>
+
+                            <button
+                              onClick={() => updateOrderStatus(order.id, 'rejected')}
+                              disabled={order.status === 'rejected'}
+                              className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                order.status === 'rejected'
+                                  ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white border-2 border-red-500'
+                                  : 'bg-gradient-to-br from-red-100 to-rose-100 text-red-800 hover:from-red-200 hover:to-rose-200 border border-red-400'
+                              }`}
+                            >
+                              <span className="block text-base md:text-lg mb-0.5">❌</span>
+                              <span>Rejected</span>
                             </button>
 
                             <button

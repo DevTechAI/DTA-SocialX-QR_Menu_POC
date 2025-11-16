@@ -53,7 +53,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  let status: 'received' | 'delivered' | 'paid' | 'unpaid' | undefined;
+  let status: 'received' | 'accepted' | 'rejected' | 'delivered' | 'paid' | 'unpaid' | undefined;
   
   try {
     const body = await request.json();
@@ -67,15 +67,15 @@ export async function PATCH(
     }
 
     // Validate status type
-    const validStatuses: ('received' | 'delivered' | 'paid' | 'unpaid')[] = ['received', 'delivered', 'paid', 'unpaid'];
+    const validStatuses: ('received' | 'accepted' | 'rejected' | 'delivered' | 'paid' | 'unpaid')[] = ['received', 'accepted', 'rejected', 'delivered', 'paid', 'unpaid'];
     if (!validStatuses.includes(statusValue)) {
       return NextResponse.json(
-        { error: 'Invalid status. Must be one of: received, delivered, paid, unpaid' },
+        { error: 'Invalid status. Must be one of: received, accepted, rejected, delivered, paid, unpaid' },
         { status: 400 }
       );
     }
 
-    status = statusValue as 'received' | 'delivered' | 'paid' | 'unpaid';
+    status = statusValue as 'received' | 'accepted' | 'rejected' | 'delivered' | 'paid' | 'unpaid';
 
     // Check if Supabase is configured
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
