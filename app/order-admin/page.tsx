@@ -87,6 +87,14 @@ export default function AdminDashboard() {
   const [newOrdersCount, setNewOrdersCount] = useState(0);
   const [previousOrders, setPreviousOrders] = useState<Order[]>([]);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    // Load from localStorage, default to true
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('notificationSoundEnabled');
+      return saved !== null ? saved === 'true' : true;
+    }
+    return true;
+  });
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -359,8 +367,20 @@ export default function AdminDashboard() {
     }
   };
 
+  // Toggle sound notification
+  const toggleSound = () => {
+    const newValue = !soundEnabled;
+    setSoundEnabled(newValue);
+    localStorage.setItem('notificationSoundEnabled', String(newValue));
+  };
+
   // Play alert sound when new order is received (using MP3 file with fallback)
   const playAlertSound = () => {
+    // Check if sound is enabled
+    if (!soundEnabled) {
+      return;
+    }
+    
     try {
       // Try to play the MP3 audio file first
       const audio = new Audio('/sounds/order-alert.mp3');
@@ -850,10 +870,29 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-10 py-8 md:py-10 flex-1 flex flex-col items-center justify-center">
         {/* Orders List Header */}
         <div className="mb-6 md:mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-orange-600 flex items-center gap-3 justify-center">
-            <span className="text-3xl md:text-4xl">📦</span>
-            <span>Orders Dashboard</span>
-          </h2>
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            <h2 className="text-2xl md:text-3xl font-bold text-orange-600 flex items-center gap-3">
+              <span className="text-3xl md:text-4xl">📦</span>
+              <span>Orders Dashboard</span>
+            </h2>
+            
+            {/* Sound Notification Toggle */}
+            <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-soft border border-orange-200">
+              <span className="text-sm font-semibold text-gray-700">🔔</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={soundEnabled}
+                  onChange={toggleSound}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                <span className="ml-2 text-sm font-medium text-gray-700">
+                  {soundEnabled ? 'On' : 'Off'}
+                </span>
+              </label>
+            </div>
+          </div>
           <p className="text-gray-600 mt-2 text-sm md:text-base font-medium text-center">
             Click on an order to expand and view details
             {allTodayOrders.length > 20 && (
