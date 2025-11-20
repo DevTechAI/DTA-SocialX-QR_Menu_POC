@@ -194,11 +194,8 @@ export default function AdminDashboard() {
     if (!formattedPhone) return '';
     
     const message = `Hey ${customerName}, 
-
 your order is ready!
-
 Please collect it from the counter. 
-
 -socialx kitchen`;
     
     const encodedMessage = encodeURIComponent(message);
