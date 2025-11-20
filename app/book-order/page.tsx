@@ -115,7 +115,7 @@ export default function BookOrderPage() {
         <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full -mt-24 sm:-mt-28 md:-mt-32 lg:-mt-36">
           <div className="w-full max-w-4xl">
             {/* Page Title */}
-            <div className="text-center mb-8 -mt-20 sm:-mt-10 md:-mt-12">
+            <div className="text-center mb-8 -mt-8 sm:-mt-10 md:-mt-12">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-2">
                 Welcome to SocialX Hub
               </h2>
