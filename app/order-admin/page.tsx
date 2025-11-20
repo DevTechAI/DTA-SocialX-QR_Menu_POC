@@ -188,6 +188,23 @@ export default function AdminDashboard() {
     return '';
   };
 
+  // Format WhatsApp link with pre-filled message
+  const formatWhatsAppMessageLink = (phoneNumber: string, customerName: string): string => {
+    const formattedPhone = formatPhoneForWhatsApp(phoneNumber);
+    if (!formattedPhone) return '';
+    
+    const message = `Hey ${customerName}, 
+
+your order is ready!
+
+Please collect it from the counter. 
+
+-socialx kitchen`;
+    
+    const encodedMessage = encodeURIComponent(message);
+    return `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
+  };
+
   // Bypass login is disabled - authentication is required
   // This function is kept for reference but should not be used
   const handleBypassLogin = () => {
@@ -713,6 +730,7 @@ export default function AdminDashboard() {
 
   const updateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
     try {
+      console.log(`🔄 Updating order ${orderId} status to: ${newStatus}`);
       const response = await fetch(`/api/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -720,6 +738,8 @@ export default function AdminDashboard() {
       });
 
       if (response.ok) {
+        const updatedOrder = await response.json();
+        console.log(`✅ Order ${orderId} status updated to: ${newStatus}`);
         setOrders(prev => {
           const updated = prev.map(order =>
             order.id === orderId ? { ...order, status: newStatus } : order
@@ -732,14 +752,15 @@ export default function AdminDashboard() {
           
           return updated;
         });
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error(`❌ Failed to update order status:`, errorData);
+        alert(`Failed to update order status: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error updating order:', error);
-      setOrders(prev =>
-        prev.map(order =>
-          order.id === orderId ? { ...order, status: newStatus } : order
-        )
-      );
+      console.error('❌ Error updating order:', error);
+      alert(`Error updating order: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Don't update local state on error - keep the original status
     }
   };
 
@@ -1102,17 +1123,17 @@ export default function AdminDashboard() {
                                 {order.customer_name}
                               </h3>
                               <div className="flex items-center gap-2">
-                                <p className="text-xs text-gray-600 font-medium truncate">
-                                  📞 {order.customer_phno || 'N/A'}
-                                </p>
-                                {order.customer_phno && formatPhoneForWhatsApp(order.customer_phno) && (
+                              <p className="text-xs text-gray-600 font-medium truncate">
+                                📞 {order.customer_phno || 'N/A'}
+                              </p>
+                                {order.customer_phno && formatWhatsAppMessageLink(order.customer_phno, order.customer_name) && (
                                   <a
-                                    href={`https://wa.me/${formatPhoneForWhatsApp(order.customer_phno)}`}
+                                    href={formatWhatsAppMessageLink(order.customer_phno, order.customer_name)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={(e) => e.stopPropagation()}
                                     className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#25D366] hover:bg-[#20BA5A] transition-all shadow-md hover:shadow-lg hover:scale-110"
-                                    title={`Chat with ${order.customer_name} on WhatsApp`}
+                                    title={`Notify ${order.customer_name} on WhatsApp`}
                                   >
                                     <span className="text-sm font-bold text-white">💬</span>
                                   </a>
@@ -1200,7 +1221,10 @@ export default function AdminDashboard() {
                           {/* Status Update Buttons */}
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
                             <button
-                              onClick={() => updateOrderStatus(order.id, 'received')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateOrderStatus(order.id, 'received');
+                              }}
                               disabled={order.status === 'received'}
                               className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
                                 order.status === 'received'
@@ -1213,7 +1237,10 @@ export default function AdminDashboard() {
                             </button>
 
                             <button
-                              onClick={() => updateOrderStatus(order.id, 'accepted')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateOrderStatus(order.id, 'accepted');
+                              }}
                               disabled={order.status === 'accepted'}
                               className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
                                 order.status === 'accepted'
@@ -1226,7 +1253,10 @@ export default function AdminDashboard() {
                             </button>
 
                             <button
-                              onClick={() => updateOrderStatus(order.id, 'rejected')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateOrderStatus(order.id, 'rejected');
+                              }}
                               disabled={order.status === 'rejected'}
                               className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
                                 order.status === 'rejected'
@@ -1239,7 +1269,10 @@ export default function AdminDashboard() {
                             </button>
 
                             <button
-                              onClick={() => updateOrderStatus(order.id, 'delivered')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateOrderStatus(order.id, 'delivered');
+                              }}
                               disabled={order.status === 'delivered'}
                               className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
                                 order.status === 'delivered'
@@ -1252,7 +1285,10 @@ export default function AdminDashboard() {
                             </button>
 
                             <button
-                              onClick={() => updateOrderStatus(order.id, 'paid')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateOrderStatus(order.id, 'paid');
+                              }}
                               disabled={order.status === 'paid'}
                               className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
                                 order.status === 'paid'
@@ -1265,7 +1301,10 @@ export default function AdminDashboard() {
                             </button>
 
                             <button
-                              onClick={() => updateOrderStatus(order.id, 'unpaid')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateOrderStatus(order.id, 'unpaid');
+                              }}
                               disabled={order.status === 'unpaid'}
                               className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
                                 order.status === 'unpaid'

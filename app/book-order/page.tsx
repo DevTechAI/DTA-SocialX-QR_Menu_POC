@@ -15,7 +15,7 @@ type BookingOption = {
 const bookingOptions: BookingOption[] = [
   {
     id: 'food-order',
-    title: 'Food Order Menu',
+    title: 'Order Food & Coffee',
     description: 'Order delicious food & beverages',
     icon: '🍽️',
     route: '/order-menu',
@@ -24,7 +24,7 @@ const bookingOptions: BookingOption[] = [
   },
   {
     id: 'snooker',
-    title: 'Snooker Slot',
+    title: 'Book Snooker/Pool Table',
     description: 'Reserve a snooker board',
     icon: '🎱',
     route: '/book-snooker',
@@ -33,7 +33,7 @@ const bookingOptions: BookingOption[] = [
   },
   {
     id: 'cowork-seat',
-    title: 'Co-Working Seat',
+    title: 'Reserve Workspace',
     description: 'Reserve a workspace seat',
     icon: '💼',
     route: '/book-cowork-seat',
@@ -42,12 +42,12 @@ const bookingOptions: BookingOption[] = [
   },
   {
     id: 'eventspace',
-    title: 'Event Space Slot',
-    description: 'Reserve event space',
+    title: 'Events & WorkShops',
+    description: 'Discover upcoming events and workshops',
     icon: '🎉',
-    route: '/book-eventspace',
+    route: 'https://linktr.ee/socialx.hub',
     gradient: 'from-purple-500 to-purple-600',
-    available: false,
+    available: true,
   },
 ];
 
@@ -56,7 +56,14 @@ export default function BookOrderPage() {
 
   const handleCardClick = (option: BookingOption) => {
     if (option.available) {
-      router.push(option.route);
+      // Check if it's an external URL (starts with http:// or https://)
+      if (option.route.startsWith('http://') || option.route.startsWith('https://')) {
+        // Navigate to external URL in the same window
+        window.location.href = option.route;
+      } else {
+        // Internal route - use Next.js router
+        router.push(option.route);
+      }
     }
   };
 
