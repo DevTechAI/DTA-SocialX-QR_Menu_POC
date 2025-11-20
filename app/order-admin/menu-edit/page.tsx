@@ -251,17 +251,14 @@ export default function MenuEditorPage() {
                         <span className="text-xl font-bold text-orange-600">₹{item.price}</span>
                         <div className="flex gap-2">
                           <button
-                            onClick={() => {
-                              setEditingItem(item);
-                              setShowAddForm(false);
-                            }}
-                            className="px-3 py-1 bg-orange-100 text-orange-700 rounded text-xs font-semibold hover:bg-orange-200"
+                            disabled
+                            className="px-3 py-1 bg-gray-100 text-gray-400 rounded text-xs font-semibold cursor-not-allowed opacity-50"
                           >
                             Edit
                           </button>
                           <button
-                            onClick={() => handleDelete(item.id)}
-                            className="px-3 py-1 bg-red-100 text-red-700 rounded text-xs font-semibold hover:bg-red-200"
+                            disabled
+                            className="px-3 py-1 bg-gray-100 text-gray-400 rounded text-xs font-semibold cursor-not-allowed opacity-50"
                           >
                             Delete
                           </button>
