@@ -7,8 +7,8 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to /order-menu
-    router.replace('/order-menu');
+    // Redirect to /book-order
+    router.replace('/book-order');
   }, [router]);
 
   // Show loading state while redirecting
