@@ -44,7 +44,7 @@ const bookingOptions: BookingOption[] = [
     id: 'eventspace',
     title: 'Events & WorkShops',
     description: 'Discover upcoming events and workshops',
-    icon: '🎉',
+    icon: '📅',
     route: 'https://linktr.ee/socialx.hub',
     gradient: 'from-purple-500 to-purple-600',
     available: true,
@@ -124,132 +124,190 @@ export default function BookOrderPage() {
         {/* Booking Options Grid */}
         {/* Mobile: Small emoji icons in 2x2 grid */}
         <div className="grid grid-cols-2 gap-4 md:hidden -mt-2 sm:-mt-4">
-          {bookingOptions.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => handleCardClick(option)}
-              disabled={!option.available}
-              className={`
-                relative flex flex-col items-center justify-center p-4
-                bg-white rounded-xl shadow-soft-lg
-                transform transition-all duration-300
-                ${option.available 
-                  ? 'hover:scale-105 hover:shadow-xl cursor-pointer active:scale-95' 
-                  : 'cursor-not-allowed'
-                }
-              `}
-            >
-              {/* Emoji Icon */}
-              {option.available ? (
-                <div className={`
-                  inline-flex items-center justify-center w-16 h-16 rounded-xl 
-                  bg-gradient-to-br ${option.gradient}
-                  mb-2 shadow-soft-lg
-                `}>
-                  <span className="text-4xl">{option.icon}</span>
-                </div>
-              ) : (
-                <div className="text-6xl mb-2 grayscale opacity-50">
-                  {option.icon}
-                </div>
-              )}
-              
-              {/* Title */}
-              <h3 className={`text-sm font-bold text-center mb-1 ${
-                option.available ? 'text-gray-800' : 'text-gray-400'
-              }`}>
-                {option.title}
-              </h3>
-              
-              {/* Work in Progress indicator */}
-              {!option.available && (option.id === 'snooker' || option.id === 'cowork-seat' || option.id === 'eventspace') && (
-                <>
-                  <span className="text-lg mb-1">🚧</span>
-                  <p className="text-xs text-gray-500 mt-1">Self-Order at Counter</p>
-                </>
-              )}
-            </button>
-          ))}
+          {bookingOptions.map((option) => {
+            // Helper function to get title parts
+            const getTitleParts = () => {
+              if (option.id === 'food-order') {
+                return { line1: 'Order', line2: 'Food & Coffee' };
+              } else if (option.id === 'snooker') {
+                return { line1: 'Book', line2: 'Snooker/Pool Table' };
+              } else if (option.id === 'eventspace') {
+                return { line1: 'Events & WorkShops', line2: null };
+              }
+              return { line1: option.title, line2: null };
+            };
+            
+            const titleParts = getTitleParts();
+            const showWIP = !option.available && (option.id === 'snooker' || option.id === 'cowork-seat');
+            
+            return (
+              <button
+                key={option.id}
+                onClick={() => handleCardClick(option)}
+                disabled={!option.available}
+                className={`
+                  relative flex flex-col items-center justify-center p-4
+                  bg-white rounded-xl shadow-soft-lg
+                  transform transition-all duration-300
+                  ${option.available 
+                    ? 'hover:scale-105 hover:shadow-xl cursor-pointer active:scale-95' 
+                    : 'cursor-not-allowed'
+                  }
+                `}
+              >
+                {/* WIP Icon - Top Right Corner */}
+                {showWIP && (
+                  <div className="absolute top-2 right-2">
+                    <span className="text-lg">🚧</span>
+                  </div>
+                )}
+                
+                {/* Emoji Icon */}
+                {option.available ? (
+                  <div className={`
+                    inline-flex items-center justify-center w-16 h-16 rounded-xl 
+                    bg-gradient-to-br ${option.gradient}
+                    mb-2 shadow-soft-lg
+                  `}>
+                    <span className="text-4xl">{option.icon}</span>
+                  </div>
+                ) : (
+                  <div className="text-6xl mb-2 grayscale opacity-50">
+                    {option.icon}
+                  </div>
+                )}
+                
+                {/* Title - Line 1 */}
+                <h3 className={`text-xs sm:text-sm font-bold text-center mb-0.5 whitespace-nowrap ${
+                  option.available ? 'text-gray-800' : 'text-gray-400'
+                }`}>
+                  {titleParts.line1}
+                </h3>
+                
+                {/* Title - Line 2 (if exists) */}
+                {titleParts.line2 && (
+                  <h3 className={`text-[10px] sm:text-xs font-bold text-center leading-tight break-words ${
+                    option.available ? 'text-gray-800' : 'text-gray-400'
+                  }`} style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+                    {titleParts.line2}
+                  </h3>
+                )}
+                
+                {/* Self-Order at Counter text */}
+                {showWIP && (
+                  <p className="text-[9px] text-gray-500 mt-1 text-center">Self-Order at Counter</p>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Desktop: Full card layout */}
         <div className="hidden md:grid md:grid-cols-2 gap-4 -mt-4">
-          {bookingOptions.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => handleCardClick(option)}
-              disabled={!option.available}
-              className={`
-                relative bg-white rounded-xl shadow-soft-lg p-4
-                transform transition-all duration-300
-                ${option.available 
-                  ? 'hover:scale-105 hover:shadow-2xl cursor-pointer active:scale-95' 
-                  : 'opacity-60 cursor-not-allowed'
-                }
-                border-2 border-transparent
-                ${option.available ? 'hover:border-primary-300' : ''}
-              `}
-            >
-              {/* Icon */}
-              <div className={`
-                inline-flex items-center justify-center w-14 h-14 rounded-xl 
-                bg-gradient-to-br ${option.gradient}
-                mb-3 shadow-soft-lg mx-auto
-                ${option.available ? '' : 'grayscale'}
-              `}>
-                <span className="text-4xl">{option.icon}</span>
-              </div>
-
-              {/* Content */}
-              <div className="text-center">
-                <h2 className="text-xl font-bold text-gray-800 mb-1.5">
-                  {option.title}
-                </h2>
-                {!option.available && (option.id === 'snooker' || option.id === 'cowork-seat' || option.id === 'eventspace') && (
-                  <div className="mb-1.5">
+          {bookingOptions.map((option) => {
+            // Helper function to get title parts
+            const getTitleParts = () => {
+              if (option.id === 'food-order') {
+                return { line1: 'Order', line2: 'Food & Coffee' };
+              } else if (option.id === 'snooker') {
+                return { line1: 'Book', line2: 'Snooker/Pool Table' };
+              } else if (option.id === 'eventspace') {
+                return { line1: 'Events & WorkShops', line2: null };
+              }
+              return { line1: option.title, line2: null };
+            };
+            
+            const titleParts = getTitleParts();
+            const showWIP = !option.available && (option.id === 'snooker' || option.id === 'cowork-seat');
+            
+            return (
+              <button
+                key={option.id}
+                onClick={() => handleCardClick(option)}
+                disabled={!option.available}
+                className={`
+                  relative bg-white rounded-xl shadow-soft-lg p-4
+                  transform transition-all duration-300
+                  ${option.available 
+                    ? 'hover:scale-105 hover:shadow-2xl cursor-pointer active:scale-95' 
+                    : 'opacity-60 cursor-not-allowed'
+                  }
+                  border-2 border-transparent
+                  ${option.available ? 'hover:border-primary-300' : ''}
+                `}
+              >
+                {/* WIP Icon - Top Right Corner */}
+                {showWIP && (
+                  <div className="absolute top-3 right-3">
                     <span className="text-xl">🚧</span>
                   </div>
                 )}
-                <p className="text-gray-600 mb-2 text-sm">
-                  {option.description}
-                </p>
-                
-                {/* Status Badge */}
-                {option.available ? (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                    ✓ Available
-                  </span>
-                ) : (
-                  <>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 mb-1.5">
-                      {option.id === 'snooker' || option.id === 'cowork-seat' || option.id === 'eventspace' 
-                        ? 'For Now Check at Counter' 
-                        : 'Coming Soon'}
-                    </span>
-                    {(option.id === 'snooker' || option.id === 'cowork-seat' || option.id === 'eventspace') && (
-                      <p className="text-xs text-gray-500 mt-1.5">Self-Order at Counter</p>
-                    )}
-                  </>
-                )}
-              </div>
 
-              {/* Arrow Icon (only for available options) */}
-              {option.available && (
-                <div className="absolute top-4 right-4 text-gray-400 group-hover:text-primary-600 transition-colors">
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className="h-5 w-5" 
-                    fill="none" 
-                    viewBox="0 0 24 24" 
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
+                {/* Icon */}
+                <div className={`
+                  inline-flex items-center justify-center w-14 h-14 rounded-xl 
+                  bg-gradient-to-br ${option.gradient}
+                  mb-3 shadow-soft-lg mx-auto
+                  ${option.available ? '' : 'grayscale'}
+                `}>
+                  <span className="text-4xl">{option.icon}</span>
                 </div>
-              )}
-            </button>
-          ))}
+
+                {/* Content */}
+                <div className="text-center">
+                  {/* Title - Line 1 */}
+                  <h2 className="text-lg font-bold text-gray-800 mb-1">
+                    {titleParts.line1}
+                  </h2>
+                  
+                  {/* Title - Line 2 (if exists) */}
+                  {titleParts.line2 && (
+                    <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-1.5 leading-tight break-words" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+                      {titleParts.line2}
+                    </h2>
+                  )}
+                  
+                  <p className="text-gray-600 mb-2 text-sm">
+                    {option.description}
+                  </p>
+                  
+                  {/* Status Badge */}
+                  {option.available ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                      ✓ Available
+                    </span>
+                  ) : (
+                    <>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 mb-1.5">
+                        {option.id === 'snooker' || option.id === 'cowork-seat' || option.id === 'eventspace' 
+                          ? 'For Now Check at Counter' 
+                          : 'Coming Soon'}
+                      </span>
+                      {showWIP && (
+                        <p className="text-xs text-gray-500 mt-1.5">Self-Order at Counter</p>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Arrow Icon (only for available options) */}
+                {option.available && (
+                  <div className="absolute top-4 right-4 text-gray-400 group-hover:text-primary-600 transition-colors">
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className="h-5 w-5" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
