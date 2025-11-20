@@ -115,11 +115,11 @@ export default function BookOrderPage() {
         <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full -mt-24 sm:-mt-28 md:-mt-32 lg:-mt-36">
           <div className="w-full max-w-4xl">
             {/* Page Title */}
-            <div className="text-center mb-8 -mt-8 sm:-mt-10 md:-mt-12">
+            <div className="text-center mb-8 -mt-20 sm:-mt-10 md:-mt-12">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-2">
                 Welcome to SocialX Hub
               </h2>
-              <p className="text-gray-600 text-sm sm:text-base md:text-lg">
+              <p className="text-gray-600 text-sm sm:text-base md:hidden">
                 Choose from our available services
               </p>
             </div>
@@ -166,21 +166,24 @@ export default function BookOrderPage() {
               
               {/* Work in Progress indicator */}
               {!option.available && (option.id === 'snooker' || option.id === 'cowork-seat' || option.id === 'eventspace') && (
-                <span className="text-lg">🚧</span>
+                <>
+                  <span className="text-lg mb-1">🚧</span>
+                  <p className="text-xs text-gray-500 mt-1">Self-Order at Counter</p>
+                </>
               )}
             </button>
           ))}
         </div>
 
         {/* Desktop: Full card layout */}
-        <div className="hidden md:grid md:grid-cols-2 gap-6 -mt-4">
+        <div className="hidden md:grid md:grid-cols-2 gap-4 -mt-4">
           {bookingOptions.map((option) => (
             <button
               key={option.id}
               onClick={() => handleCardClick(option)}
               disabled={!option.available}
               className={`
-                relative bg-white rounded-2xl shadow-soft-lg p-6
+                relative bg-white rounded-xl shadow-soft-lg p-4
                 transform transition-all duration-300
                 ${option.available 
                   ? 'hover:scale-105 hover:shadow-2xl cursor-pointer active:scale-95' 
@@ -192,48 +195,53 @@ export default function BookOrderPage() {
             >
               {/* Icon */}
               <div className={`
-                inline-flex items-center justify-center w-20 h-20 rounded-2xl 
+                inline-flex items-center justify-center w-14 h-14 rounded-xl 
                 bg-gradient-to-br ${option.gradient}
-                mb-4 shadow-soft-lg mx-auto
+                mb-3 shadow-soft-lg mx-auto
                 ${option.available ? '' : 'grayscale'}
               `}>
-                <span className="text-5xl">{option.icon}</span>
+                <span className="text-4xl">{option.icon}</span>
               </div>
 
               {/* Content */}
               <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                <h2 className="text-xl font-bold text-gray-800 mb-1.5">
                   {option.title}
                 </h2>
                 {!option.available && (option.id === 'snooker' || option.id === 'cowork-seat' || option.id === 'eventspace') && (
-                  <div className="mb-2">
-                    <span className="text-2xl">🚧</span>
+                  <div className="mb-1.5">
+                    <span className="text-xl">🚧</span>
                   </div>
                 )}
-                <p className="text-gray-600 mb-3">
+                <p className="text-gray-600 mb-2 text-sm">
                   {option.description}
                 </p>
                 
                 {/* Status Badge */}
                 {option.available ? (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
                     ✓ Available
                   </span>
                 ) : (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gray-100 text-gray-500">
-                    {option.id === 'snooker' || option.id === 'cowork-seat' || option.id === 'eventspace' 
-                      ? 'For Now Check at Counter' 
-                      : 'Coming Soon'}
-                  </span>
+                  <>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 mb-1.5">
+                      {option.id === 'snooker' || option.id === 'cowork-seat' || option.id === 'eventspace' 
+                        ? 'For Now Check at Counter' 
+                        : 'Coming Soon'}
+                    </span>
+                    {(option.id === 'snooker' || option.id === 'cowork-seat' || option.id === 'eventspace') && (
+                      <p className="text-xs text-gray-500 mt-1.5">Self-Order at Counter</p>
+                    )}
+                  </>
                 )}
               </div>
 
               {/* Arrow Icon (only for available options) */}
               {option.available && (
-                <div className="absolute top-6 right-6 text-gray-400 group-hover:text-primary-600 transition-colors">
+                <div className="absolute top-4 right-4 text-gray-400 group-hover:text-primary-600 transition-colors">
                   <svg 
                     xmlns="http://www.w3.org/2000/svg" 
-                    className="h-6 w-6" 
+                    className="h-5 w-5" 
                     fill="none" 
                     viewBox="0 0 24 24" 
                     stroke="currentColor"
