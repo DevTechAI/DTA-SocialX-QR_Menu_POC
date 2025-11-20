@@ -328,7 +328,7 @@ export default function AdminDashboard() {
     // Set up polling interval (every 10 seconds)
     const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
-  }, [authChecked]);
+  }, [authChecked, fetchOrders]);
 
   useEffect(() => {
     const timer = setInterval(() => {

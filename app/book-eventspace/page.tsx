@@ -24,7 +24,7 @@ export default function BookEventSpacePage() {
             🚧 This feature is under development
           </p>
           <p className="text-gray-500 mb-6">
-            We're working hard to bring you the event space booking system. 
+            We&apos;re working hard to bring you the event space booking system. 
             Check back soon!
           </p>
           
