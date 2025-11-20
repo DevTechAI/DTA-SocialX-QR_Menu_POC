@@ -100,6 +100,35 @@ export default function AdminDashboard() {
   const soundEnabledRef = useRef(soundEnabled);
   const previousOrdersRef = useRef<Order[]>([]);
   const newOrdersCountRef = useRef(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Preload audio on mount
+  useEffect(() => {
+    // Preload the audio file for better performance and to avoid autoplay issues
+    const audio = new Audio('/sounds/order-alert.mp3');
+    audio.preload = 'auto';
+    audio.volume = 0.7;
+    // Try to load the audio (this helps with autoplay policies)
+    audio.load();
+    audioRef.current = audio;
+    
+    // Log audio readiness
+    audio.addEventListener('canplaythrough', () => {
+      console.log('✅ Sound notification audio loaded and ready');
+    });
+    
+    audio.addEventListener('error', (e) => {
+      console.error('❌ Sound notification audio error:', e);
+    });
+    
+    return () => {
+      // Cleanup
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
   
   // Update refs whenever state changes
   useEffect(() => {
@@ -375,6 +404,54 @@ export default function AdminDashboard() {
           // This is optional - notifications will still work without it
         });
     }
+    
+    // Unlock audio on first user interaction (required by browser autoplay policies)
+    const unlockAudio = async () => {
+      // Try to play and immediately pause to unlock audio
+      if (audioRef.current) {
+        try {
+          await audioRef.current.play();
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+          console.log('✅ Audio unlocked for notifications');
+        } catch (error) {
+          console.log('⚠️ Could not unlock audio:', error);
+        }
+      }
+      
+      // Also unlock AudioContext for beep fallback
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        const testContext = new AudioContextClass();
+        if (testContext.state === 'suspended') {
+          await testContext.resume();
+          console.log('✅ AudioContext unlocked for beep fallback');
+        }
+        testContext.close();
+      } catch (error) {
+        // Ignore errors
+      }
+    };
+    
+    // Add event listeners for user interaction to unlock audio
+    const events = ['click', 'touchstart', 'keydown'];
+    const unlockHandler = () => {
+      unlockAudio();
+      // Remove listeners after first interaction
+      events.forEach(event => {
+        document.removeEventListener(event, unlockHandler);
+      });
+    };
+    
+    events.forEach(event => {
+      document.addEventListener(event, unlockHandler, { once: true });
+    });
+    
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, unlockHandler);
+      });
+    };
   }, []);
 
   // Update browser tab title with new orders count
@@ -397,54 +474,99 @@ export default function AdminDashboard() {
   const playAlertSound = () => {
     // Check if sound is enabled (use ref to get current value, avoiding stale closures)
     if (!soundEnabledRef.current) {
+      console.log('🔇 Sound notification is disabled');
       return;
     }
     
-    try {
-      // Try to play the MP3 audio file first
-      const audio = new Audio('/sounds/order-alert.mp3');
-      audio.volume = 0.7; // 70% volume
+    console.log('🔔 Attempting to play sound notification...');
+    
+    // Try to use preloaded audio first
+    if (audioRef.current) {
+      const audio = audioRef.current;
       
-      audio.play().catch((error) => {
-        console.warn('Could not play MP3 audio file, falling back to beep:', error);
-        // Fallback to generated beep sound if MP3 fails
+      // Reset audio to beginning
+      audio.currentTime = 0;
+      
+      // Try to play
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('✅ Sound notification played successfully');
+          })
+          .catch((error) => {
+            console.warn('⚠️ Could not play preloaded MP3 audio:', error);
+            console.log('🔄 Falling back to beep sound...');
+            // Fallback to generated beep sound if MP3 fails
+            playBeepSound();
+          });
+      }
+    } else {
+      // If preloaded audio doesn't exist, try creating a new one
+      try {
+        console.log('⚠️ Preloaded audio not available, creating new audio element...');
+        const audio = new Audio('/sounds/order-alert.mp3');
+        audio.volume = 0.7;
+        
+        audio.play().catch((error) => {
+          console.warn('⚠️ Could not play new MP3 audio file:', error);
+          console.log('🔄 Falling back to beep sound...');
+          playBeepSound();
+        });
+      } catch (error) {
+        console.warn('⚠️ Could not initialize audio:', error);
+        console.log('🔄 Falling back to beep sound...');
         playBeepSound();
-      });
-    } catch (error) {
-      console.warn('Could not initialize audio, falling back to beep:', error);
-      // Fallback to generated beep sound
-      playBeepSound();
+      }
     }
   };
 
   // Fallback beep sound (used if MP3 file fails to load)
-  const playBeepSound = () => {
+  const playBeepSound = async () => {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const audioContext = new AudioContextClass();
+      
+      // Resume AudioContext if it's suspended (browser autoplay policy)
+      if (audioContext.state === 'suspended') {
+        console.log('🔄 AudioContext is suspended, attempting to resume...');
+        await audioContext.resume();
+        console.log('✅ AudioContext resumed');
+      }
       
       // Play 3 beeps for better attention
       [0, 200, 400].forEach((delay, index) => {
         setTimeout(() => {
-          const oscillator = audioContext.createOscillator();
-          const gainNode = audioContext.createGain();
+          try {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
 
-          oscillator.connect(gainNode);
-          gainNode.connect(audioContext.destination);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
 
-          // Slightly different pitch for each beep (800Hz, 900Hz, 1000Hz)
-          oscillator.frequency.value = 800 + (index * 100);
-          oscillator.type = 'sine';
+            // Slightly different pitch for each beep (800Hz, 900Hz, 1000Hz)
+            oscillator.frequency.value = 800 + (index * 100);
+            oscillator.type = 'sine';
 
-          // Louder and longer for better noticeability
-          gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+            // Louder and longer for better noticeability
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
 
-          oscillator.start(audioContext.currentTime);
-          oscillator.stop(audioContext.currentTime + 0.4);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.4);
+            
+            if (index === 0) {
+              console.log('✅ Fallback beep sound playing');
+            }
+          } catch (beepError) {
+            console.error('❌ Error creating beep:', beepError);
+          }
         }, delay);
       });
     } catch (error) {
-      console.warn('Could not play fallback beep sound:', error);
+      console.error('❌ Could not play fallback beep sound:', error);
+      console.log('💡 Tip: Browser may be blocking audio. Try clicking anywhere on the page first to enable audio.');
     }
   };
 
