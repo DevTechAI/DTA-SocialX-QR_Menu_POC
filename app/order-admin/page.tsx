@@ -151,47 +151,48 @@ export default function AdminDashboard() {
     router.push('/auth/signin');
   };
 
+  // Format phone number for WhatsApp link
+  const formatPhoneForWhatsApp = (phoneNumber: string): string => {
+    if (!phoneNumber || phoneNumber === 'N/A') return '';
+    
+    // Remove all spaces, dashes, and other non-digit characters except +
+    let cleaned = phoneNumber.replace(/[\s\-\(\)]/g, '');
+    
+    // Remove +91 if present at the start
+    if (cleaned.startsWith('+91')) {
+      cleaned = cleaned.substring(3);
+    } else if (cleaned.startsWith('91') && cleaned.length > 10) {
+      cleaned = cleaned.substring(2);
+    }
+    
+    // Remove leading 0 if present (for Indian numbers)
+    if (cleaned.startsWith('0')) {
+      cleaned = cleaned.substring(1);
+    }
+    
+    // Ensure we have a valid 10-digit number
+    if (cleaned.length === 10 && /^\d+$/.test(cleaned)) {
+      return `+91${cleaned}`;
+    }
+    
+    // If already in international format, return as is
+    if (cleaned.startsWith('+')) {
+      return cleaned;
+    }
+    
+    // Fallback: return with +91 prefix if it's all digits
+    if (/^\d+$/.test(cleaned)) {
+      return `+91${cleaned}`;
+    }
+    
+    return '';
+  };
+
   // Bypass login is disabled - authentication is required
   // This function is kept for reference but should not be used
   const handleBypassLogin = () => {
     console.log('⚠️ Bypass login is disabled. Please use proper authentication.');
     alert('Bypass login is disabled. Please sign in with Google or email/password.');
-  };
-
-  const handleClearAllOrders = async () => {
-    const confirmed = window.confirm(
-      '⚠️ Are you sure you want to clear ALL orders?\n\n' +
-      'This will reset:\n' +
-      '• Total Order Value\n' +
-      '• Number of Orders\n' +
-      '• Amount Settled\n' +
-      '• All orders in the dashboard\n' +
-      '• Item-wise metrics\n\n' +
-      'This action cannot be undone!'
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setLoading(true);
-      const response = await fetch('/api/orders', {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to clear orders');
-      }
-
-      // Refresh orders after clearing
-      await fetchOrders();
-      alert('✅ All orders have been cleared successfully!');
-    } catch (error: any) {
-      console.error('Error clearing orders:', error);
-      alert(`❌ Failed to clear orders: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
   };
 
   // Check authentication on mount
@@ -864,13 +865,6 @@ export default function AdminDashboard() {
               <div className="flex-1 flex flex-col items-end gap-2">
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={handleClearAllOrders}
-                    className="px-4 py-2 bg-red-500/80 backdrop-blur-md text-white rounded-lg border border-red-400/50 hover:bg-red-600/90 transition-colors font-semibold text-sm shadow-lg"
-                    title="Clear all orders and reset statistics"
-                  >
-                    🗑️ Clear All
-                  </button>
                   <Link
                     href="/order-admin/menu-edit"
                     className="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-lg border border-white/30 hover:bg-white/30 transition-colors font-semibold text-sm"
@@ -1107,9 +1101,23 @@ export default function AdminDashboard() {
                               <h3 className="text-base md:text-lg font-bold text-gray-800 truncate">
                                 {order.customer_name}
                               </h3>
-                              <p className="text-xs text-gray-600 font-medium truncate">
-                                📞 {order.customer_phno || 'N/A'}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-xs text-gray-600 font-medium truncate">
+                                  📞 {order.customer_phno || 'N/A'}
+                                </p>
+                                {order.customer_phno && formatPhoneForWhatsApp(order.customer_phno) && (
+                                  <a
+                                    href={`https://wa.me/${formatPhoneForWhatsApp(order.customer_phno)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#25D366] hover:bg-[#20BA5A] transition-all shadow-md hover:shadow-lg hover:scale-110"
+                                    title={`Chat with ${order.customer_name} on WhatsApp`}
+                                  >
+                                    <span className="text-sm font-bold text-white">💬</span>
+                                  </a>
+                                )}
+                              </div>
                               <p className="text-xs text-gray-600 font-medium truncate">
                                 #{order.id.slice(0, 8)}
                                 {order.table_number && ` • Table ${order.table_number}`}
