@@ -99,8 +99,8 @@ export default function BookOrderPage() {
                 </div>
                 
                 {/* Brand Name */}
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-2xl mb-2 sm:mb-3" style={{ fontFamily: 'cursive' }}>
-                  SocialX <span className="italic font-semibold" style={{ fontFamily: 'Georgia, serif' }}>Hub</span>
+                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white drop-shadow-2xl mb-2 sm:mb-3" style={{ fontFamily: 'cursive', textShadow: '0 4px 8px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3)' }}>
+                  SocialX <span className="italic font-black" style={{ fontFamily: 'Georgia, serif', fontWeight: 900 }}>Hub</span>
                 </h1>
               </div>
             </div>
@@ -114,16 +114,6 @@ export default function BookOrderPage() {
         {/* Content Container */}
         <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full -mt-24 sm:-mt-28 md:-mt-32 lg:-mt-36">
           <div className="w-full max-w-4xl">
-            {/* Page Title */}
-            <div className="text-center mb-8 -mt-8 sm:-mt-10 md:-mt-12">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-2">
-                Welcome to SocialX Hub
-              </h2>
-              <p className="text-gray-600 text-sm sm:text-base md:hidden">
-                Choose from our available services
-              </p>
-            </div>
-
         {/* Booking Options Grid */}
         {/* Mobile: Small emoji icons in 2x2 grid */}
         <div className="grid grid-cols-2 gap-4 md:hidden -mt-2 sm:-mt-4">
