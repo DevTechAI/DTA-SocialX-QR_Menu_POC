@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Order Manager - SocialX',
-  description: 'Order management dashboard for SocialX Community Café',
+  description: 'Order management dashboard for SocialX Hub',
 };
 
 export default function ManagerLayout({

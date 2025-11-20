@@ -735,7 +735,7 @@ export default function AdminDashboard() {
                   <span className="text-4xl md:text-5xl">👨‍💼</span>
                   <span>Admin Dashboard</span>
                 </h1>
-                <p className="text-white text-base md:text-lg mt-2 font-bold drop-shadow-lg">SocialX Community Café - Order Management</p>
+                <p className="text-white text-base md:text-lg mt-2 font-bold drop-shadow-lg">SocialX Hub - Order Management</p>
               </div>
               
               {/* Right side - Date and Time + Actions */}
@@ -1277,7 +1277,7 @@ export default function AdminDashboard() {
         {/* Footer */}
       <footer className="mt-12 py-6 text-center border-t border-gray-200/50">
           <p className="text-sm text-gray-600">
-            Powered by{' '}
+            Tech Powered by{' '}
             <a
               href="https://www.devtechai.org"
               target="_blank"

@@ -170,7 +170,7 @@ function SignInForm() {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border-2 border-orange-200">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-orange-900 mb-2">👨‍💼 Admin Sign In</h1>
-          <p className="text-orange-600">SocialX Community Café</p>
+          <p className="text-orange-600">SocialX Hub</p>
         </div>
 
         {supabaseNotConfigured && (

@@ -823,7 +823,7 @@ export default function SocialXMenuApp() {
                       SocialX
                     </h1>
                     <p className="text-lg sm:text-xl md:text-2xl text-white/95 italic font-medium drop-shadow-lg" style={{ fontFamily: 'Georgia, serif' }}>
-                      Community Café
+                      Hub
                     </p>
                   </div>
                 </div>
@@ -840,7 +840,7 @@ export default function SocialXMenuApp() {
         <footer className="fixed bottom-0 left-0 right-0 z-0">
           <div className="w-full bg-white/60 backdrop-blur-sm border-t border-gray-200/50 py-2 shadow-sm">
             <p className="text-xs text-gray-500 text-center">
-              Powered by{' '}
+              Tech Powered by{' '}
               <a
                 href="https://www.devtechai.org"
                 target="_blank"
@@ -1046,7 +1046,7 @@ export default function SocialXMenuApp() {
         <footer className="fixed bottom-0 left-0 right-0 z-0">
           <div className="w-full bg-white/60 backdrop-blur-sm border-t border-gray-200/50 py-2 shadow-sm">
             <p className="text-xs text-gray-500 text-center">
-              Powered by{' '}
+              Tech Powered by{' '}
               <a
                 href="https://www.devtechai.org"
                 target="_blank"
