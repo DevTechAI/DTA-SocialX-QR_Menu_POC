@@ -38,6 +38,8 @@ export default function SocialXMenuApp() {
   
   const [mounted, setMounted] = useState(false);
   const [showOrderMessageDialog, setShowOrderMessageDialog] = useState(false);
+  const [showUnavailableItemsDialog, setShowUnavailableItemsDialog] = useState(false);
+  const [unavailableItems, setUnavailableItems] = useState<Array<{ menu_item_id: string; name: string; Available: boolean }>>([]);
   
   // Ref for selected items scroll container
   const selectedItemsScrollRef = useRef<HTMLDivElement>(null);
@@ -46,25 +48,44 @@ export default function SocialXMenuApp() {
 
   // Fetch menu items from API
   useEffect(() => {
-    const fetchMenuItems = async () => {
+    const fetchMenuItems = async (isInitialLoad = false) => {
       try {
-        setMenuLoading(true);
+        if (isInitialLoad) {
+          setMenuLoading(true);
+        }
         const response = await fetch('/api/menu');
         if (response.ok) {
           const data = await response.json();
           setMenuItems(data);
-          console.log('✅ Menu items loaded from database:', data.length);
+          if (isInitialLoad) {
+            console.log('✅ Menu items loaded from database:', data.length);
+            // Log availability status for debugging
+            const unavailableCount = data.filter((item: MenuItem) => item.available === false).length;
+            if (unavailableCount > 0) {
+              console.log(`⚠️ Found ${unavailableCount} unavailable items (available=false)`);
+            }
+          }
         } else {
           console.error('Failed to fetch menu items');
         }
       } catch (error) {
         console.error('Error fetching menu items:', error);
       } finally {
-        setMenuLoading(false);
+        if (isInitialLoad) {
+          setMenuLoading(false);
+        }
       }
     };
 
-    fetchMenuItems();
+    // Initial load
+    fetchMenuItems(true);
+    
+    // Poll for menu updates every 20 seconds to get real-time availability changes
+    const pollInterval = setInterval(() => {
+      fetchMenuItems(false);
+    }, 20000); // 20 seconds
+
+    return () => clearInterval(pollInterval);
   }, []);
 
   useEffect(() => {
@@ -401,6 +422,10 @@ export default function SocialXMenuApp() {
   };
 
   const addItem = (item: MenuItem) => {
+    // Prevent adding unavailable items
+    if (item.available === false) {
+      return;
+    }
     setSelectedItems(prev => {
       const existing = prev.find(i => i.item.id === item.id);
       if (existing) {
@@ -430,6 +455,31 @@ export default function SocialXMenuApp() {
 
   const removeItemCompletely = (itemId: string) => {
     setSelectedItems(prev => prev.filter(i => i.item.id !== itemId));
+  };
+
+  const handleViewMenu = () => {
+    // Get IDs of unavailable items
+    const unavailableIds = unavailableItems.map(item => item.menu_item_id);
+    
+    // Remove unavailable items from selected items
+    setSelectedItems(prev => {
+      const updated = prev.filter(i => !unavailableIds.includes(i.item.id));
+      // Update localStorage for selected items
+      localStorage.setItem('selectedItems', JSON.stringify(updated));
+      return updated;
+    });
+    
+    // Update menu items to mark unavailable items as sold out
+    setMenuItems(prev => prev.map(item => {
+      if (unavailableIds.includes(item.id)) {
+        return { ...item, available: false };
+      }
+      return item;
+    }));
+    
+    // Close dialog
+    setShowUnavailableItemsDialog(false);
+    setUnavailableItems([]);
   };
 
   const getTotalAmount = () => {
@@ -497,22 +547,55 @@ export default function SocialXMenuApp() {
         body: JSON.stringify(orderData),
       });
 
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (jsonError) {
+        console.error('❌ Failed to parse response JSON:', jsonError);
+        alert('Failed to place order. Please try again.');
+        return;
+      }
+
+      console.log('📦 Order API Response:', {
+        status: response.status,
+        ok: response.ok,
+        hasUnavailableItems: !!responseData.unavailableItems,
+        unavailableItemsCount: responseData.unavailableItems?.length || 0,
+        data: responseData
+      });
+
       if (response.ok) {
-        const mockOrderId = getMockOrderId();
-        setOrderId(mockOrderId);
-        localStorage.setItem('orderId', mockOrderId);
+        // Order placed successfully
+        const orderId = responseData.id || getMockOrderId();
+        setOrderId(orderId);
+        localStorage.setItem('orderId', orderId);
         localStorage.setItem('orderPlaced', 'true');
         navigateToView('orderPlaced');
         // Dialog will be shown by useEffect
+      } else if (response.status === 400) {
+        // Check if it's an unavailable items error
+        if (responseData.unavailableItems && Array.isArray(responseData.unavailableItems) && responseData.unavailableItems.length > 0) {
+          // Some items are unavailable
+          console.log('⚠️ Unavailable items detected:', responseData.unavailableItems);
+          console.log('🔔 Setting dialog state to true');
+          
+          // Show dialog first to notify user
+          setUnavailableItems(responseData.unavailableItems);
+          setShowUnavailableItemsDialog(true);
+          console.log('✅ Dialog state set, showUnavailableItemsDialog should be true');
+        } else {
+          // Other 400 error
+          console.error('❌ Order error (400):', responseData);
+          alert(responseData.error || 'Failed to place order. Please try again.');
+        }
+      } else {
+        // Other error
+        console.error('❌ Order error:', responseData);
+        alert(responseData.error || 'Failed to place order. Please try again.');
       }
     } catch (error) {
-      console.error('Error placing order:', error);
-      const mockOrderId = getMockOrderId();
-      setOrderId(mockOrderId);
-      localStorage.setItem('orderId', mockOrderId);
-      localStorage.setItem('orderPlaced', 'true');
-      navigateToView('orderPlaced');
-      // Dialog will be shown by useEffect
+      console.error('❌ Error placing order:', error);
+      alert('Failed to place order. Please try again.');
     }
   };
 
@@ -1037,6 +1120,7 @@ export default function SocialXMenuApp() {
             </div>
           </div>
         )}
+
       </div>
     );
   }
@@ -1538,19 +1622,36 @@ export default function SocialXMenuApp() {
                     const selectedItem = selectedItems.find(i => i.item.id === item.id);
                     const quantity = selectedItem?.quantity || 0;
 
+                    const isUnavailable = item.available === false;
+                    
                     return (
                       <div key={item.id} className="relative group/item px-1">
                         {/* Card */}
-                        <div className="relative rounded-xl overflow-hidden shadow-soft">
+                        <div className={`relative rounded-xl overflow-hidden shadow-soft ${isUnavailable ? 'opacity-60 grayscale' : ''}`}>
                           {/* Glass background */}
-                          <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-orange-50/70 backdrop-blur-xl"></div>
+                          <div className={`absolute inset-0 backdrop-blur-xl ${
+                            isUnavailable 
+                              ? 'bg-gradient-to-br from-gray-200/95 via-gray-200/90 to-gray-300/70' 
+                              : 'bg-gradient-to-br from-white/95 via-white/90 to-orange-50/70'
+                          }`}></div>
+                          
+                          {/* SOLD OUT Tag */}
+                          {isUnavailable && (
+                            <div className="absolute top-2 right-2 z-20 bg-red-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-md shadow-md">
+                              SOLD OUT
+                            </div>
+                          )}
                           
                           {/* Content */}
                           <div className="relative z-10 p-3">
                             <div className="flex items-center gap-3">
                               {/* Icon */}
                               {item.icon && (
-                                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100">
+                                <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm border ${
+                                  isUnavailable 
+                                    ? 'bg-gradient-to-br from-gray-100 to-gray-200 border-gray-300' 
+                                    : 'bg-gradient-to-br from-primary-50 to-accent-50 border-primary-100'
+                                }`}>
                                   {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
                                     <Image 
                                       src={item.icon} 
@@ -1568,25 +1669,33 @@ export default function SocialXMenuApp() {
                               {/* Item Details */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2 mb-0.5">
-                                  <h3 className="text-sm font-bold text-gray-800 truncate">{item.name}</h3>
+                                  <h3 className={`text-sm font-bold truncate ${
+                                    isUnavailable ? 'text-gray-500' : 'text-gray-800'
+                                  }`}>{item.name}</h3>
                                   {quantity === 0 ? (
-                                    <button
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        addItem(item);
-                                      }}
-                                      className="flex-shrink-0 py-1.5 text-xs rounded-lg font-bold transition-all shadow-sm hover:shadow-soft active:scale-95 text-white touch-manipulation min-w-[72px]"
-                                      style={{
-                                        background: 'linear-gradient(135deg, #f97316 0%, #fb923c 100%)',
-                                        WebkitTapHighlightColor: 'transparent',
-                                        touchAction: 'manipulation',
-                                        paddingLeft: '1.2rem', // 19.2px - 20% more than previous 16px (1rem)
-                                        paddingRight: '1.2rem', // 19.2px - 20% more than previous 16px (1rem)
-                                      }}
-                                    >
-                                      Add
-                                    </button>
+                                    isUnavailable ? (
+                                      <span className="flex-shrink-0 py-1.5 text-xs rounded-lg font-bold text-gray-500 min-w-[72px] text-center">
+                                        SOLD OUT
+                                      </span>
+                                    ) : (
+                                      <button
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          addItem(item);
+                                        }}
+                                        className="flex-shrink-0 py-1.5 text-xs rounded-lg font-bold transition-all shadow-sm hover:shadow-soft active:scale-95 text-white touch-manipulation min-w-[72px]"
+                                        style={{
+                                          background: 'linear-gradient(135deg, #f97316 0%, #fb923c 100%)',
+                                          WebkitTapHighlightColor: 'transparent',
+                                          touchAction: 'manipulation',
+                                          paddingLeft: '1.2rem', // 19.2px - 20% more than previous 16px (1rem)
+                                          paddingRight: '1.2rem', // 19.2px - 20% more than previous 16px (1rem)
+                                        }}
+                                      >
+                                        Add
+                                      </button>
+                                    )
                                   ) : (
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                       <button
@@ -1600,7 +1709,12 @@ export default function SocialXMenuApp() {
                                       </span>
                                       <button
                                         onClick={() => addItem(item)}
-                                        className="w-6 h-6 rounded-lg bg-gradient-to-br from-green-500 to-green-600 text-white font-bold shadow-sm hover:shadow-soft transition-all active:scale-95 flex items-center justify-center text-sm"
+                                        disabled={isUnavailable}
+                                        className={`w-6 h-6 rounded-lg font-bold shadow-sm hover:shadow-soft transition-all active:scale-95 flex items-center justify-center text-sm ${
+                                          isUnavailable 
+                                            ? 'bg-gradient-to-br from-gray-400 to-gray-500 text-gray-200 cursor-not-allowed' 
+                                            : 'bg-gradient-to-br from-green-500 to-green-600 text-white'
+                                        }`}
                                       >
                                         +
                                       </button>
@@ -1608,8 +1722,12 @@ export default function SocialXMenuApp() {
                                   )}
                                 </div>
                                 <div className="flex items-center justify-between gap-2">
-                                  <p className="text-[10px] text-gray-500 truncate">{item.description}</p>
-                                  <span className="text-base font-bold text-primary-600 whitespace-nowrap flex-shrink-0">₹{item.price}</span>
+                                  <p className={`text-[10px] truncate ${
+                                    isUnavailable ? 'text-gray-400' : 'text-gray-500'
+                                  }`}>{item.description}</p>
+                                  <span className={`text-base font-bold whitespace-nowrap flex-shrink-0 ${
+                                    isUnavailable ? 'text-gray-500' : 'text-primary-600'
+                                  }`}>₹{item.price}</span>
                                 </div>
                               </div>
                             </div>
@@ -1629,6 +1747,78 @@ export default function SocialXMenuApp() {
       {/* Moved selected items section above - now between Place Order and tabs */}
 
       {/* Footer removed in menu page - Selected items window now between sections */}
+
+      {/* Unavailable Items Dialog - Available from menu view */}
+      {showUnavailableItemsDialog && (
+        <div 
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 animate-in fade-in duration-300"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={(e) => {
+            // Close when clicking outside
+            if (e.target === e.currentTarget) {
+              setShowUnavailableItemsDialog(false);
+            }
+          }}
+        >
+          <div 
+            className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full transform transition-all animate-in zoom-in-95 duration-300"
+          >
+            {/* Close Button - Red X */}
+            <button
+              onClick={() => setShowUnavailableItemsDialog(false)}
+              className="absolute top-4 right-4 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full p-1.5 transition-all"
+              aria-label="Close"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-6 w-6" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Message Content */}
+            <div className="pr-8 text-center">
+              <h3 className="text-xl font-bold text-red-600 mb-4">
+                ⚠️ Not Available
+              </h3>
+              <div className="space-y-3 mb-4">
+                <ul className="space-y-2 flex flex-col items-center">
+                  {unavailableItems.map((item) => {
+                    // Find the menu item to get its icon
+                    const menuItem = menuItems.find(mi => mi.id === item.menu_item_id);
+                    return (
+                      <li key={item.menu_item_id} className="flex items-center gap-2 text-sm font-bold text-gray-700">
+                        {menuItem?.icon && (
+                          <span className="text-lg flex-shrink-0">{menuItem.icon}</span>
+                        )}
+                        <span className="text-red-600">{item.name}</span> - <span className="text-red-600 font-bold">SOLD OUT</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="text-sm font-semibold text-gray-700 mt-4">
+                  Removing out of stock Items from your cart
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-6">
+              <button
+                onClick={handleViewMenu}
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2.5 px-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+              >
+                View Menu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -18,7 +18,7 @@ interface Order {
   customer_phno: string;
   items: OrderItem[];
   total_amount: number;
-  status: 'received' | 'delivered' | 'paid' | 'unpaid';
+  status: 'received' | 'accepted' | 'rejected' | 'delivered' | 'paid' | 'unpaid';
   created_at: string;
   table_number?: string;
 }
@@ -31,6 +31,22 @@ const statusConfig = {
     textColor: 'text-yellow-700',
     badge: 'bg-gradient-to-r from-yellow-500 to-orange-500',
     icon: '⏳',
+  },
+  accepted: {
+    label: 'Accepted',
+    color: 'border-blue-300',
+    cardBg: 'bg-gradient-to-br from-blue-50 via-blue-100/70 to-indigo-50/80',
+    textColor: 'text-blue-700',
+    badge: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+    icon: '✅',
+  },
+  rejected: {
+    label: 'Rejected',
+    color: 'border-red-400',
+    cardBg: 'bg-gradient-to-br from-red-50 via-red-100/70 to-rose-50/80',
+    textColor: 'text-red-800',
+    badge: 'bg-gradient-to-r from-red-600 to-rose-600',
+    icon: '❌',
   },
   delivered: {
     label: 'Delivered',
@@ -68,6 +84,25 @@ export default function AdminDashboard() {
   const [amountView, setAmountView] = useState<'ordered' | 'settled'>('settled');
   const [authChecked, setAuthChecked] = useState(false);
   const [bypassAuth, setBypassAuth] = useState(false);
+  const [newOrdersCount, setNewOrdersCount] = useState(0);
+  const [previousOrders, setPreviousOrders] = useState<Order[]>([]);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    // Load from localStorage, default to true
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('notificationSoundEnabled');
+      return saved !== null ? saved === 'true' : true;
+    }
+    return true;
+  });
+  
+  // Use ref to always have the current soundEnabled value (avoids stale closures)
+  const soundEnabledRef = useRef(soundEnabled);
+  
+  // Update ref whenever soundEnabled changes
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -77,13 +112,11 @@ export default function AdminDashboard() {
     router.push('/auth/signin');
   };
 
+  // Bypass login is disabled - authentication is required
+  // This function is kept for reference but should not be used
   const handleBypassLogin = () => {
-    console.log('⚠️ Bypassing authentication (development mode)');
-    // Set both localStorage and cookie for middleware to check
-    localStorage.setItem('admin_bypass', 'true');
-    document.cookie = 'admin_bypass=true; path=/; max-age=86400'; // 24 hours
-    setBypassAuth(true);
-    setAuthChecked(true);
+    console.log('⚠️ Bypass login is disabled. Please use proper authentication.');
+    alert('Bypass login is disabled. Please sign in with Google or email/password.');
   };
 
   const handleClearAllOrders = async () => {
@@ -124,14 +157,53 @@ export default function AdminDashboard() {
 
   // Check authentication on mount
   useEffect(() => {
-    // Check if bypass is enabled (check both localStorage and cookie)
-    const bypassEnabled = localStorage.getItem('admin_bypass') === 'true' || 
-                         document.cookie.includes('admin_bypass=true');
-    
-    // Also set cookie if localStorage has it but cookie doesn't
-    if (localStorage.getItem('admin_bypass') === 'true' && !document.cookie.includes('admin_bypass=true')) {
-      document.cookie = 'admin_bypass=true; path=/; max-age=86400';
+    // Display stored OAuth logs from sessionStorage
+    const storedLogs = sessionStorage.getItem('oauth_logs');
+    if (storedLogs) {
+      try {
+        const logs = JSON.parse(storedLogs);
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('📋 OAUTH FLOW LOGS (from previous steps)');
+        console.log('═══════════════════════════════════════════════════════');
+        logs.forEach((log: { timestamp: string; message: string }) => {
+          console.log(`[${new Date(log.timestamp).toLocaleTimeString()}] ${log.message}`);
+        });
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('💡 TIP: Enable "Preserve log" in browser console to keep logs across page navigations');
+        console.log('═══════════════════════════════════════════════════════');
+      } catch (e) {
+        // Ignore parse errors
+      }
     }
+    
+    // Make logs accessible globally for debugging
+    if (typeof window !== 'undefined') {
+      (window as any).viewOAuthLogs = () => {
+        const logs = sessionStorage.getItem('oauth_logs');
+        if (logs) {
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('📋 ALL OAUTH LOGS');
+          console.log('═══════════════════════════════════════════════════════');
+          JSON.parse(logs).forEach((log: { timestamp: string; message: string }) => {
+            console.log(`[${new Date(log.timestamp).toLocaleString()}] ${log.message}`);
+          });
+          console.log('═══════════════════════════════════════════════════════');
+        } else {
+          console.log('No OAuth logs found in sessionStorage');
+        }
+      };
+      
+      (window as any).clearOAuthLogs = () => {
+        sessionStorage.removeItem('oauth_logs');
+        console.log('✅ OAuth logs cleared');
+      };
+    }
+
+    // Only check bypass if explicitly enabled via environment variable
+    // Note: We can't access process.env.ALLOW_ADMIN_BYPASS on client-side directly,
+    // but middleware will handle the actual protection. This is just for UI state.
+    // If bypass is disabled, we should always require proper authentication.
+    const bypassEnabled = false; // Bypass is disabled - always require authentication
     
     if (bypassEnabled) {
       console.log('⚠️ Bypass mode enabled');
@@ -141,42 +213,100 @@ export default function AdminDashboard() {
     }
 
     const checkAuth = async () => {
+      // Store logs in sessionStorage to persist across redirects
+      const logToStorage = (message: string) => {
+        try {
+          const logs = JSON.parse(sessionStorage.getItem('oauth_logs') || '[]');
+          logs.push({ timestamp: new Date().toISOString(), message });
+          sessionStorage.setItem('oauth_logs', JSON.stringify(logs.slice(-50))); // Keep last 50 logs
+        } catch (e) {
+          // Ignore storage errors
+        }
+      };
+      
       try {
-        console.log('🔐 Admin page: Checking authentication...');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('🔐 ORDER-ADMIN PAGE - Verifying access');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('🔄 Step 1: Checking authentication...');
+        
         const { data: { user }, error } = await supabase.auth.getUser();
         
-        console.log('🔐 Admin page: User check result');
-        console.log('  - User:', user?.email || 'none');
-        console.log('  - Error:', error?.message || 'none');
-        
         if (error || !user) {
-          console.log('❌ Admin page: No authenticated user, redirecting to sign-in');
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('❌ PAGE CHECK - Authentication failed');
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('  📧 User email: none');
+          console.log('  ❌ Error:', error?.message || 'No user found');
+          console.log('  🔒 Redirecting to sign-in page');
           router.push('/auth/signin');
           return;
         }
 
-        // Check if user is authorized
-        console.log('🔐 Admin page: Checking authorization for:', user.email);
+        console.log('✅ Step 1: User authenticated');
+        console.log('  📧 Email:', user.email);
+        console.log('  🆔 User ID:', user.id);
+        logToStorage(`✅ User authenticated: ${user.email}`);
+
+        // Check if user is authorized (case-insensitive)
+        console.log('🔄 Step 2: Checking authorization in database...');
+        const userEmail = user.email?.toLowerCase().trim();
+        console.log('  🔍 Searching for email:', userEmail);
         const { data: authorizedEmail, error: authError } = await supabase
           .from('authorized_emails')
           .select('role')
-          .eq('email', user.email)
+          .ilike('email', userEmail || '')
           .single();
 
-        console.log('🔐 Admin page: Authorization check result');
-        console.log('  - Authorized:', authorizedEmail?.role || 'not found');
-        console.log('  - Auth error:', authError?.message || 'none');
-
-        if (!authorizedEmail) {
-          console.log('❌ Admin page: User not authorized, redirecting to unauthorized page');
+        if (authError) {
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('❌ PAGE CHECK - Database query error');
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('  📧 Email:', user.email);
+          console.log('  ❌ Error:', authError.message);
+          console.log('  💡 This might be an RLS policy issue. Check Supabase RLS policies.');
+          console.log('  🔒 Redirecting to unauthorized page');
+          logToStorage(`❌ Authorization query error: ${authError.message}`);
           router.push('/auth/unauthorized');
           return;
         }
 
-        console.log('✅ Admin page: User authenticated and authorized with role:', authorizedEmail.role);
+        if (!authorizedEmail) {
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('❌ PAGE CHECK - Authorization failed');
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('  📧 Email:', user.email);
+          console.log('  ❌ Email not found in authorized_emails table');
+          console.log('  🔒 Redirecting to unauthorized page');
+          logToStorage(`❌ Authorization failed: ${user.email} not in authorized_emails`);
+          router.push('/auth/unauthorized');
+          return;
+        }
+
+        console.log('✅ Step 2: User is authorized');
+        console.log('  👤 Role:', authorizedEmail.role);
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('✅ ORDER-ADMIN PAGE - Access verified');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('  📧 User:', user.email);
+        console.log('  👤 Role:', authorizedEmail.role);
+        console.log('  ✅ Dashboard access granted');
+        console.log('  📊 Loading orders and dashboard data...');
+        console.log('═══════════════════════════════════════════════════════');
+        
+        // Store success in sessionStorage
+        logToStorage(`✅ OAuth login successful! User: ${user.email}, Role: ${authorizedEmail.role}`);
+        logToStorage(`✅ Access granted to /order-admin page`);
+        
+        // Clear logs after successful login (optional - comment out if you want to keep them)
+        // sessionStorage.removeItem('oauth_logs');
+        
         setAuthChecked(true);
       } catch (err) {
-        console.error('❌ Admin page: Error checking auth:', err);
+        console.error('═══════════════════════════════════════════════════════');
+        console.error('❌ PAGE CHECK - Error occurred');
+        console.error('═══════════════════════════════════════════════════════');
+        console.error('  Error:', err);
         router.push('/auth/signin');
       }
     };
@@ -192,7 +322,10 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!authChecked) return; // Wait for auth check before fetching orders
     
+    // Initial fetch
     fetchOrders();
+    
+    // Set up polling interval (every 10 seconds)
     const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
   }, [authChecked]);
@@ -204,9 +337,155 @@ export default function AdminDashboard() {
     return () => clearInterval(timer);
   }, []);
 
+  // Request notification permission on mount and register service worker for push notifications
+  useEffect(() => {
+    // Request notification permission
+    if ('Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          setNotificationPermission(permission);
+          if (permission === 'granted') {
+            console.log('✅ Notification permission granted');
+          }
+        });
+      } else {
+        setNotificationPermission(Notification.permission);
+      }
+    }
+
+    // Register service worker for better push notification support
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(registration => {
+          console.log('✅ Service Worker registered:', registration.scope);
+        })
+        .catch(error => {
+          console.log('⚠️ Service Worker registration failed (optional):', error);
+          // This is optional - notifications will still work without it
+        });
+    }
+  }, []);
+
+  // Update browser tab title with new orders count
+  const updateTabTitle = (count: number) => {
+    if (count > 0) {
+      document.title = `New Orders (${count}) - Order Admin`;
+    } else {
+      document.title = 'Order Admin Dashboard';
+    }
+  };
+
+  // Toggle sound notification
+  const toggleSound = () => {
+    const newValue = !soundEnabled;
+    setSoundEnabled(newValue);
+    localStorage.setItem('notificationSoundEnabled', String(newValue));
+  };
+
+  // Play alert sound when new order is received (using MP3 file with fallback)
+  const playAlertSound = () => {
+    // Check if sound is enabled (use ref to get current value, avoiding stale closures)
+    if (!soundEnabledRef.current) {
+      return;
+    }
+    
+    try {
+      // Try to play the MP3 audio file first
+      const audio = new Audio('/sounds/order-alert.mp3');
+      audio.volume = 0.7; // 70% volume
+      
+      audio.play().catch((error) => {
+        console.warn('Could not play MP3 audio file, falling back to beep:', error);
+        // Fallback to generated beep sound if MP3 fails
+        playBeepSound();
+      });
+    } catch (error) {
+      console.warn('Could not initialize audio, falling back to beep:', error);
+      // Fallback to generated beep sound
+      playBeepSound();
+    }
+  };
+
+  // Fallback beep sound (used if MP3 file fails to load)
+  const playBeepSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Play 3 beeps for better attention
+      [0, 200, 400].forEach((delay, index) => {
+        setTimeout(() => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+
+          // Slightly different pitch for each beep (800Hz, 900Hz, 1000Hz)
+          oscillator.frequency.value = 800 + (index * 100);
+          oscillator.type = 'sine';
+
+          // Louder and longer for better noticeability
+          gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.4);
+        }, delay);
+      });
+    } catch (error) {
+      console.warn('Could not play fallback beep sound:', error);
+    }
+  };
+
+  // Show desktop notification for new order (works even when browser is in background)
+  const showNewOrderNotification = (order: Order) => {
+    if (notificationPermission === 'granted') {
+      const itemsSummary = order.items
+        .slice(0, 3)
+        .map(item => `${item.name} (x${item.quantity})`)
+        .join(', ');
+      const moreItems = order.items.length > 3 ? ` +${order.items.length - 3} more` : '';
+
+      const notificationBody = [
+        `Customer: ${order.customer_name}`,
+        `Items: ${itemsSummary}${moreItems}`,
+        `Total: ₹${order.total_amount}`,
+        order.table_number ? `Table: ${order.table_number}` : ''
+      ].filter(Boolean).join('\n');
+
+      const notificationOptions: NotificationOptions = {
+        body: notificationBody,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: `order-${order.id}`, // Prevent duplicate notifications
+        requireInteraction: false,
+        silent: false, // Ensure sound plays (browser may play notification sound)
+      };
+
+      // Add vibrate for mobile (TypeScript doesn't recognize it but browsers do)
+      if ('vibrate' in navigator) {
+        (notificationOptions as any).vibrate = [200, 100, 200];
+      }
+
+      const notification = new Notification('New Order Received! 🎉', notificationOptions);
+
+      // Handle notification click - focus the window
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+
+      // Auto-close after 10 seconds
+      setTimeout(() => {
+        notification.close();
+      }, 10000);
+    }
+  };
+
   const fetchOrders = async () => {
     try {
-      const response = await fetch('/api/orders');
+      // Fetch orders for current business day (8 AM to 8 AM)
+      const response = await fetch('/api/orders?business_day=true');
       if (response.ok) {
         const data = await response.json();
         const parsedData = data.map((order: any) => {
@@ -218,16 +497,73 @@ export default function AdminDashboard() {
             items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
           };
         });
-        console.log('📋 Fetched orders:', parsedData.length, 'orders');
+        
+        // Detect new orders and track if we should play sound
+        let shouldPlaySound = false;
+        let newOrders: Order[] = [];
+        
+        if (previousOrders.length > 0 && parsedData.length > previousOrders.length) {
+          newOrders = parsedData.filter(
+            (newOrder: Order) => 
+              !previousOrders.some(prevOrder => prevOrder.id === newOrder.id)
+          );
+
+          // Play sound when new orders are detected
+          if (newOrders.length > 0) {
+            shouldPlaySound = true;
+            playAlertSound();
+          }
+          
+          newOrders.forEach((order: Order) => {
+            // Show notification (requires permission)
+            showNewOrderNotification(order);
+            
+            // Also send message to service worker for background notifications
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'NEW_ORDER',
+                order: {
+                  id: order.id,
+                  customer_name: order.customer_name,
+                  total_amount: order.total_amount,
+                  items: order.items.slice(0, 3).map(item => `${item.name} (x${item.quantity})`).join(', '),
+                  table_number: order.table_number,
+                }
+              });
+            }
+          });
+        }
+
+        setPreviousOrders(parsedData);
+        setOrders(parsedData);
+
+        // Calculate new orders count (received but not accepted)
+        const receivedCount = parsedData.filter(
+          (order: Order) => order.status === 'received'
+        ).length;
+        
+        // Play sound if count is 1 or greater (and count increased)
+        // This ensures sound plays when count goes from 0 to 1 or more
+        // Only play if we didn't already play for new orders detection above
+        const previousCount = newOrdersCount;
+        if (receivedCount >= 1 && receivedCount > previousCount && !shouldPlaySound) {
+          playAlertSound();
+        }
+        
+        setNewOrdersCount(receivedCount);
+
+        // Update browser tab title
+        updateTabTitle(receivedCount);
+
+        console.log('📋 Fetched orders for business day:', parsedData.length, 'orders');
         if (parsedData.length > 0) {
           console.log('📋 Sample order:', {
             id: parsedData[0].id,
             customer_name: parsedData[0].customer_name,
             customer_phno: parsedData[0].customer_phno,
-            allKeys: Object.keys(parsedData[0])
+            created_at: parsedData[0].created_at
           });
         }
-        setOrders(parsedData);
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -246,11 +582,18 @@ export default function AdminDashboard() {
       });
 
       if (response.ok) {
-        setOrders(prev =>
-          prev.map(order =>
+        setOrders(prev => {
+          const updated = prev.map(order =>
             order.id === orderId ? { ...order, status: newStatus } : order
-          )
-        );
+          );
+          
+          // Recalculate new orders count
+          const receivedCount = updated.filter(order => order.status === 'received').length;
+          setNewOrdersCount(receivedCount);
+          updateTabTitle(receivedCount);
+          
+          return updated;
+        });
       }
     } catch (error) {
       console.error('Error updating order:', error);
@@ -262,15 +605,11 @@ export default function AdminDashboard() {
     }
   };
 
-  // Calculate today's stats
-  // Filter today's orders for stats (all orders, not limited)
-  const allTodayOrders = orders.filter(order => {
-    const orderDate = new Date(order.created_at);
-    const today = new Date();
-    return orderDate.toDateString() === today.toDateString();
-  });
+  // Orders are already filtered by business day (8 AM to 8 AM) from the API
+  // So we can use them directly - no need for additional client-side filtering
+  const allTodayOrders = orders; // Already filtered by business day from server
 
-  // Calculate stats from all today's orders
+  // Calculate stats from all business day orders
   const totalOrderValue = allTodayOrders.reduce((sum, order) => sum + order.total_amount, 0);
   const numberOfOrders = allTodayOrders.length;
   const amountSettled = allTodayOrders
@@ -343,14 +682,8 @@ export default function AdminDashboard() {
           <p className="text-gray-500 text-sm mt-1">
             {!authChecked ? 'Please wait' : 'Fetching latest orders'}
           </p>
-          {!authChecked && (
-            <button
-              onClick={handleBypassLogin}
-              className="mt-6 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold shadow-lg"
-            >
-              ⚠️ Bypass Login (Development)
-            </button>
-          )}
+          {/* Bypass login is disabled - authentication is required */}
+          {/* Bypass button removed for security */}
         </div>
       </div>
     );
@@ -384,7 +717,7 @@ export default function AdminDashboard() {
               {/* Centered Admin Dashboard */}
               <div className="flex-1 flex flex-col items-center text-center">
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white flex items-center gap-3 drop-shadow-lg">
-                  <span className="text-4xl md:text-5xl">👔</span>
+                  <span className="text-4xl md:text-5xl">👨‍💼</span>
                   <span>Admin Dashboard</span>
                 </h1>
                 <p className="text-white text-base md:text-lg mt-2 font-bold drop-shadow-lg">SocialX Community Café - Order Management</p>
@@ -545,11 +878,30 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-10 py-8 md:py-10 flex-1 flex flex-col items-center justify-center">
         {/* Orders List Header */}
         <div className="mb-6 md:mb-8">
+          <div className="flex items-center justify-center gap-4 flex-wrap">
           <h2 className="text-2xl md:text-3xl font-bold text-orange-600 flex items-center gap-3">
             <span className="text-3xl md:text-4xl">📦</span>
             <span>Orders Dashboard</span>
           </h2>
-          <p className="text-gray-600 mt-2 text-sm md:text-base font-medium">
+            
+            {/* Sound Notification Toggle */}
+            <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-soft border border-orange-200">
+              <span className="text-sm font-semibold text-gray-700">🔔</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={soundEnabled}
+                  onChange={toggleSound}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                <span className="ml-2 text-sm font-medium text-gray-700">
+                  {soundEnabled ? 'On' : 'Off'}
+                </span>
+              </label>
+            </div>
+          </div>
+          <p className="text-gray-600 mt-2 text-sm md:text-base font-medium text-center">
             Click on an order to expand and view details
             {allTodayOrders.length > 20 && (
               <span className="ml-2 text-orange-600 font-semibold">
@@ -701,7 +1053,7 @@ export default function AdminDashboard() {
                           </div>
 
                           {/* Status Update Buttons */}
-                          <div className="grid grid-cols-2 gap-2 md:gap-3">
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
                             <button
                               onClick={() => updateOrderStatus(order.id, 'received')}
                               disabled={order.status === 'received'}
@@ -713,6 +1065,32 @@ export default function AdminDashboard() {
                             >
                               <span className="block text-base md:text-lg mb-0.5">⏳</span>
                               <span>Received</span>
+                            </button>
+
+                            <button
+                              onClick={() => updateOrderStatus(order.id, 'accepted')}
+                              disabled={order.status === 'accepted'}
+                              className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                order.status === 'accepted'
+                                  ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-2 border-blue-400'
+                                  : 'bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-700 hover:from-blue-200 hover:to-indigo-200 border border-blue-300'
+                              }`}
+                            >
+                              <span className="block text-base md:text-lg mb-0.5">✅</span>
+                              <span>Accepted</span>
+                            </button>
+
+                            <button
+                              onClick={() => updateOrderStatus(order.id, 'rejected')}
+                              disabled={order.status === 'rejected'}
+                              className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                order.status === 'rejected'
+                                  ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white border-2 border-red-500'
+                                  : 'bg-gradient-to-br from-red-100 to-rose-100 text-red-800 hover:from-red-200 hover:to-rose-200 border border-red-400'
+                              }`}
+                            >
+                              <span className="block text-base md:text-lg mb-0.5">❌</span>
+                              <span>Rejected</span>
                             </button>
 
                             <button

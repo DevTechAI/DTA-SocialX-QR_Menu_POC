@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     const menuService = new MenuService();
-    const items = await menuService.getAllMenuItems();
+    const items = await menuService.getAllMenuItemsForAdmin();
     return NextResponse.json(items);
   } catch (error: any) {
     console.error('Error fetching menu:', error);

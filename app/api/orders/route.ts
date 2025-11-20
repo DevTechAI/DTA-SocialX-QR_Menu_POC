@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OrderService } from '@/services/OrderService';
 import { AuthService } from '@/services/AuthService';
+import { MenuService } from '@/services/MenuService';
 import { getMockOrders, addMockOrder, clearMockOrders } from '@/lib/mock/orders';
 
 export async function GET(request: NextRequest) {
@@ -18,11 +19,15 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const date = searchParams.get('date');
     const customerName = searchParams.get('customer_name');
+    const businessDay = searchParams.get('business_day'); // New parameter for 8 AM to 8 AM window
 
     const orderService = new OrderService();
     
     let orders;
-    if (date) {
+    if (businessDay === 'true') {
+      // Use business day window (8 AM to 8 AM)
+      orders = await orderService.getOrdersByBusinessDay();
+    } else if (date) {
       orders = await orderService.getOrdersByDate(new Date(date));
     } else if (customerName) {
       orders = await orderService.getOrderHistory(customerName);
@@ -79,6 +84,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(newOrder, { status: 201 });
     }
 
+    // Check availability of all items in the order
+    const menuService = new MenuService();
+    const itemIds = items.map((item: any) => item.menu_item_id);
+    const availabilityMap = await menuService.checkItemsAvailability(itemIds);
+
+    // Add Available flag to each item in the order
+    const itemsWithAvailability = items.map((item: any) => {
+      const isAvailable = availabilityMap[item.menu_item_id] === true;
+      return {
+        ...item,
+        Available: isAvailable,
+      };
+    });
+
+    // Check if any items are unavailable
+    const unavailableItems = itemsWithAvailability.filter((item: any) => item.Available === false);
+    
+    if (unavailableItems.length > 0) {
+      console.log(`⚠️ Order contains ${unavailableItems.length} unavailable items:`, 
+        unavailableItems.map((item: any) => item.name));
+      
+      // Return response with unavailable items information
+      return NextResponse.json({
+        error: 'Some items are no longer available',
+        unavailableItems: unavailableItems.map((item: any) => ({
+          menu_item_id: item.menu_item_id,
+          name: item.name,
+          Available: false,
+        })),
+        items: itemsWithAvailability, // Include all items with availability status
+      }, { status: 400 }); // 400 Bad Request - client needs to fix the order
+    }
+
+    // All items are available, proceed with order creation
     const orderService = new OrderService();
     const order = await orderService.createOrder({
       customer_name,
@@ -132,9 +171,9 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'All orders cleared' });
     }
 
-    // Check for bypass cookie (same logic as middleware)
+    // Check for bypass cookie (only if explicitly enabled via environment variable)
     const bypassCookie = request.cookies.get('admin_bypass');
-    const allowBypass = process.env.ALLOW_ADMIN_BYPASS === 'true' || process.env.NODE_ENV === 'development';
+    const allowBypass = process.env.ALLOW_ADMIN_BYPASS === 'true';
     
     if (allowBypass && bypassCookie?.value === 'true') {
       console.log('🗑️ ⚠️ Bypass mode enabled - clearing all orders');

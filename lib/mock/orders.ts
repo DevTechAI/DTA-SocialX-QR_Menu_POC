@@ -13,7 +13,7 @@ export interface MockOrder {
     price: number;
   }>;
   total_amount: number;
-  status: 'received' | 'delivered' | 'paid' | 'unpaid';
+  status: 'received' | 'accepted' | 'rejected' | 'delivered' | 'paid' | 'unpaid';
   table_number?: string;
   created_at: string;
   updated_at?: string;
