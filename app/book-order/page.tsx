@@ -128,13 +128,15 @@ export default function BookOrderPage() {
             // Helper function to get title parts
             const getTitleParts = () => {
               if (option.id === 'food-order') {
-                return { line1: 'Order', line2: 'Food & Coffee' };
+                return { line1: 'Order', line2: 'Food & Coffee', line3: null, singleLine: false };
               } else if (option.id === 'snooker') {
-                return { line1: 'Book', line2: 'Snooker/Pool Table' };
+                return { line1: 'Book', line2: 'Snooker/Pool', line3: 'Table', singleLine: false };
               } else if (option.id === 'eventspace') {
-                return { line1: 'Events & WorkShops', line2: null };
+                return { line1: 'Events & WorkShops', line2: null, line3: null, singleLine: true };
+              } else if (option.id === 'cowork-seat') {
+                return { line1: 'Reserve', line2: 'Workspace', line3: null, singleLine: false };
               }
-              return { line1: option.title, line2: null };
+              return { line1: option.title, line2: null, line3: null, singleLine: false };
             };
             
             const titleParts = getTitleParts();
@@ -177,20 +179,40 @@ export default function BookOrderPage() {
                   </div>
                 )}
                 
-                {/* Title - Line 1 */}
-                <h3 className={`text-xs sm:text-sm font-bold text-center mb-0.5 whitespace-nowrap ${
-                  option.available ? 'text-gray-800' : 'text-gray-400'
-                }`}>
-                  {titleParts.line1}
-                </h3>
-                
-                {/* Title - Line 2 (if exists) */}
-                {titleParts.line2 && (
-                  <h3 className={`text-[10px] sm:text-xs font-bold text-center leading-tight break-words ${
+                {/* Title - Single Line (for Events & WorkShops) */}
+                {titleParts.singleLine ? (
+                  <h3 className={`text-xs sm:text-sm font-bold text-center leading-tight ${
                     option.available ? 'text-gray-800' : 'text-gray-400'
-                  }`} style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
-                    {titleParts.line2}
+                  }`} style={{ paddingLeft: '5%', paddingRight: '5%', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+                    {titleParts.line1}
                   </h3>
+                ) : (
+                  <>
+                    {/* Title - Line 1 */}
+                    <h3 className={`text-sm sm:text-base font-bold text-center mb-0.5 ${
+                      option.available ? 'text-gray-800' : 'text-gray-400'
+                    }`} style={{ paddingLeft: '5%', paddingRight: '5%' }}>
+                      {titleParts.line1}
+                    </h3>
+                    
+                    {/* Title - Line 2 */}
+                    {titleParts.line2 && (
+                      <h3 className={`text-xs sm:text-sm font-bold text-center leading-tight break-words ${
+                        option.available ? 'text-gray-800' : 'text-gray-400'
+                      }`} style={{ paddingLeft: '5%', paddingRight: '5%', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+                        {titleParts.line2}
+                      </h3>
+                    )}
+                    
+                    {/* Title - Line 3 (for Snooker/Pool Table) */}
+                    {titleParts.line3 && (
+                      <h3 className={`text-xs sm:text-sm font-bold text-center leading-tight break-words ${
+                        option.available ? 'text-gray-800' : 'text-gray-400'
+                      }`} style={{ paddingLeft: '5%', paddingRight: '5%', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+                        {titleParts.line3}
+                      </h3>
+                    )}
+                  </>
                 )}
                 
                 {/* Self-Order at Counter text */}
@@ -208,13 +230,15 @@ export default function BookOrderPage() {
             // Helper function to get title parts
             const getTitleParts = () => {
               if (option.id === 'food-order') {
-                return { line1: 'Order', line2: 'Food & Coffee' };
+                return { line1: 'Order', line2: 'Food & Coffee', line3: null, singleLine: false };
               } else if (option.id === 'snooker') {
-                return { line1: 'Book', line2: 'Snooker/Pool Table' };
+                return { line1: 'Book', line2: 'Snooker/Pool', line3: 'Table', singleLine: false };
               } else if (option.id === 'eventspace') {
-                return { line1: 'Events & WorkShops', line2: null };
+                return { line1: 'Events & WorkShops', line2: null, line3: null, singleLine: true };
+              } else if (option.id === 'cowork-seat') {
+                return { line1: 'Reserve', line2: 'Workspace', line3: null, singleLine: false };
               }
-              return { line1: option.title, line2: null };
+              return { line1: option.title, line2: null, line3: null, singleLine: false };
             };
             
             const titleParts = getTitleParts();
@@ -254,17 +278,33 @@ export default function BookOrderPage() {
                 </div>
 
                 {/* Content */}
-                <div className="text-center">
-                  {/* Title - Line 1 */}
-                  <h2 className="text-lg font-bold text-gray-800 mb-1">
-                    {titleParts.line1}
-                  </h2>
-                  
-                  {/* Title - Line 2 (if exists) */}
-                  {titleParts.line2 && (
-                    <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-1.5 leading-tight break-words" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
-                      {titleParts.line2}
+                <div className="text-center" style={{ paddingLeft: '5%', paddingRight: '5%' }}>
+                  {/* Title - Single Line (for Events & WorkShops) */}
+                  {titleParts.singleLine ? (
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-1.5 leading-tight" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+                      {titleParts.line1}
                     </h2>
+                  ) : (
+                    <>
+                      {/* Title - Line 1 */}
+                      <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-1">
+                        {titleParts.line1}
+                      </h2>
+                      
+                      {/* Title - Line 2 */}
+                      {titleParts.line2 && (
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-0.5 leading-tight break-words" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+                          {titleParts.line2}
+                        </h2>
+                      )}
+                      
+                      {/* Title - Line 3 (for Snooker/Pool Table) */}
+                      {titleParts.line3 && (
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-1.5 leading-tight break-words" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+                          {titleParts.line3}
+                        </h2>
+                      )}
+                    </>
                   )}
                   
                   <p className="text-gray-600 mb-2 text-sm">
@@ -313,7 +353,7 @@ export default function BookOrderPage() {
     </div>
 
     {/* Footer - Subtle Bottom Banner */}
-    <footer className="fixed bottom-0 left-0 right-0 z-0">
+    <footer className="w-full mt-auto">
       <div className="w-full bg-white/60 backdrop-blur-sm border-t border-gray-200/50 py-2 shadow-sm">
         <p className="text-xs text-gray-500 text-center">
           Tech Powered by{' '}
