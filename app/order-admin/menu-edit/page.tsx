@@ -132,7 +132,7 @@ export default function MenuEditorPage() {
                 👨‍💼 Admin Dashboard - Menu Editor
               </h1>
               <p className="text-white/90 text-sm md:text-base font-semibold drop-shadow">
-                SocialX Community Café - Menu Management
+                SocialX Hub - Menu Management
               </p>
               <p className="text-white/80 text-xs md:text-sm mt-1">
                 {currentDateTime.toLocaleString('en-US', {
