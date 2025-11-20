@@ -261,7 +261,7 @@ export default function BookOrderPage() {
     <footer className="fixed bottom-0 left-0 right-0 z-0">
       <div className="w-full bg-white/60 backdrop-blur-sm border-t border-gray-200/50 py-2 shadow-sm">
         <p className="text-xs text-gray-500 text-center">
-          Powered by{' '}
+          Tech Powered by{' '}
           <a
             href="https://www.devtechai.org"
             target="_blank"
