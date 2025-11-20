@@ -5,7 +5,13 @@ import { logger } from '@/lib/logger';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/order-admin';
+  let next = searchParams.get('next') ?? '/order-admin';
+  
+  // Ensure OAuth flows always redirect to /order-admin or admin sub-routes (OAuth is only for admin)
+  // Prevent redirects to root or book-order which could cause issues
+  if (next === '/' || next === '/book-order') {
+    next = '/order-admin';
+  }
 
   // Get the correct origin for redirects
   // Priority: x-forwarded-host (production) > host header > origin
