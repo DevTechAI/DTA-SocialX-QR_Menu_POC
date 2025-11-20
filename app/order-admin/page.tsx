@@ -98,11 +98,21 @@ export default function AdminDashboard() {
   
   // Use ref to always have the current soundEnabled value (avoids stale closures)
   const soundEnabledRef = useRef(soundEnabled);
+  const previousOrdersRef = useRef<Order[]>([]);
+  const newOrdersCountRef = useRef(0);
   
-  // Update ref whenever soundEnabled changes
+  // Update refs whenever state changes
   useEffect(() => {
     soundEnabledRef.current = soundEnabled;
   }, [soundEnabled]);
+  
+  useEffect(() => {
+    previousOrdersRef.current = previousOrders;
+  }, [previousOrders]);
+  
+  useEffect(() => {
+    newOrdersCountRef.current = newOrdersCount;
+  }, [newOrdersCount]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -328,6 +338,7 @@ export default function AdminDashboard() {
     // Set up polling interval (every 10 seconds)
     const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authChecked]);
 
   useEffect(() => {
@@ -502,10 +513,14 @@ export default function AdminDashboard() {
         let shouldPlaySound = false;
         let newOrders: Order[] = [];
         
-        if (previousOrders.length > 0 && parsedData.length > previousOrders.length) {
+        // Use refs to get latest values (avoid stale closures)
+        const currentPreviousOrders = previousOrdersRef.current;
+        const currentNewOrdersCount = newOrdersCountRef.current;
+        
+        if (currentPreviousOrders.length > 0 && parsedData.length > currentPreviousOrders.length) {
           newOrders = parsedData.filter(
             (newOrder: Order) => 
-              !previousOrders.some(prevOrder => prevOrder.id === newOrder.id)
+              !currentPreviousOrders.some(prevOrder => prevOrder.id === newOrder.id)
           );
 
           // Play sound when new orders are detected
@@ -545,7 +560,7 @@ export default function AdminDashboard() {
         // Play sound if count is 1 or greater (and count increased)
         // This ensures sound plays when count goes from 0 to 1 or more
         // Only play if we didn't already play for new orders detection above
-        const previousCount = newOrdersCount;
+        const previousCount = currentNewOrdersCount;
         if (receivedCount >= 1 && receivedCount > previousCount && !shouldPlaySound) {
           playAlertSound();
         }
