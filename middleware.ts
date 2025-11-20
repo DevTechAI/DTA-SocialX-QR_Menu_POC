@@ -72,7 +72,10 @@ export async function middleware(request: NextRequest) {
       console.log('  📧 User email: none');
       console.log('  ❌ Error: No user found (session not established)');
       console.log('  🔒 Redirecting to sign-in page');
-      return NextResponse.redirect(new URL('/auth/signin', request.url));
+      // Preserve the original URL so user can be redirected back after auth
+      const signInUrl = new URL('/auth/signin', request.url);
+      signInUrl.searchParams.set('next', pathname);
+      return NextResponse.redirect(signInUrl);
     }
 
     console.log('✅ User authenticated via OAuth/Email');

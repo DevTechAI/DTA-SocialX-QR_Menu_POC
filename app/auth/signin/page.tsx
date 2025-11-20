@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 
-export default function SignInPage() {
+function SignInForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [supabaseNotConfigured, setSupabaseNotConfigured] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
@@ -51,8 +52,9 @@ export default function SignInPage() {
           return;
         }
 
-        // Redirect to admin dashboard
-        router.push('/order-admin');
+        // Redirect to the target page (from URL param) or default to /order-admin
+        const nextPage = searchParams.get('next') || '/order-admin';
+        router.push(nextPage);
         router.refresh();
       }
     } catch (err: any) {
@@ -71,7 +73,9 @@ export default function SignInPage() {
     setLoading(true);
     setError('');
 
-    const redirectUrl = `${window.location.origin}/auth/callback?next=/order-admin`;
+    // Get the next parameter from URL or default to /order-admin
+    const nextPage = searchParams.get('next') || '/order-admin';
+    const redirectUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPage)}`;
     console.log('═══════════════════════════════════════════════════════');
     console.log('🔐 INITIATING GOOGLE OAUTH SIGN-IN');
     console.log('═══════════════════════════════════════════════════════');
@@ -275,6 +279,21 @@ export default function SignInPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+          <p className="text-orange-600 font-semibold">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SignInForm />
+    </Suspense>
   );
 }
 
