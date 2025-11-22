@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 type Board = {
   snooker_board_id: string;
   board_name: string;
+  type: string;
+  given_duration_for_100inr: number;
 };
 
 export default function BookSnookerPage() {
@@ -258,14 +260,19 @@ export default function BookSnookerPage() {
                         disabled={loading}
                       >
                         <option value="">Select a Snooker Table</option>
-                        {boards.map((board) => (
-                          <option 
-                            key={board.snooker_board_id} 
-                            value={board.snooker_board_id}
-                          >
-                            {board.board_name}
-                          </option>
-                        ))}
+                        {boards.map((board) => {
+                          // Calculate hourly price based on type
+                          // Pool Table: 400/hr, French Table: 300/hr
+                          const hourlyPrice = board.type === 'Pool-Table' ? 400 : 300;
+                          return (
+                            <option 
+                              key={board.snooker_board_id} 
+                              value={board.snooker_board_id}
+                            >
+                              {board.board_name} - ₹{hourlyPrice}/hr
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                     {loading && (
