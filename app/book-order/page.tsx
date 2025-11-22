@@ -29,7 +29,7 @@ const bookingOptions: BookingOption[] = [
     icon: '🎱',
     route: '/book-snooker',
     gradient: 'from-blue-500 to-blue-600',
-    available: false,
+    available: true,
   },
   {
     id: 'cowork-seat',
@@ -130,7 +130,7 @@ export default function BookOrderPage() {
               if (option.id === 'food-order') {
                 return { line1: 'Order', line2: 'Food & Coffee', line3: null, singleLine: false };
               } else if (option.id === 'snooker') {
-                return { line1: 'Book', line2: 'Snooker/Pool', line3: 'Table', singleLine: false };
+                return { line1: 'Book', line2: 'Snooker/Pool Table', line3: null, singleLine: false };
               } else if (option.id === 'eventspace') {
                 return { line1: 'Events & WorkShops', line2: null, line3: null, singleLine: true };
               } else if (option.id === 'cowork-seat') {
@@ -232,7 +232,7 @@ export default function BookOrderPage() {
               if (option.id === 'food-order') {
                 return { line1: 'Order', line2: 'Food & Coffee', line3: null, singleLine: false };
               } else if (option.id === 'snooker') {
-                return { line1: 'Book', line2: 'Snooker/Pool', line3: 'Table', singleLine: false };
+                return { line1: 'Book', line2: 'Snooker/Pool Table', line3: null, singleLine: false };
               } else if (option.id === 'eventspace') {
                 return { line1: 'Events & WorkShops', line2: null, line3: null, singleLine: true };
               } else if (option.id === 'cowork-seat') {
