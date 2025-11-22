@@ -163,7 +163,7 @@ export default function BookSnookerPage() {
           <div className="relative group mb-6 sm:mb-8">
             {/* Glowing border effect */}
             <div className="absolute -inset-0.5 gradient-primary rounded-[24px] sm:rounded-[28px] opacity-75 group-hover:opacity-100 blur-sm transition duration-500"></div>
-            
+
             {/* Main card */}
             <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-soft-xl transform hover:scale-[1.02] transition-all duration-500">
               {/* Glass-morphism background */}
@@ -240,7 +240,7 @@ export default function BookSnookerPage() {
                       />
                     </div>
                   </div>
-
+          
                   {/* Snooker Table Dropdown */}
                   <div>
                     <label htmlFor="board" className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -262,14 +262,16 @@ export default function BookSnookerPage() {
                         <option value="">Select a Snooker Table</option>
                         {boards.map((board) => {
                           // Calculate hourly price based on type
-                          // Pool Table: 400/hr, French Table: 300/hr
-                          const hourlyPrice = board.type === 'Pool-Table' ? 400 : 300;
+                          // Pool Table: 300/hr, French Table: 400/hr
+                          const hourlyPrice = board.type === 'Pool-Table' ? 300 : 400;
+                          // Remove trailing numbers and letters from board name for display
+                          const displayName = board.board_name.replace(/\s+[A-Z0-9]+$/, '');
                           return (
                             <option 
                               key={board.snooker_board_id} 
                               value={board.snooker_board_id}
                             >
-                              {board.board_name} - ₹{hourlyPrice}/hr
+                              {displayName} - ₹{hourlyPrice}/hr
                             </option>
                           );
                         })}
@@ -308,7 +310,7 @@ export default function BookSnookerPage() {
                   </div>
 
                   {/* Submit Button - Same style as "Click for Menu" */}
-                  <button
+          <button
                     type="submit"
                     disabled={submitting || loading}
                     className="relative w-full group/btn transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
