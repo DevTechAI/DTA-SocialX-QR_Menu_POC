@@ -6,10 +6,6 @@ import { useRouter } from 'next/navigation';
 type Board = {
   snooker_board_id: string;
   board_name: string;
-  type: string;
-  is_available_to_play: boolean;
-  current_status: string;
-  given_duration_for_100inr: number;
 };
 
 export default function BookSnookerPage() {
@@ -65,15 +61,8 @@ export default function BookSnookerPage() {
       return;
     }
 
-    if (!playersCount) {
-      alert('Please select Players Count');
-      return;
-    }
-
-    // Check if selected board is available
-    const selectedBoardData = boards.find(b => b.snooker_board_id === selectedBoard);
-    if (selectedBoardData && selectedBoardData.current_status === 'STARTED') {
-      alert('This board is currently occupied. Please select another board.');
+    if (!playersCount || parseInt(playersCount) < 1) {
+      alert('Please select at least 1 player');
       return;
     }
 
@@ -100,12 +89,6 @@ export default function BookSnookerPage() {
         setCustomerPhone('');
         setSelectedBoard('');
         setPlayersCount('');
-        // Refresh boards to update status
-        const refreshResponse = await fetch('/api/boards');
-        if (refreshResponse.ok) {
-          const refreshedBoards = await refreshResponse.json();
-          setBoards(refreshedBoards);
-        }
         // Show success dialog
         setShowBookingSuccessDialog(true);
       } else {
@@ -119,10 +102,6 @@ export default function BookSnookerPage() {
     }
   };
 
-  // Calculate hourly price
-  const calculateHourlyPrice = (givenDurationFor100Inr: number): number => {
-    return (60 / givenDurationFor100Inr) * 100;
-  };
 
   return (
     <main className="min-h-screen gradient-soft flex flex-col items-center w-full overflow-x-hidden">
@@ -279,22 +258,14 @@ export default function BookSnookerPage() {
                         disabled={loading}
                       >
                         <option value="">Select a Snooker Table</option>
-                        {boards.map((board) => {
-                          const isOccupied = board.current_status === 'STARTED';
-                          const hourlyPrice = calculateHourlyPrice(board.given_duration_for_100inr);
-                          const displayText = `${board.board_name} - ₹${hourlyPrice.toFixed(0)}/hr${isOccupied ? ' (Game In Progress)' : ''}`;
-                          
-                          return (
-                            <option 
-                              key={board.snooker_board_id} 
-                              value={board.snooker_board_id}
-                              disabled={isOccupied}
-                              style={isOccupied ? { color: '#9ca3af', backgroundColor: '#f3f4f6' } : {}}
-                            >
-                              {displayText}
-                            </option>
-                          );
-                        })}
+                        {boards.map((board) => (
+                          <option 
+                            key={board.snooker_board_id} 
+                            value={board.snooker_board_id}
+                          >
+                            {board.board_name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     {loading && (
@@ -319,7 +290,7 @@ export default function BookSnookerPage() {
                         style={{ fontSize: '16px' }}
                         required
                       >
-                        <option value="">Select Players Count</option>
+                        <option value="">Select Players Count (Minimum 1)</option>
                         {[1, 2, 3, 4, 5, 6].map((count) => (
                           <option key={count} value={count.toString()}>
                             {count}
@@ -446,9 +417,9 @@ export default function BookSnookerPage() {
               className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
             >
               Close
-            </button>
-          </div>
+          </button>
         </div>
+      </div>
       )}
     </main>
   );

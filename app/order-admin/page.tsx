@@ -74,6 +74,23 @@ const statusConfig = {
   },
 };
 
+interface SnookerBooking {
+  snooker_order_id: string;
+  customer_name: string;
+  customer_phno: string;
+  snooker_board_id: string;
+  order_status: string;
+  start_date_time: string;
+  end_date_time: string | null;
+  players_count: number;
+  created_at: string;
+  snooker_board_menu_items?: {
+    board_name: string;
+    type: string;
+    given_duration_for_100inr: number;
+  };
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -95,6 +112,10 @@ export default function AdminDashboard() {
     }
     return true;
   });
+  const [activeTab, setActiveTab] = useState<'food' | 'snooker'>('food');
+  const [snookerBookings, setSnookerBookings] = useState<SnookerBooking[]>([]);
+  const [snookerLoading, setSnookerLoading] = useState(true);
+  const [expandedSnookerBookings, setExpandedSnookerBookings] = useState<Set<string>>(new Set());
   
   // Use ref to always have the current soundEnabled value (avoids stale closures)
   const soundEnabledRef = useRef(soundEnabled);
@@ -761,6 +782,128 @@ Please collect it from the counter.
     }
   };
 
+  // Fetch Snooker Bookings
+  const fetchSnookerBookings = async (showLoading = false) => {
+    try {
+      if (showLoading) {
+        setSnookerLoading(true);
+      }
+      const response = await fetch('/api/snooker-bookings');
+      if (response.ok) {
+        const data = await response.json();
+        setSnookerBookings(data);
+      } else {
+        console.error('Failed to fetch snooker bookings');
+      }
+    } catch (error) {
+      console.error('Error fetching snooker bookings:', error);
+    } finally {
+      if (showLoading) {
+        setSnookerLoading(false);
+      }
+    }
+  };
+
+  // End Play Session
+  const handleStartPlay = async (bookingId: string) => {
+    if (!confirm('Are you sure you want to start this play session?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/snooker-bookings/${bookingId}/start-play`, {
+        method: 'PATCH',
+      });
+
+      if (response.ok) {
+        // Refresh bookings
+        await fetchSnookerBookings();
+        // Also refresh food orders to update any related stats
+        await fetchOrders();
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        alert(`Failed to start play session: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error starting play session:', error);
+      alert(`Error starting play session: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleEndPlay = async (bookingId: string) => {
+    if (!confirm('Are you sure you want to end this play session?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/snooker-bookings/${bookingId}/end-play`, {
+        method: 'PATCH',
+      });
+
+      if (response.ok) {
+        // Refresh bookings
+        await fetchSnookerBookings();
+        // Also refresh food orders to update any related stats
+        await fetchOrders();
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        alert(`Failed to end play session: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error ending play session:', error);
+      alert(`Error ending play session: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Countdown Timer Component
+  const CountdownTimer = ({ startTime }: { startTime: string }) => {
+    const [timeElapsed, setTimeElapsed] = useState('00:00:00');
+
+    useEffect(() => {
+      const updateTimer = () => {
+        const start = new Date(startTime).getTime();
+        const now = new Date().getTime();
+        const diff = now - start;
+
+        if (diff < 0) {
+          setTimeElapsed('00:00:00');
+          return;
+        }
+
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        setTimeElapsed(
+          `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+        );
+      };
+
+      updateTimer();
+      const interval = setInterval(updateTimer, 1000);
+
+      return () => clearInterval(interval);
+    }, [startTime]);
+
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-lg">⏱️</span>
+        <span className="font-bold text-orange-700">{timeElapsed}</span>
+      </div>
+    );
+  };
+
+  // Fetch snooker bookings when tab is active
+  useEffect(() => {
+    if (activeTab === 'snooker' && authChecked) {
+      // Initial fetch with loading state
+      fetchSnookerBookings(true);
+      // Refresh every 5 seconds without loading state
+      const interval = setInterval(() => fetchSnookerBookings(false), 5000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, authChecked]);
+
   // Orders are already filtered by business day (8 AM to 8 AM) from the API
   // So we can use them directly - no need for additional client-side filtering
   const allTodayOrders = orders; // Already filtered by business day from server
@@ -1025,13 +1168,42 @@ Please collect it from the counter.
 
       {/* Main Content - Orders List */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-10 py-8 md:py-10 flex-1 flex flex-col items-center justify-center">
-        {/* Orders List Header */}
-        <div className="mb-6 md:mb-8">
-          <div className="flex items-center justify-center gap-4 flex-wrap">
-          <h2 className="text-2xl md:text-3xl font-bold text-orange-600 flex items-center gap-3">
-            <span className="text-3xl md:text-4xl">📦</span>
-            <span>Orders Dashboard</span>
-          </h2>
+        {/* Tabs */}
+        <div className="mb-6 md:mb-8 w-full">
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <button
+              onClick={() => setActiveTab('food')}
+              className={`px-6 py-3 rounded-xl font-bold text-lg transition-all ${
+                activeTab === 'food'
+                  ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 shadow-soft'
+              }`}
+            >
+              🍽️ Food Orders
+            </button>
+            <button
+              onClick={() => setActiveTab('snooker')}
+              className={`px-6 py-3 rounded-xl font-bold text-lg transition-all ${
+                activeTab === 'snooker'
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 shadow-soft'
+              }`}
+            >
+              🎱 Snooker Booking
+            </button>
+          </div>
+        </div>
+
+        {/* Food Orders Tab */}
+        {activeTab === 'food' && (
+          <>
+            {/* Orders List Header */}
+            <div className="mb-6 md:mb-8">
+              <div className="flex items-center justify-center gap-4 flex-wrap">
+              <h2 className="text-2xl md:text-3xl font-bold text-orange-600 flex items-center gap-3">
+                <span className="text-3xl md:text-4xl">📦</span>
+                <span>Orders Dashboard</span>
+              </h2>
             
             {/* Sound Notification Toggle */}
             <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-soft border border-orange-200">
@@ -1322,7 +1494,281 @@ Please collect it from the counter.
             })}
           </div>
         )}
-        </div>
+          </>
+        )}
+
+        {/* Snooker Booking Tab */}
+        {activeTab === 'snooker' && (
+          <>
+            {/* Snooker Bookings Header */}
+            <div className="mb-6 md:mb-8">
+              <div className="flex items-center justify-center gap-4 flex-wrap">
+                <h2 className="text-2xl md:text-3xl font-bold text-blue-600 flex items-center gap-3">
+                  <span className="text-3xl md:text-4xl">🎱</span>
+                  <span>Snooker Bookings</span>
+                </h2>
+              </div>
+              <p className="text-gray-600 mt-2 text-sm md:text-base font-medium text-center">
+                Click on a booking to expand and view details
+              </p>
+            </div>
+
+            {/* Loading State */}
+            {snookerLoading && (
+              <div className="text-center py-12">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 mb-4 shadow-soft">
+                  <div className="animate-pulse">
+                    <span className="text-5xl text-blue-600">⏳</span>
+                  </div>
+                </div>
+                <p className="text-gray-700 font-bold text-lg">Loading Bookings...</p>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!snookerLoading && snookerBookings.length === 0 && (
+              <div className="relative rounded-3xl overflow-hidden shadow-soft-lg">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-blue-50/80 backdrop-blur-xl"></div>
+                <div className="relative z-10 text-center py-16 md:py-20 px-6">
+                  <div className="inline-flex items-center justify-center w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 mb-6 shadow-soft">
+                    <span className="text-6xl md:text-7xl">🎱</span>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text mb-3">No bookings yet</h3>
+                  <p className="text-gray-600 font-medium">Snooker bookings will appear here as customers book tables</p>
+                </div>
+              </div>
+            )}
+
+            {/* Snooker Bookings Grid */}
+            {!snookerLoading && snookerBookings.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                {snookerBookings
+                  .filter(booking => {
+                    // Show all ongoing orders: Received, Accepted, Started, STARTED, Paused, Resumed, Ended, and ENDED orders
+                    const ongoingStatuses = ['Received', 'Accepted', 'Started', 'STARTED', 'Paused', 'Resumed', 'Ended', 'ENDED'];
+                    return ongoingStatuses.includes(booking.order_status);
+                  })
+                  .map(booking => {
+                    const isExpanded = expandedSnookerBookings.has(booking.snooker_order_id);
+                    const boardInfo = booking.snooker_board_menu_items;
+                    const statusConfig = {
+                      Received: {
+                        label: 'Received',
+                        color: 'border-yellow-300',
+                        cardBg: 'bg-gradient-to-br from-yellow-50 via-yellow-100/70 to-orange-50/80',
+                        textColor: 'text-yellow-700',
+                        badge: 'bg-gradient-to-r from-yellow-500 to-orange-500',
+                        icon: '⏳',
+                      },
+                      Started: {
+                        label: 'Started',
+                        color: 'border-blue-300',
+                        cardBg: 'bg-gradient-to-br from-blue-50 via-blue-100/70 to-indigo-50/80',
+                        textColor: 'text-blue-700',
+                        badge: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+                        icon: '▶️',
+                      },
+                      Ended: {
+                        label: 'Ended',
+                        color: 'border-gray-300',
+                        cardBg: 'bg-gradient-to-br from-gray-50 via-gray-100/70 to-slate-50/80',
+                        textColor: 'text-gray-700',
+                        badge: 'bg-gradient-to-r from-gray-500 to-slate-500',
+                        icon: '✅',
+                      },
+                    };
+                    // Normalize status to handle case variations
+                    const normalizedStatus = booking.order_status === 'STARTED' ? 'STARTED' : 
+                                           booking.order_status === 'Started' ? 'STARTED' :
+                                           booking.order_status === 'ENDED' ? 'ENDED' :
+                                           booking.order_status === 'Ended' ? 'ENDED' :
+                                           booking.order_status;
+                    const config = statusConfig[normalizedStatus as keyof typeof statusConfig] || statusConfig.Received;
+
+                    return (
+                      <div
+                        key={booking.snooker_order_id}
+                        className="relative rounded-2xl overflow-hidden transition-all shadow-soft hover:shadow-soft-lg"
+                      >
+                        {/* Card Background with Status Color */}
+                        <div className={`relative ${config.cardBg} p-5 md:p-6 border-2 ${config.color} rounded-2xl`}>
+                          {/* Glass Effect Overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent rounded-2xl pointer-events-none"></div>
+                          
+                          {/* Content */}
+                          <div className="relative z-10">
+                            {/* Booking Header - Clickable */}
+                            <div
+                              onClick={() => {
+                                const newExpanded = new Set(expandedSnookerBookings);
+                                if (isExpanded) {
+                                  newExpanded.delete(booking.snooker_order_id);
+                                } else {
+                                  newExpanded.add(booking.snooker_order_id);
+                                }
+                                setExpandedSnookerBookings(newExpanded);
+                              }}
+                              className="w-full text-left hover:bg-white/30 rounded-xl p-3 -m-3 mb-0 transition-all cursor-pointer"
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                {/* Left Section - Customer Info */}
+                                <div className="flex items-start gap-3 flex-1 min-w-0">
+                                  {/* Status Icon */}
+                                  <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl ${config.badge} flex items-center justify-center shadow-soft flex-shrink-0`}>
+                                    <span className="text-2xl md:text-3xl text-white">{config.icon}</span>
+                                  </div>
+
+                                  {/* Customer Name & Booking ID */}
+                                  <div className="flex-1 min-w-0 space-y-1">
+                                    <h3 className="text-base md:text-lg font-bold text-gray-800 truncate leading-tight">
+                                      {booking.customer_name}
+                                    </h3>
+                                    <p className="text-xs text-gray-600 font-medium truncate">
+                                      📞 {booking.customer_phno || 'N/A'}
+                                    </p>
+                                    <p className="text-xs text-gray-600 font-medium truncate">
+                                      #{booking.snooker_order_id.slice(0, 8)}
+                                      {boardInfo && ` • ${boardInfo.board_name}`}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {new Date(booking.created_at).toLocaleString('en-US', { 
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: '2-digit', 
+                                        minute: '2-digit' 
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Right Section - Status & Timer */}
+                                <div className="text-right flex-shrink-0 flex flex-col items-end">
+                                  {/* Status Badge */}
+                                  <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${config.badge} mb-2`}>
+                                    <span className="text-xs font-bold text-white uppercase">{config.label}</span>
+                                  </div>
+                                  {/* START PLAY Button - Show for Received orders (DISABLED) */}
+                                  {normalizedStatus === 'Received' && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleStartPlay(booking.snooker_order_id);
+                                      }}
+                                      disabled
+                                      className="mt-1 w-auto min-w-[120px] py-2 px-3 rounded-lg font-bold text-xs transition-all shadow-soft hover:shadow-soft-lg active:scale-95 bg-gradient-to-r from-green-500 to-emerald-600 text-white border-2 border-green-400 opacity-50 cursor-not-allowed"
+                                    >
+                                      ▶️ START PLAY
+                                    </button>
+                                  )}
+                                  {/* Countdown Timer - Show for Started orders with start_date_time */}
+                                  {booking.start_date_time && (normalizedStatus === 'STARTED' || normalizedStatus === 'Started') && (
+                                    <div className="mt-2">
+                                      <CountdownTimer startTime={booking.start_date_time} />
+                                    </div>
+                                  )}
+                                  {/* END PLAY Button - Show for Started orders */}
+                                  {(normalizedStatus === 'STARTED' || normalizedStatus === 'Started') && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEndPlay(booking.snooker_order_id);
+                                      }}
+                                      className="mt-2 w-auto min-w-[120px] py-2 px-3 rounded-lg font-bold text-xs transition-all shadow-soft hover:shadow-soft-lg active:scale-95 bg-gradient-to-r from-red-500 to-red-600 text-white border-2 border-red-400"
+                                    >
+                                      🛑 END PLAY
+                                    </button>
+                                  )}
+                                  <p className="text-xs font-semibold text-gray-600 mt-2">
+                                    {isExpanded ? '▲ Hide' : '▼ Show'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Expanded Details */}
+                            {isExpanded && (
+                              <div className="mt-4 pt-4 border-t-2 border-gray-300/50">
+                                {/* Booking Details */}
+                                <div className="mb-4">
+                                  <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2 text-sm md:text-base">
+                                    <span className="text-lg">🎱</span>
+                                    <span>Booking Details:</span>
+                                  </h4>
+                                  <div className="space-y-2">
+                                    <div className="relative rounded-xl overflow-hidden shadow-soft">
+                                      <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-blue-50/70 backdrop-blur-xl"></div>
+                                      <div className="relative z-10 p-3">
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-gray-800 font-bold text-sm">Board</span>
+                                          <span className="font-bold text-gray-800 text-sm">
+                                            {boardInfo?.board_name || 'N/A'} ({boardInfo?.type || 'N/A'})
+                                          </span>
+                                        </div>
+                                        <div className="flex justify-between items-center mt-2">
+                                          <span className="text-gray-800 font-bold text-sm">Players</span>
+                                          <span className="font-bold text-gray-800 text-sm">{booking.players_count}</span>
+                                        </div>
+                                        {booking.start_date_time && (
+                                          <div className="flex justify-between items-center mt-2">
+                                            <span className="text-gray-800 font-bold text-sm">Start Time</span>
+                                            <span className="font-bold text-gray-800 text-sm">
+                                              {new Date(booking.start_date_time).toLocaleString('en-US', { 
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit', 
+                                                minute: '2-digit' 
+                                              })}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {/* Start Play Button - DISABLED */}
+                                        {/* {normalizedStatus === 'Received' && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleStartPlay(booking.snooker_order_id);
+                                            }}
+                                            className="w-full py-3 px-4 rounded-xl font-bold text-sm md:text-base transition-all shadow-soft hover:shadow-soft-lg active:scale-95 bg-gradient-to-r from-green-500 to-emerald-600 text-white border-2 border-green-400"
+                                          >
+                                            <span className="block text-lg mb-1">▶️</span>
+                                            <span>START PLAY</span>
+                                          </button>
+                                        )} */}
+                                        {booking.start_date_time && (normalizedStatus === 'STARTED' || normalizedStatus === 'Started') && (
+                                          <div className="mt-3 pt-3 border-t border-gray-200">
+                                            <CountdownTimer startTime={booking.start_date_time} />
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* End Play Button - Show for Started orders */}
+                                {(normalizedStatus === 'STARTED' || normalizedStatus === 'Started') && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEndPlay(booking.snooker_order_id);
+                                    }}
+                                    className="w-full py-3 px-4 rounded-xl font-bold text-sm md:text-base transition-all shadow-soft hover:shadow-soft-lg active:scale-95 bg-gradient-to-r from-red-500 to-red-600 text-white border-2 border-red-400"
+                                  >
+                                    <span className="block text-lg mb-1">🛑</span>
+                                    <span>END PLAY</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Item-wise Metrics Section - Collapsible Tab */}
       {itemMetrics.length > 0 && (

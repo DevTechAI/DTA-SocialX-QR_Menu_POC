@@ -1,6 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+export async function GET(request: NextRequest) {
+  try {
+    // Check if Supabase is configured
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
+      console.error('❌ Supabase is not configured');
+      return NextResponse.json(
+        { error: 'Database is not configured. Please set up Supabase environment variables.' },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient();
+    
+    // Fetch all snooker bookings
+    const { data: bookings, error: bookingsError } = await supabase
+      .from('snooker_booking_orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (bookingsError) {
+      console.error('❌ Supabase error fetching snooker bookings:', bookingsError);
+      return NextResponse.json(
+        { error: `Failed to fetch snooker bookings: ${bookingsError.message}` },
+        { status: 500 }
+      );
+    }
+
+    // Fetch board information for each booking
+    const boardIds = [...new Set(bookings?.map(b => b.snooker_board_id) || [])];
+    const { data: boards, error: boardsError } = await supabase
+      .from('snooker_board_menu_items')
+      .select('snooker_board_id, board_name, type, given_duration_for_100inr')
+      .in('snooker_board_id', boardIds);
+
+    if (boardsError) {
+      console.error('❌ Supabase error fetching boards:', boardsError);
+      // Continue without board info
+    }
+
+    // Combine bookings with board information
+    const data = bookings?.map(booking => ({
+      ...booking,
+      snooker_board_menu_items: boards?.find(b => b.snooker_board_id === booking.snooker_board_id) || null,
+    })) || [];
+
+    console.log(`✅ Fetched ${data?.length || 0} snooker bookings from Supabase`);
+    return NextResponse.json(data || []);
+  } catch (error: any) {
+    console.error('❌ Error fetching snooker bookings:', error);
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Check if Supabase is configured
@@ -49,15 +108,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the booking order
+    // Create the booking order - set status to 'Received' (admin will start play manually)
     const { data: bookingData, error: bookingError } = await supabase
       .from('snooker_booking_orders')
       .insert({
         customer_name,
         customer_phno,
         snooker_board_id,
-        order_status: 'Received', // Match the table default value
-        start_date_time: currentTimestamp,
+        order_status: 'Received', // Admin will start play manually
         players_count: players_count ? parseInt(players_count) : 0, // Use 0 as default instead of null
       })
       .select()
@@ -71,28 +129,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update the board status to STARTED
-    const { error: boardUpdateError } = await supabase
-      .from('snooker_board_menu_items')
-      .update({
-        current_status: 'STARTED',
-        is_available_to_play: false,
-        updated_at: currentTimestamp,
-      })
-      .eq('snooker_board_id', snooker_board_id);
-
-    if (boardUpdateError) {
-      console.error('❌ Error updating board status:', boardUpdateError);
-      // Note: Booking was created but board status update failed
-      // You might want to handle this differently (rollback or retry)
-      return NextResponse.json(
-        { 
-          error: `Booking created but failed to update board status: ${boardUpdateError.message}`,
-          booking_id: bookingData.snooker_order_id,
-        },
-        { status: 500 }
-      );
-    }
+    // Don't update board status on booking creation - admin will start play manually
+    // Board remains available until admin clicks "START PLAY"
 
     console.log(`✅ Created snooker booking: ${bookingData.snooker_order_id}`);
     return NextResponse.json({
