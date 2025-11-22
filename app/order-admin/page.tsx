@@ -116,11 +116,15 @@ export default function AdminDashboard() {
   const [snookerBookings, setSnookerBookings] = useState<SnookerBooking[]>([]);
   const [snookerLoading, setSnookerLoading] = useState(true);
   const [expandedSnookerBookings, setExpandedSnookerBookings] = useState<Set<string>>(new Set());
+  const [newSnookerBookingsCount, setNewSnookerBookingsCount] = useState(0);
+  const [previousSnookerBookings, setPreviousSnookerBookings] = useState<SnookerBooking[]>([]);
   
   // Use ref to always have the current soundEnabled value (avoids stale closures)
   const soundEnabledRef = useRef(soundEnabled);
   const previousOrdersRef = useRef<Order[]>([]);
   const newOrdersCountRef = useRef(0);
+  const previousSnookerBookingsRef = useRef<SnookerBooking[]>([]);
+  const newSnookerBookingsCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
   // Preload audio on mount
@@ -152,9 +156,18 @@ export default function AdminDashboard() {
   }, []);
   
   // Update refs whenever state changes
-  useEffect(() => {
-    soundEnabledRef.current = soundEnabled;
-  }, [soundEnabled]);
+    useEffect(() => {
+      soundEnabledRef.current = soundEnabled;
+    }, [soundEnabled]);
+
+    // Update refs for snooker bookings
+    useEffect(() => {
+      previousSnookerBookingsRef.current = previousSnookerBookings;
+    }, [previousSnookerBookings]);
+
+    useEffect(() => {
+      newSnookerBookingsCountRef.current = newSnookerBookingsCount;
+    }, [newSnookerBookingsCount]);
   
   useEffect(() => {
     previousOrdersRef.current = previousOrders;
@@ -491,9 +504,10 @@ Please collect it from the counter.
   }, []);
 
   // Update browser tab title with new orders count
-  const updateTabTitle = (count: number) => {
-    if (count > 0) {
-      document.title = `New Orders (${count}) - Order Admin`;
+  const updateTabTitle = (foodCount: number, snookerCount: number = 0) => {
+    const totalCount = foodCount + snookerCount;
+    if (totalCount > 0) {
+      document.title = `New Orders (${totalCount}) - Order Admin`;
     } else {
       document.title = 'Order Admin Dashboard';
     }
@@ -725,8 +739,9 @@ Please collect it from the counter.
         
         setNewOrdersCount(receivedCount);
 
-        // Update browser tab title
-        updateTabTitle(receivedCount);
+        // Update browser tab title with both food and snooker counts
+        const currentSnookerCount = newSnookerBookingsCountRef.current;
+        updateTabTitle(receivedCount, currentSnookerCount);
 
         console.log('📋 Fetched orders for business day:', parsedData.length, 'orders');
         if (parsedData.length > 0) {
@@ -766,7 +781,8 @@ Please collect it from the counter.
           // Recalculate new orders count
           const receivedCount = updated.filter(order => order.status === 'received').length;
           setNewOrdersCount(receivedCount);
-          updateTabTitle(receivedCount);
+          const currentSnookerCount = newSnookerBookingsCountRef.current;
+          updateTabTitle(receivedCount, currentSnookerCount);
           
           return updated;
         });
@@ -791,7 +807,43 @@ Please collect it from the counter.
       const response = await fetch('/api/snooker-bookings');
       if (response.ok) {
         const data = await response.json();
+        const currentPreviousBookings = previousSnookerBookingsRef.current;
+        let shouldPlaySound = false;
+        
+        // Detect new bookings
+        if (currentPreviousBookings.length > 0 && data.length > currentPreviousBookings.length) {
+          const newBookings = data.filter(
+            (newBooking: SnookerBooking) => 
+              !currentPreviousBookings.some(prevBooking => prevBooking.snooker_order_id === newBooking.snooker_order_id)
+          );
+
+          // Play sound when new bookings are detected
+          if (newBookings.length > 0) {
+            shouldPlaySound = true;
+            playAlertSound();
+          }
+        }
+
+        setPreviousSnookerBookings(data);
         setSnookerBookings(data);
+
+        // Calculate new snooker bookings count (Received status)
+        const receivedCount = data.filter(
+          (booking: SnookerBooking) => booking.order_status === 'Received'
+        ).length;
+        
+        // Play sound if count is 1 or greater (and count increased)
+        // Only play if we didn't already play for new bookings detection above
+        const previousCount = newSnookerBookingsCountRef.current;
+        if (receivedCount >= 1 && receivedCount > previousCount && !shouldPlaySound) {
+          playAlertSound();
+        }
+        
+        setNewSnookerBookingsCount(receivedCount);
+
+        // Update browser tab title with both food and snooker counts
+        const currentFoodCount = newOrdersCountRef.current;
+        updateTabTitle(currentFoodCount, receivedCount);
       } else {
         console.error('Failed to fetch snooker bookings');
       }
@@ -1173,23 +1225,33 @@ Please collect it from the counter.
           <div className="flex items-center justify-center gap-4 mb-6">
             <button
               onClick={() => setActiveTab('food')}
-              className={`px-6 py-3 rounded-xl font-bold text-lg transition-all ${
+              className={`px-6 py-3 rounded-xl font-bold text-lg transition-all relative ${
                 activeTab === 'food'
                   ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg'
                   : 'bg-white text-gray-700 hover:bg-gray-100 shadow-soft'
               }`}
             >
               🍽️ Food Orders
+              {newOrdersCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                  {newOrdersCount}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setActiveTab('snooker')}
-              className={`px-6 py-3 rounded-xl font-bold text-lg transition-all ${
+              className={`px-6 py-3 rounded-xl font-bold text-lg transition-all relative ${
                 activeTab === 'snooker'
                   ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
                   : 'bg-white text-gray-700 hover:bg-gray-100 shadow-soft'
               }`}
             >
               🎱 Snooker Booking
+              {newSnookerBookingsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                  {newSnookerBookingsCount}
+                </span>
+              )}
             </button>
           </div>
         </div>
