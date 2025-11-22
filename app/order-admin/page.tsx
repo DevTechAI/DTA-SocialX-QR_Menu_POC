@@ -156,9 +156,9 @@ export default function AdminDashboard() {
   }, []);
   
   // Update refs whenever state changes
-    useEffect(() => {
-      soundEnabledRef.current = soundEnabled;
-    }, [soundEnabled]);
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
 
     // Update refs for snooker bookings
     useEffect(() => {
@@ -1259,13 +1259,13 @@ Please collect it from the counter.
         {/* Food Orders Tab */}
         {activeTab === 'food' && (
           <>
-            {/* Orders List Header */}
-            <div className="mb-6 md:mb-8">
-              <div className="flex items-center justify-center gap-4 flex-wrap">
-              <h2 className="text-2xl md:text-3xl font-bold text-orange-600 flex items-center gap-3">
-                <span className="text-3xl md:text-4xl">📦</span>
-                <span>Orders Dashboard</span>
-              </h2>
+        {/* Orders List Header */}
+        <div className="mb-6 md:mb-8">
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+          <h2 className="text-2xl md:text-3xl font-bold text-orange-600 flex items-center gap-3">
+            <span className="text-3xl md:text-4xl">📦</span>
+            <span>Orders Dashboard</span>
+          </h2>
             
             {/* Sound Notification Toggle */}
             <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-soft border border-orange-200">
@@ -1830,7 +1830,7 @@ Please collect it from the counter.
             )}
           </>
         )}
-      </div>
+        </div>
 
       {/* Item-wise Metrics Section - Collapsible Tab */}
       {itemMetrics.length > 0 && (
