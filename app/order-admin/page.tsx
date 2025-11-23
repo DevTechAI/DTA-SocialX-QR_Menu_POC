@@ -967,13 +967,12 @@ Please collect it from the counter.
     .filter(order => order.status === 'paid')
     .reduce((sum, order) => sum + order.total_amount, 0);
 
-  // Display orders: sort by created_at (oldest first) and limit to 20
+  // Display orders: sort by created_at (oldest first) - show all orders
   const todayOrders = allTodayOrders
     .sort((a, b) => {
       // Sort by created_at ascending (oldest first)
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    })
-    .slice(0, 20); // Limit to 20 orders for display
+    });
 
   // Calculate item-wise metrics
   interface ItemMetrics {
