@@ -96,6 +96,7 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [isItemMetricsExpanded, setIsItemMetricsExpanded] = useState(false);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [amountView, setAmountView] = useState<'ordered' | 'settled'>('settled');
@@ -410,11 +411,11 @@ Please collect it from the counter.
   useEffect(() => {
     if (!authChecked) return; // Wait for auth check before fetching orders
     
-    // Initial fetch
-    fetchOrders();
+    // Initial fetch with loading state
+    fetchOrders(true);
     
-    // Set up polling interval (every 10 seconds)
-    const interval = setInterval(fetchOrders, 10000);
+    // Set up polling interval (every 10 seconds) - background refresh without loading
+    const interval = setInterval(() => fetchOrders(false), 10000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authChecked]);
@@ -665,8 +666,11 @@ Please collect it from the counter.
     }
   };
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (showLoading = false) => {
     try {
+      if (showLoading) {
+        setLoading(true);
+      }
       // Fetch orders for current business day (8 AM to 8 AM)
       const response = await fetch('/api/orders?business_day=true');
       if (response.ok) {
@@ -752,12 +756,19 @@ Please collect it from the counter.
             created_at: parsedData[0].created_at
           });
         }
+        
+        // Mark initial load as complete after first successful fetch
+        if (!initialLoadComplete) {
+          setInitialLoadComplete(true);
+        }
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
       setOrders([]);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -870,8 +881,8 @@ Please collect it from the counter.
       if (response.ok) {
         // Refresh bookings
         await fetchSnookerBookings();
-        // Also refresh food orders to update any related stats
-        await fetchOrders();
+        // Also refresh food orders to update any related stats (background refresh)
+        await fetchOrders(false);
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         alert(`Failed to start play session: ${errorData.error || 'Unknown error'}`);
@@ -895,8 +906,8 @@ Please collect it from the counter.
       if (response.ok) {
         // Refresh bookings
         await fetchSnookerBookings();
-        // Also refresh food orders to update any related stats
-        await fetchOrders();
+        // Also refresh food orders to update any related stats (background refresh)
+        await fetchOrders(false);
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         alert(`Failed to end play session: ${errorData.error || 'Unknown error'}`);
@@ -1016,8 +1027,8 @@ Please collect it from the counter.
   const itemMetrics = Array.from(itemMetricsMap.values())
     .sort((a, b) => b.totalQuantity - a.totalQuantity); // Sort by total quantity (most popular first)
 
-  // Show loading state while checking authentication or fetching data
-  if (!authChecked || loading) {
+  // Show loading state only on initial load while checking authentication or fetching data
+  if (!authChecked || (loading && !initialLoadComplete)) {
   return (
       <div className="min-h-screen gradient-soft flex items-center justify-center">
         <div className="text-center">
@@ -1112,8 +1123,8 @@ Please collect it from the counter.
                 </div>
                 {/* Live Status */}
                 <div className="flex items-center gap-3 bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30">
-                  <div className={`w-3 h-3 rounded-full ${loading ? 'bg-yellow-400 animate-pulse' : 'bg-green-400'} shadow-soft`}></div>
-                  <span className="text-white font-bold text-sm md:text-base">{loading ? 'Syncing...' : 'Live'}</span>
+                  <div className="w-3 h-3 rounded-full bg-green-400 shadow-soft"></div>
+                  <span className="text-white font-bold text-sm md:text-base">Live</span>
                 </div>
               </div>
             </div>

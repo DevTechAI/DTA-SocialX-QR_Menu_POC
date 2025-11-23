@@ -176,7 +176,7 @@ export default function BookSnookerPage() {
               <div className="relative z-10 p-6 sm:p-8 md:p-10">
                 {/* Form Header */}
                 <div className="text-center mb-6 sm:mb-8">
-                  <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
                     <span className="block sm:inline">Book</span>
                     <span className="block sm:inline sm:ml-1">Snooker/Pool Table</span>
                   </h2>
@@ -300,7 +300,7 @@ export default function BookSnookerPage() {
                         required
                       >
                         <option value="">Select Players Count (Minimum 1)</option>
-                        {[1, 2, 3, 4, 5, 6].map((count) => (
+                        {[1, 2, 3, 4].map((count) => (
                           <option key={count} value={count.toString()}>
                             {count}
                           </option>
