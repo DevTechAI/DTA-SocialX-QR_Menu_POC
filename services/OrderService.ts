@@ -90,28 +90,39 @@ export class OrderService {
   }
 
   async getOrdersByBusinessDay(date: Date = new Date()): Promise<Order[]> {
-    const now = new Date(date);
+    // IST is UTC+5:30
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
     
-    // Calculate 8 AM today
-    const startOfBusinessDay = new Date(now);
-    startOfBusinessDay.setHours(8, 0, 0, 0);
+    // Get current UTC time
+    const nowUTC = new Date(date);
     
-    // Calculate 8 AM tomorrow
-    const endOfBusinessDay = new Date(now);
-    endOfBusinessDay.setDate(endOfBusinessDay.getDate() + 1);
-    endOfBusinessDay.setHours(8, 0, 0, 0);
+    // Convert to IST by adding offset
+    const nowIST = new Date(nowUTC.getTime() + IST_OFFSET_MS);
     
-    // If current time is before 8 AM, use yesterday's 8 AM to today's 8 AM
-    if (now.getHours() < 8) {
-      startOfBusinessDay.setDate(startOfBusinessDay.getDate() - 1);
-      endOfBusinessDay.setDate(endOfBusinessDay.getDate() - 1);
+    // Get IST date components
+    const istYear = nowIST.getUTCFullYear();
+    const istMonth = nowIST.getUTCMonth();
+    const istDate = nowIST.getUTCDate();
+    const istHours = nowIST.getUTCHours();
+    
+    // Calculate 8 AM IST today in UTC (8 AM IST = 2:30 AM UTC)
+    const startOfBusinessDayUTC = new Date(Date.UTC(istYear, istMonth, istDate, 2, 30, 0, 0));
+    
+    // Calculate 8 AM IST tomorrow in UTC
+    const endOfBusinessDayUTC = new Date(Date.UTC(istYear, istMonth, istDate + 1, 2, 30, 0, 0));
+    
+    // If current time is before 8 AM IST, use yesterday's 8 AM IST to today's 8 AM IST
+    if (istHours < 8) {
+      const yesterdayIST = new Date(Date.UTC(istYear, istMonth, istDate - 1, 2, 30, 0, 0));
+      startOfBusinessDayUTC.setTime(yesterdayIST.getTime());
+      endOfBusinessDayUTC.setTime(startOfBusinessDayUTC.getTime() + (24 * 60 * 60 * 1000));
     }
 
     const { data, error } = await this.supabase
       .from('orders')
       .select('*')
-      .gte('created_at', startOfBusinessDay.toISOString())
-      .lt('created_at', endOfBusinessDay.toISOString())
+      .gte('created_at', startOfBusinessDayUTC.toISOString())
+      .lt('created_at', endOfBusinessDayUTC.toISOString())
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -121,7 +132,8 @@ export class OrderService {
       throw new Error(`Failed to fetch orders: ${error.message}`);
     }
 
-    console.log(`✅ Fetched ${data?.length || 0} orders for business day (8 AM to 8 AM)`);
+    console.log(`✅ Fetched ${data?.length || 0} orders for business day (8 AM IST to 8 AM IST)`);
+    console.log(`   Business day window: ${startOfBusinessDayUTC.toISOString()} to ${endOfBusinessDayUTC.toISOString()}`);
     return (data || []).map(order => {
       // Ensure customer_phno is properly mapped (handle both cases)
       const phoneNumber = order.customer_phno || order.customer_phNo || 'N/A';
