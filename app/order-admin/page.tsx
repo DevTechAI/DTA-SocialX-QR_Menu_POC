@@ -1285,9 +1285,9 @@ Please collect it from the counter.
           </div>
           <p className="text-gray-600 mt-2 text-sm md:text-base font-medium text-center">
             Click on an order to expand and view details
-            {allTodayOrders.length > 20 && (
+            {allTodayOrders.length > 0 && (
               <span className="ml-2 text-orange-600 font-semibold">
-                (Showing first 20 orders, sorted by time - oldest first)
+                (sorted by time - oldest first)
               </span>
             )}
           </p>
