@@ -350,6 +350,58 @@ export default function BookOrderPage() {
           })}
         </div>
       </div>
+
+      {/* SocialX Logo Card with Café Background */}
+      <div className="w-full max-w-4xl mt-6 sm:mt-8">
+        <div className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-soft-xl transform hover:scale-105 transition-all duration-300">
+          <div className="relative w-full h-48 sm:h-56 md:h-72 lg:h-80 p-6 sm:p-8 md:p-10" style={{
+            background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.75) 0%, rgba(251, 146, 60, 0.75) 100%)',
+          }}>
+            {/* Café Background Vector - Fitted to this window */}
+            <div 
+              className="absolute inset-0"
+              style={{
+                backgroundImage: 'url(/background_vector.png)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                opacity: 0.35,
+              }}
+            />
+            
+            {/* Content Layer - Positioned above screen midline */}
+            <div className="absolute inset-0 flex items-center justify-center transform -translate-y-20">
+              <div className="text-center relative z-10">
+                {/* Coffee Cup Icon */}
+                <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-white/40 backdrop-blur-md mb-3 sm:mb-4 mt-16 sm:mt-18 md:mt-20 shadow-soft-lg">
+                  <svg className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    {/* Coffee cup body */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9v8c0 1.657 1.343 3 3 3h8c1.657 0 3-1.343 3-3v-2" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 9h1a3 3 0 013 3v1a3 3 0 01-3 3h-1" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 9h12V7c0-1.105-.895-2-2-2H7c-1.105 0-2 .895-2 2v2z" />
+                    {/* Steam lines */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 5V3" opacity="0.7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 5V2" opacity="0.7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 5V3" opacity="0.7" />
+                  </svg>
+                </div>
+                
+                {/* Brand Name */}
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-2xl mb-2 sm:mb-3" style={{ fontFamily: 'cursive' }}>
+                  SocialX
+                </h1>
+                <p className="text-lg sm:text-xl md:text-2xl text-white/95 italic font-medium drop-shadow-lg" style={{ fontFamily: 'Georgia, serif' }}>
+                  Hub
+                </p>
+              </div>
+            </div>
+            
+            {/* Decorative circles with animation */}
+            <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/15 backdrop-blur-sm animate-pulse z-10"></div>
+            <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/15 backdrop-blur-sm animate-pulse z-10" style={{ animationDelay: '1s' }}></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     {/* Footer - Subtle Bottom Banner */}

@@ -13,11 +13,11 @@ export default function SocialXMenuApp() {
   const devicePadding = getDevicePadding(deviceInfo);
   
   // View state
-  const [currentView, setCurrentView] = useState<ViewState>('nameEntry');
+  const [currentView, setCurrentView] = useState<ViewState>('menu');
   const [navigationHistory, setNavigationHistory] = useState<ViewState[]>([]);
   
   // Name entry state
-  const [customerName, setCustomerName] = useState('');
+  const [customerName, setCustomerName] = useState('Guest');
   const [customerPhone, setCustomerPhone] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
@@ -40,6 +40,9 @@ export default function SocialXMenuApp() {
   const [showOrderMessageDialog, setShowOrderMessageDialog] = useState(false);
   const [showUnavailableItemsDialog, setShowUnavailableItemsDialog] = useState(false);
   const [unavailableItems, setUnavailableItems] = useState<Array<{ menu_item_id: string; name: string; Available: boolean }>>([]);
+  const [showCheckoutDialog, setShowCheckoutDialog] = useState(false);
+  const [checkoutName, setCheckoutName] = useState('');
+  const [checkoutPhone, setCheckoutPhone] = useState('');
   
   // Ref for selected items scroll container
   const selectedItemsScrollRef = useRef<HTMLDivElement>(null);
@@ -100,7 +103,10 @@ export default function SocialXMenuApp() {
     const savedOrderStatus = localStorage.getItem('orderStatus');
     const savedOrderId = localStorage.getItem('orderId');
     
-    if (savedName) setCustomerName(savedName);
+    // Only restore name if it exists and is not 'Guest' (to allow Guest as default)
+    if (savedName && savedName !== 'Guest') {
+      setCustomerName(savedName);
+    }
     if (savedPhone) {
       // Remove +91 prefix if present (for display in input field)
       const phoneWithoutPrefix = savedPhone.startsWith('+91') ? savedPhone.slice(3) : savedPhone;
@@ -115,8 +121,9 @@ export default function SocialXMenuApp() {
     }
     if (savedOrderPlaced === 'true' && savedView === 'orderPlaced') {
       setCurrentView('orderPlaced');
-    } else if (savedView) {
-      setCurrentView(savedView);
+    } else {
+      // Default to menu view, skip nameEntry
+      setCurrentView('menu');
     }
     if (savedOrderStatus) {
       setOrderStatus(savedOrderStatus as any);
@@ -125,9 +132,7 @@ export default function SocialXMenuApp() {
       setOrderId(savedOrderId);
     }
     // Keep categories collapsed by default when menu view loads
-    if (savedView === 'menu' || !savedView) {
       setExpandedCategories([]);
-    }
   }, []);
 
   // Save view state
@@ -523,12 +528,31 @@ export default function SocialXMenuApp() {
       return;
     }
 
+    // Validate checkout form
+    if (!checkoutName.trim()) {
+      alert('Please enter your good Name');
+      return;
+    }
+    
+    // Validate phone number - must be exactly 10 digits
+    const phoneDigits = checkoutPhone.replace(/\D/g, '');
+    if (!phoneDigits || phoneDigits.length !== 10) {
+      alert('Please enter your Phone Number (exactly 10 digits)');
+      return;
+    }
+
+    // Update customer name from Guest to entered name
+    const finalName = checkoutName.trim();
+    setCustomerName(finalName);
+    localStorage.setItem('customerName', finalName);
+
     // Ensure phone number is exactly 10 digits with +91 prefix
-    const phoneDigits = customerPhone.replace(/\D/g, '');
-    const phoneWithPrefix = phoneDigits.length === 10 ? `+91${phoneDigits}` : `+91${customerPhone}`;
+    const phoneWithPrefix = `+91${phoneDigits}`;
+    setCustomerPhone(phoneDigits);
+    localStorage.setItem('customerPhone', phoneWithPrefix);
 
     const orderData = {
-      customer_name: customerName,
+      customer_name: finalName,
       customer_phno: phoneWithPrefix,
       items: selectedItems.map(({ item, quantity }) => ({
         menu_item_id: item.id,
@@ -565,6 +589,11 @@ export default function SocialXMenuApp() {
       });
 
       if (response.ok) {
+        // Close checkout dialog
+        setShowCheckoutDialog(false);
+        // Reset checkout form
+        setCheckoutName('');
+        setCheckoutPhone('');
         // Order placed successfully
         const orderId = responseData.id || getMockOrderId();
         setOrderId(orderId);
@@ -768,7 +797,7 @@ export default function SocialXMenuApp() {
                         
                         {/* Button content */}
                         <span className="relative flex items-center justify-center gap-2 text-white drop-shadow-lg">
-                          <span className="text-sm sm:text-base font-bold">Click for Menu</span>
+                          <span className="text-sm sm:text-base font-bold">Done</span>
                           <span className="text-lg sm:text-xl group-hover/btn:rotate-12 transition-transform duration-300">🍽️</span>
                         </span>
                       </div>
@@ -781,56 +810,6 @@ export default function SocialXMenuApp() {
                   <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 w-6 h-6 sm:w-8 sm:h-8 border-b-2 border-l-2 border-primary-300 rounded-bl-2xl opacity-50"></div>
                   <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 border-b-2 border-r-2 border-accent-300 rounded-br-2xl opacity-50"></div>
                 </div>
-              </div>
-            </div>
-
-            {/* SocialX Logo Card with Café Background */}
-            <div className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-soft-xl transform hover:scale-105 transition-all duration-300">
-              <div className="relative w-full h-48 sm:h-56 md:h-72 lg:h-80 p-6 sm:p-8 md:p-10" style={{
-                background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.75) 0%, rgba(251, 146, 60, 0.75) 100%)',
-              }}>
-                {/* Café Background Vector - Fitted to this window */}
-                <div 
-                  className="absolute inset-0"
-                  style={{
-                    backgroundImage: 'url(/background_vector.png)',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    opacity: 0.35,
-                  }}
-                />
-                
-                {/* Content Layer - Positioned above screen midline */}
-                <div className="absolute inset-0 flex items-center justify-center transform -translate-y-20">
-                  <div className="text-center relative z-10">
-                    {/* Coffee Cup Icon */}
-                    <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-white/40 backdrop-blur-md mb-3 sm:mb-4 mt-16 sm:mt-18 md:mt-20 shadow-soft-lg">
-                      <svg className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        {/* Coffee cup body */}
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 9v8c0 1.657 1.343 3 3 3h8c1.657 0 3-1.343 3-3v-2" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 9h1a3 3 0 013 3v1a3 3 0 01-3 3h-1" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 9h12V7c0-1.105-.895-2-2-2H7c-1.105 0-2 .895-2 2v2z" />
-                        {/* Steam lines */}
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 5V3" opacity="0.7" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 5V2" opacity="0.7" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 5V3" opacity="0.7" />
-                      </svg>
-                    </div>
-                    
-                    {/* Brand Name */}
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-2xl mb-2 sm:mb-3" style={{ fontFamily: 'cursive' }}>
-                      SocialX
-                    </h1>
-                    <p className="text-lg sm:text-xl md:text-2xl text-white/95 italic font-medium drop-shadow-lg" style={{ fontFamily: 'Georgia, serif' }}>
-                      Hub
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Decorative circles with animation */}
-                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/15 backdrop-blur-sm animate-pulse z-10"></div>
-                <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/15 backdrop-blur-sm animate-pulse z-10" style={{ animationDelay: '1s' }}></div>
               </div>
             </div>
           </div>
@@ -1264,7 +1243,7 @@ export default function SocialXMenuApp() {
         </div>
       </div>
 
-      {/* Customer Info and Place Order Section - Below Header */}
+      {/* Customer Info Section - Below Header */}
       <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-1.5 md:py-2 pb-1">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
@@ -1357,44 +1336,18 @@ export default function SocialXMenuApp() {
               </div>
             )}
           </div>
-          {/* Place Order Button - Vertically Centered */}
-          <div className="flex items-center">
-            <button
-              onClick={handlePlaceOrder}
-              disabled={selectedItems.length === 0}
-              className="relative px-4 py-2 md:px-5 md:py-2.5 rounded-xl font-bold text-sm md:text-base transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group/order active:scale-95 border-2 border-primary-300"
-              style={{
-                boxShadow: selectedItems.length > 0 
-                  ? '0 4px 20px rgba(168, 85, 247, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2)' 
-                  : '0 2px 10px rgba(0, 0, 0, 0.2)',
-              }}
-            >
-              <div 
-                className="absolute inset-0 group-hover/order:opacity-90 transition-all"
-                style={{
-                  background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)'
-                }}
-              ></div>
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent"></div>
-              <span className="relative z-10 text-white flex items-center gap-1.5 font-extrabold drop-shadow-lg" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
-                <span className="text-base md:text-lg">🍽️</span>
-                <span>Place Order</span>
-              </span>
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* Selected Items Section - Between Place Order and Tabs - Sticky, overlays menu items */}
+      {/* Selected Items Section - Between Header and CheckOut Button - Sticky, overlays menu items */}
       {selectedItems.length > 0 && (
         <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 sticky z-[9999] mt-1" style={{ top: 'calc(140px + env(safe-area-inset-top, 0px))' }}>
           <div 
-            className="backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-primary-200/50 overflow-hidden mb-6"
+            className="backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-primary-200/50 overflow-hidden mb-4"
             style={{
               background: 'linear-gradient(to bottom, rgba(255, 237, 213, 0.95), rgba(254, 215, 170, 0.95), rgba(251, 191, 36, 0.90))',
               maxHeight: '120px', // Reduced from 140px
-              marginBottom: '24px', // Increased spacing between selected items and HOT tab
-              marginTop: '4px', // Small top margin to create minimal gap from Place Order button
+              marginTop: '4px', // Small top margin to create minimal gap from header
             }}
           >
             {/* Header - Smaller */}
@@ -1497,12 +1450,37 @@ export default function SocialXMenuApp() {
         </div>
       )}
 
+      {/* CheckOut Button - Below Selected Items, Above Tabs */}
+      {selectedItems.length > 0 && (
+        <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 mb-4 flex justify-center">
+          <button
+            onClick={() => setShowCheckoutDialog(true)}
+            className="relative w-[60%] min-w-[140px] max-w-[280px] px-4 py-2.5 md:px-5 md:py-3 rounded-xl font-bold text-sm md:text-base transition-all shadow-lg overflow-hidden group/checkout active:scale-95 border-2 border-primary-300"
+            style={{
+              boxShadow: '0 4px 20px rgba(168, 85, 247, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2)',
+            }}
+          >
+            <div 
+              className="absolute inset-0 group-hover/checkout:opacity-90 transition-all"
+              style={{
+                background: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)'
+              }}
+            ></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent"></div>
+            <span className="relative z-10 text-white flex items-center justify-center gap-1.5 font-extrabold drop-shadow-lg whitespace-nowrap" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+              <span className="text-base md:text-lg">🛒</span>
+              <span>CheckOut</span>
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* Expandable Category Accordion - Mobile Container - Scrolls behind selected items window */}
       <div 
         className="w-full md:max-w-2xl lg:max-w-3xl space-y-1.5"
         style={{
-          // Add top margin to create space from selected items window
-          marginTop: selectedItems.length > 0 ? '16px' : '8px', // Increased gap when selected items visible
+          // Add top margin to create space from CheckOut button or selected items window
+          marginTop: selectedItems.length > 0 ? '8px' : '8px', // Gap from CheckOut button or header
           paddingTop: '8px',
           paddingBottom: '20px', // Single paddingBottom value
           // Reduced horizontal padding by 20% + additional 15% = 32% total reduction (0.8 * 0.85 = 0.68)
@@ -1533,7 +1511,7 @@ export default function SocialXMenuApp() {
           const categoryDisplayNames: Record<string, string> = {
             'HOT': 'Hot Coffee',
             'COLD': 'Cold Coffee',
-            'ADDON': 'Coffee Addons',
+            'ADDON': 'Coffee Add-Ons',
             'NON-COFFEE': 'Non-Coffee & Refreshers',
             'SNACK': 'Snacks & Bites',
             'DESSERT': 'Desserts'
@@ -1744,9 +1722,160 @@ export default function SocialXMenuApp() {
         })()}
       </div>
 
-      {/* Moved selected items section above - now between Place Order and tabs */}
+      {/* Footer - Subtle Bottom Banner */}
+      <footer className="w-full mt-auto">
+        <div className="w-full bg-white/60 backdrop-blur-sm border-t border-gray-200/50 py-2 shadow-sm">
+          <p className="text-xs text-gray-500 text-center">
+            Tech Powered by{' '}
+            <a
+              href="https://www.devtechai.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-500 hover:text-primary-600 font-semibold underline"
+            >
+              DevTechAi.Org
+            </a>
+          </p>
+        </div>
+      </footer>
 
-      {/* Footer removed in menu page - Selected items window now between sections */}
+      {/* CheckOut Dialog Popup */}
+      {showCheckoutDialog && (
+        <div 
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 animate-in fade-in duration-300"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={(e) => {
+            // Close when clicking outside
+            if (e.target === e.currentTarget) {
+              setShowCheckoutDialog(false);
+            }
+          }}
+        >
+          <div 
+            className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full transform transition-all animate-in zoom-in-95 duration-300 overflow-hidden"
+          >
+            {/* Orange corner lining on all 4 edges */}
+            <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none">
+              <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-orange-500 rounded-tl-2xl"></div>
+              <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-orange-500 rounded-tr-2xl"></div>
+              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-orange-500 rounded-bl-2xl"></div>
+              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-orange-500 rounded-br-2xl"></div>
+            </div>
+
+            {/* Close Button - Red X */}
+            <button
+              onClick={() => setShowCheckoutDialog(false)}
+              className="absolute top-4 right-4 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full p-1.5 transition-all z-10"
+              aria-label="Close"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-6 w-6" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Form Content */}
+            <div>
+              <form onSubmit={(e) => { e.preventDefault(); handlePlaceOrder(); }} className="space-y-4 sm:space-y-6">
+                {/* Name Input */}
+                <div>
+                  <label htmlFor="checkout-name" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Name <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative group/input">
+                    {/* Elite border frame */}
+                    <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
+                    
+                    <input
+                      type="text"
+                      id="checkout-name"
+                      value={checkoutName}
+                      onChange={(e) => setCheckoutName(e.target.value)}
+                      placeholder="Please enter your name"
+                      className="relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                      style={{ fontSize: '16px' }}
+                      required
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {/* Phone Number Input */}
+                <div>
+                  <label htmlFor="checkout-phone" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative group/input">
+                    {/* Elite border frame */}
+                    <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
+                    
+                    {/* Phone prefix */}
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                      <span className="text-base font-medium text-gray-700">+91</span>
+                    </div>
+                    
+                    <input
+                      type="tel"
+                      id="checkout-phone"
+                      value={checkoutPhone}
+                      onChange={(e) => {
+                        // Only allow numbers, max 10 digits
+                        const numericValue = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setCheckoutPhone(numericValue);
+                      }}
+                      placeholder="Enter 10 digit phone number"
+                      className="relative w-full pl-14 sm:pl-16 pr-4 sm:pr-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                      style={{ fontSize: '16px' }}
+                      inputMode="numeric"
+                      pattern="[0-9]{10}"
+                      required
+                      minLength={10}
+                      maxLength={10}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1.5 italic font-bold text-center">
+                    *Details needed to notify when your order is ready!
+                  </p>
+                </div>
+
+                {/* Place Order Button - Narrowed by 30% on each side (40% width total) */}
+                <div className="flex justify-center">
+                  <button
+                    type="submit"
+                    className="relative w-[40%] group/btn transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99]"
+                  >
+                    {/* Elite outer border */}
+                    <div className="absolute -inset-px bg-gradient-to-r from-primary-400/60 via-accent-400/60 to-primary-400/60 rounded-lg opacity-100 group-hover/btn:opacity-100 transition duration-300 blur-[0.5px]"></div>
+                    
+                    {/* Inner button */}
+                    <div className="relative py-2.5 sm:py-3 px-4 sm:px-5 rounded-lg overflow-hidden backdrop-blur-md">
+                      {/* Shiny transparent gradient background */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary-500/70 via-accent-500/70 to-primary-500/70 bg-[length:200%_100%] group-hover/btn:bg-[position:100%_0] transition-all duration-500"></div>
+                      
+                      {/* Glass shine effect */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent"></div>
+                      
+                      {/* Animated shine sweep */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700"></div>
+                      
+                      {/* Button content - Single line text, no icon */}
+                      <span className="relative flex items-center justify-center text-white drop-shadow-lg whitespace-nowrap">
+                        <span className="text-sm sm:text-base font-bold">Place Order</span>
+                      </span>
+                    </div>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Unavailable Items Dialog - Available from menu view */}
       {showUnavailableItemsDialog && (
