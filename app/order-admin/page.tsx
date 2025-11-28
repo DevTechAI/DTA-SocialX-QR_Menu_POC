@@ -767,7 +767,7 @@ Please collect it from the counter.
       setOrders([]);
     } finally {
       if (showLoading) {
-        setLoading(false);
+      setLoading(false);
       }
     }
   };
