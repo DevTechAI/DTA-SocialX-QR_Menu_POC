@@ -59,7 +59,7 @@ export default function BookSnookerPage() {
     }
 
     if (!selectedBoard) {
-      alert('Please select a Snooker Table');
+      alert('Please select a Gaming Table');
       return;
     }
 
@@ -244,7 +244,7 @@ export default function BookSnookerPage() {
                   {/* Snooker Table Dropdown */}
                   <div>
                     <label htmlFor="board" className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Snooker Table <span className="text-red-500">*</span>
+                      Table <span className="text-red-500">*</span>
                     </label>
                     <div className="relative group/input">
                       {/* Elite border frame */}
@@ -259,7 +259,7 @@ export default function BookSnookerPage() {
                         required
                         disabled={loading}
                       >
-                        <option value="">Select a Snooker Table</option>
+                        <option value="">Select a Gaming Table</option>
                         {boards.map((board) => {
                           // Calculate hourly price based on type
                           // Pool Table: 300/hr, French Table: 400/hr

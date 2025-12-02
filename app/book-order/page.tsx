@@ -225,7 +225,7 @@ export default function BookOrderPage() {
         </div>
 
         {/* Desktop: Full card layout */}
-        <div className="hidden md:grid md:grid-cols-2 gap-4 -mt-4">
+        <div className="hidden md:grid md:grid-cols-2 gap-4 mt-16">
           {bookingOptions.map((option) => {
             // Helper function to get title parts
             const getTitleParts = () => {
