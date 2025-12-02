@@ -119,11 +119,11 @@ export default function BookOrderPage() {
         </div>
 
         {/* Content Container */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full -mt-24 sm:-mt-28 md:-mt-32 lg:-mt-36">
+        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full mt-4 sm:mt-6 md:mt-8">
           <div className="w-full max-w-4xl">
         {/* Booking Options Grid */}
         {/* Mobile: Small emoji icons in 2x2 grid */}
-        <div className="grid grid-cols-2 gap-4 md:hidden -mt-2 sm:-mt-4">
+        <div className="grid grid-cols-2 gap-4 md:hidden mt-4 sm:mt-6">
           {bookingOptions.map((option) => {
             // Helper function to get title parts
             const getTitleParts = () => {
