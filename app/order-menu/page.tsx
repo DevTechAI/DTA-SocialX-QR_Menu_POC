@@ -1452,7 +1452,7 @@ export default function SocialXMenuApp() {
 
       {/* CheckOut Button - Below Selected Items, Above Tabs */}
       {selectedItems.length > 0 && (
-        <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 mb-4 flex justify-center">
+        <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 mb-4 flex justify-center sticky z-[9998]" style={{ top: 'calc(292px + env(safe-area-inset-top, 0px))' }}>
           <button
             onClick={() => setShowCheckoutDialog(true)}
             className="relative w-[45%] min-w-[140px] max-w-[240px] px-4 py-2.5 md:px-5 md:py-3 rounded-xl font-bold text-sm md:text-base transition-all shadow-lg overflow-hidden group/checkout active:scale-95 border-2 border-primary-300"
