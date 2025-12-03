@@ -945,7 +945,7 @@ export default function SocialXMenuApp() {
                       Your order will be ready soon!
                     </p>
                     <p className="text-sm font-semibold text-gray-700 leading-relaxed">
-                      Please collect it from the counter when you get a message.
+                      Please pay and collect it from the counter when you get a message.
                     </p>
                     <p className="text-sm font-semibold text-gray-700">
                       SocialX is a self-serve space <span className="text-green-600 font-bold">💚</span>
@@ -1081,7 +1081,7 @@ export default function SocialXMenuApp() {
                     Your order will be ready soon!
                   </p>
                   <p className="text-sm font-semibold text-gray-700 leading-relaxed">
-                    Please collect it from the counter when you get a message.
+                    Please pay and collect it from the counter when you get a message.
                   </p>
                   <p className="text-sm font-semibold text-gray-700">
                     SocialX is a self-serve space <span className="text-green-600 font-bold">💚</span>
