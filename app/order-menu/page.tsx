@@ -43,7 +43,6 @@ export default function SocialXMenuApp() {
   const [showCheckoutDialog, setShowCheckoutDialog] = useState(false);
   const [checkoutName, setCheckoutName] = useState('');
   const [checkoutPhone, setCheckoutPhone] = useState('');
-  const [showImageDialog, setShowImageDialog] = useState(false);
   
   // Ref for selected items scroll container
   const selectedItemsScrollRef = useRef<HTMLDivElement>(null);
@@ -1657,32 +1656,9 @@ export default function SocialXMenuApp() {
                               {/* Item Details */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2 mb-0.5">
-                                  <div className="flex items-center gap-2 flex-1 min-w-0">
                                   <h3 className={`text-sm font-bold truncate ${
                                     isUnavailable ? 'text-gray-500' : 'text-gray-800'
                                   }`}>{item.name}</h3>
-                                    {/* Image Icon */}
-                                    <button
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setShowImageDialog(true);
-                                      }}
-                                      className="flex-shrink-0 text-gray-500 hover:text-gray-700 transition-colors"
-                                      aria-label="View image"
-                                    >
-                                      <svg 
-                                        xmlns="http://www.w3.org/2000/svg" 
-                                        className="h-4 w-4" 
-                                        fill="none" 
-                                        viewBox="0 0 24 24" 
-                                        stroke="currentColor" 
-                                        strokeWidth={2}
-                                      >
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                      </svg>
-                                    </button>
-                                  </div>
                                   {quantity === 0 ? (
                                     isUnavailable ? (
                                       <span className="flex-shrink-0 py-1.5 text-xs rounded-lg font-bold text-gray-500 min-w-[72px] text-center">
@@ -1982,68 +1958,6 @@ export default function SocialXMenuApp() {
         </div>
       )}
 
-      {/* Image Dialog Popup */}
-      {showImageDialog && (
-        <div 
-          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 animate-in fade-in duration-300"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-          onClick={(e) => {
-            // Close when clicking outside
-            if (e.target === e.currentTarget) {
-              setShowImageDialog(false);
-            }
-          }}
-        >
-          <div 
-            className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full transform transition-all animate-in zoom-in-95 duration-300 overflow-hidden"
-          >
-            {/* Orange corner lining on all 4 edges */}
-            <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none">
-              <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-orange-500 rounded-tl-2xl"></div>
-              <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-orange-500 rounded-tr-2xl"></div>
-              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-orange-500 rounded-bl-2xl"></div>
-              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-orange-500 rounded-br-2xl"></div>
-            </div>
-
-            {/* Close Button - Red X */}
-            <button
-              onClick={() => setShowImageDialog(false)}
-              className="absolute top-4 right-4 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full p-1.5 transition-all z-10"
-              aria-label="Close"
-            >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className="h-6 w-6" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            {/* Message Content */}
-            <div className="pr-8 text-center">
-              <div className="mb-4 flex justify-center">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-16 w-16 text-gray-500" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor" 
-                  strokeWidth={1.5}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <p className="text-base font-semibold text-gray-700">
-                Image will be added soon
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
