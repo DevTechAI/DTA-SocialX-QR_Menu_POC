@@ -1147,7 +1147,9 @@ export default function SocialXMenuApp() {
           WebkitTapHighlightColor: 'transparent',
           touchAction: 'manipulation',
           ...(selectedItems.length > 0 ? {
-            top: 'calc(306px + env(safe-area-inset-top, 0px))' // Aligned with Checkout button center
+            top: selectedItems.length === 1
+              ? 'calc(272px + env(safe-area-inset-top, 0px))' // Aligned with Checkout button center when 1 item
+              : 'calc(306px + env(safe-area-inset-top, 0px))' // Aligned with Checkout button center when 2+ items
           } : {})
         }}
         aria-label="Go back to welcome page"
@@ -1457,7 +1459,14 @@ export default function SocialXMenuApp() {
 
       {/* CheckOut Button - Below Selected Items, Above Tabs */}
       {selectedItems.length > 0 && (
-        <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 mb-4 flex justify-center sticky z-[9998]" style={{ top: 'calc(284px + env(safe-area-inset-top, 0px))' }}>
+        <div 
+          className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 mb-4 flex justify-center sticky z-[9998]" 
+          style={{ 
+            top: selectedItems.length === 1 
+              ? 'calc(250px + env(safe-area-inset-top, 0px))' // Closer to Selected Items when only 1 item
+              : 'calc(284px + env(safe-area-inset-top, 0px))' // Normal position for 2+ items
+          }}
+        >
           <button
             onClick={() => setShowCheckoutDialog(true)}
             className="relative w-[45%] min-w-[140px] max-w-[240px] px-4 py-2.5 md:px-5 md:py-3 rounded-xl font-bold text-sm md:text-base transition-all shadow-lg overflow-hidden group/checkout active:scale-95 border-2 border-primary-300"
@@ -1494,7 +1503,11 @@ export default function SocialXMenuApp() {
         className="w-full md:max-w-2xl lg:max-w-3xl space-y-1.5"
         style={{
           // Add top margin to create space from CheckOut button or selected items window
-          marginTop: selectedItems.length > 0 ? '50px' : '8px', // Gap from CheckOut button (50px) or header (8px)
+          marginTop: selectedItems.length === 1 
+            ? '45px' // Smaller gap when 1 item (CheckOut button is higher)
+            : selectedItems.length > 0 
+            ? '50px' // Normal gap when 2+ items
+            : '8px', // Gap from header when no items
           paddingTop: '8px',
           paddingBottom: '20px', // Single paddingBottom value
           // Reduced horizontal padding by 20% + additional 15% = 32% total reduction (0.8 * 0.85 = 0.68)
