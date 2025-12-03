@@ -178,14 +178,44 @@ export default function SocialXMenuApp() {
     }
   }, [currentView]);
 
-  // Auto-scroll selected items window to show latest added item
+  // Auto-scroll selected items window to show latest added item and adjust when items are removed
   useEffect(() => {
-    if (selectedItemsScrollRef.current && selectedItems.length > 0) {
-      // Scroll to bottom to show latest item
-      selectedItemsScrollRef.current.scrollTo({
-        top: selectedItemsScrollRef.current.scrollHeight,
+    if (selectedItemsScrollRef.current) {
+      const scrollContainer = selectedItemsScrollRef.current;
+      // Use setTimeout to ensure DOM has updated after state change
+      setTimeout(() => {
+        if (!scrollContainer) return;
+        
+        const scrollHeight = scrollContainer.scrollHeight;
+        const clientHeight = scrollContainer.clientHeight;
+        const scrollTop = scrollContainer.scrollTop;
+        const maxScroll = Math.max(0, scrollHeight - clientHeight);
+        
+        if (selectedItems.length > 0) {
+          // If content doesn't overflow, ensure we're at top
+          if (scrollHeight <= clientHeight) {
+            if (scrollTop > 0) {
+              scrollContainer.scrollTo({
+                top: 0,
         behavior: 'smooth'
       });
+            }
+          } 
+          // If we're scrolled past the content (showing blank space), adjust to max scroll
+          else if (scrollTop > maxScroll) {
+            scrollContainer.scrollTo({
+              top: maxScroll,
+              behavior: 'smooth'
+            });
+          }
+        } else {
+          // Reset scroll when no items
+          scrollContainer.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        }
+      }, 50); // Small delay to ensure DOM update
     }
   }, [selectedItems]);
 
