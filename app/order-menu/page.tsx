@@ -1133,17 +1133,22 @@ export default function SocialXMenuApp() {
         overflowY: 'auto', // Allow scrolling if unexpanded tabs don't fit on screen
       }}
     >
-      {/* Back Button - Left Arrow (to Name Entry) - Mid Screen */}
+      {/* Back Button - Left Arrow (to Name Entry) - Mid Screen or Aligned with Checkout */}
       <button
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
           navigateBack();
         }}
-        className="fixed top-1/2 left-2 md:left-4 -translate-y-1/2 z-[60] group/back touch-manipulation"
+        className={`fixed left-2 md:left-4 -translate-y-1/2 z-[60] group/back touch-manipulation ${
+          selectedItems.length > 0 ? '' : 'top-1/2'
+        }`}
         style={{ 
           WebkitTapHighlightColor: 'transparent',
           touchAction: 'manipulation',
+          ...(selectedItems.length > 0 ? {
+            top: 'calc(306px + env(safe-area-inset-top, 0px))' // Aligned with Checkout button center
+          } : {})
         }}
         aria-label="Go back to welcome page"
       >
@@ -1489,7 +1494,7 @@ export default function SocialXMenuApp() {
         className="w-full md:max-w-2xl lg:max-w-3xl space-y-1.5"
         style={{
           // Add top margin to create space from CheckOut button or selected items window
-          marginTop: selectedItems.length > 0 ? '70px' : '8px', // Gap from CheckOut button (70px) or header (8px)
+          marginTop: selectedItems.length > 0 ? '50px' : '8px', // Gap from CheckOut button (50px) or header (8px)
           paddingTop: '8px',
           paddingBottom: '20px', // Single paddingBottom value
           // Reduced horizontal padding by 20% + additional 15% = 32% total reduction (0.8 * 0.85 = 0.68)
@@ -1586,23 +1591,19 @@ export default function SocialXMenuApp() {
                 </div>
               </button>
 
-              {/* Expanded Menu Items - Scrollable if items exceed viewport - Behind selected items window */}
+              {/* Expanded Menu Items - Natural scrolling, tabs move together */}
               {isExpanded && (
                 <div 
                   className="mt-1.5 space-y-1.5" 
                   style={{ 
                     paddingLeft: 'calc(0.25rem * 0.68)',
-                    // No bottom padding needed - selected items window is now above tabs
                     paddingBottom: '20px',
-                    // Add scrolling for tab-specific items - max height based on available space
-                    // Account for header and selected items window (now above tabs)
-                    maxHeight: 'calc(100vh - 300px)', // Account for header + selected items section above
-                    overflowY: 'auto', // Scroll items within this tab
                     overflowX: 'hidden',
-                    WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
-                    // Ensure menu items stay behind selected items window
+                    // Removed maxHeight and overflowY to allow natural page scrolling
+                    // Menu items will scroll with the main page underneath sticky elements
+                    // When scrolling up, tabs will naturally move up together
                     position: 'relative',
-                    zIndex: 1, // Lower than selected items window (99999)
+                    zIndex: 1, // Lower than selected items window
                   }}
                 >
                   {categoryItems.map(item => {
