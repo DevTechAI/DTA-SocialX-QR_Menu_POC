@@ -103,3 +103,11 @@ If after following all steps it still redirects to localhost:
 
 The code is already configured correctly to use dynamic URLs. The issue is almost always in Supabase configuration.
 
+
+
+
+
+
+
+
+sample text
