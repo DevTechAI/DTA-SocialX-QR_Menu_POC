@@ -1452,7 +1452,7 @@ export default function SocialXMenuApp() {
 
       {/* CheckOut Button - Below Selected Items, Above Tabs */}
       {selectedItems.length > 0 && (
-        <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 mb-4 flex justify-center sticky z-[9998]" style={{ top: 'calc(292px + env(safe-area-inset-top, 0px))' }}>
+        <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 mb-4 flex justify-center sticky z-[9998]" style={{ top: 'calc(284px + env(safe-area-inset-top, 0px))' }}>
           <button
             onClick={() => setShowCheckoutDialog(true)}
             className="relative w-[45%] min-w-[140px] max-w-[240px] px-4 py-2.5 md:px-5 md:py-3 rounded-xl font-bold text-sm md:text-base transition-all shadow-lg overflow-hidden group/checkout active:scale-95 border-2 border-primary-300"
@@ -1489,7 +1489,7 @@ export default function SocialXMenuApp() {
         className="w-full md:max-w-2xl lg:max-w-3xl space-y-1.5"
         style={{
           // Add top margin to create space from CheckOut button or selected items window
-          marginTop: selectedItems.length > 0 ? '8px' : '8px', // Gap from CheckOut button or header
+          marginTop: selectedItems.length > 0 ? '70px' : '8px', // Gap from CheckOut button (70px) or header (8px)
           paddingTop: '8px',
           paddingBottom: '20px', // Single paddingBottom value
           // Reduced horizontal padding by 20% + additional 15% = 32% total reduction (0.8 * 0.85 = 0.68)
