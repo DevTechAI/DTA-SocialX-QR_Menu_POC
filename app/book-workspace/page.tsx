@@ -207,7 +207,7 @@ export default function BookWorkspacePage() {
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
               
               {/* Content */}
-              <div className="relative z-10 p-6 sm:p-8 md:p-10">
+              <div className="relative z-10 p-6 sm:p-8 md:p-10 -mt-2 sm:-mt-3 md:-mt-4">
                 {/* Form Header */}
                 <div className="text-center mb-6 sm:mb-8">
                   <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text leading-tight">
@@ -230,8 +230,8 @@ export default function BookWorkspacePage() {
                         id="name"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
-                        placeholder="Please enter your name"
-                        className="relative w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                        placeholder="enter your name"
+                        className="relative w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium text-center"
                         style={{ fontSize: '16px' }}
                         required
                         autoFocus
@@ -262,8 +262,8 @@ export default function BookWorkspacePage() {
                           const numericValue = e.target.value.replace(/\D/g, '').slice(0, 10);
                           setCustomerPhone(numericValue);
                         }}
-                        placeholder="Enter 10 digit phone number"
-                        className="relative w-full pl-12 sm:pl-14 pr-3 sm:pr-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                        placeholder="enter ph number"
+                        className="relative w-full pl-12 sm:pl-14 pr-3 sm:pr-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium text-center"
                         style={{ fontSize: '16px' }}
                         inputMode="numeric"
                         pattern="[0-9]{10}"
@@ -288,7 +288,7 @@ export default function BookWorkspacePage() {
                           id="workspaceSeat"
                           value={selectedSeatId}
                           onChange={(e) => setSelectedSeatId(e.target.value)}
-                          className="relative w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                          className="relative w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium text-center"
                           style={{ fontSize: '16px' }}
                           required
                           disabled={loading}
@@ -320,7 +320,7 @@ export default function BookWorkspacePage() {
                         id="seats"
                         value={seatsCount}
                         onChange={(e) => setSeatsCount(e.target.value)}
-                        className="relative w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                        className="relative w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium text-center"
                         style={{ fontSize: '16px' }}
                         required
                       >
@@ -354,7 +354,7 @@ export default function BookWorkspacePage() {
                             }
                           }}
                           placeholder="Enter number of seats (1-50)"
-                          className="relative w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                          className="relative w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium text-center"
                           style={{ fontSize: '16px' }}
                           min={1}
                           max={50}
@@ -385,34 +385,36 @@ export default function BookWorkspacePage() {
                   </div>
 
                   {/* Submit Button - Same style as snooker form */}
-                  <button
-                    type="submit"
-                    disabled={submitting || loading}
-                    className="relative w-full group/btn transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {/* Elite outer border */}
-                    <div className="absolute -inset-px bg-gradient-to-r from-primary-400/60 via-accent-400/60 to-primary-400/60 rounded-lg opacity-100 group-hover/btn:opacity-100 transition duration-300 blur-[0.5px]"></div>
-                    
-                    {/* Inner button */}
-                    <div className="relative py-2.5 sm:py-3 px-4 sm:px-5 rounded-lg overflow-hidden backdrop-blur-md">
-                      {/* Shiny transparent gradient background */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary-500/70 via-accent-500/70 to-primary-500/70 bg-[length:200%_100%] group-hover/btn:bg-[position:100%_0] transition-all duration-500"></div>
+                  <div className="flex justify-center">
+                    <button
+                      type="submit"
+                      disabled={submitting || loading}
+                      className="relative inline-block group/btn transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {/* Elite outer border */}
+                      <div className="absolute -inset-px bg-gradient-to-r from-primary-400/60 via-accent-400/60 to-primary-400/60 rounded-lg opacity-100 group-hover/btn:opacity-100 transition duration-300 blur-[0.5px]"></div>
                       
-                      {/* Glass shine effect */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent"></div>
-                      
-                      {/* Animated shine sweep */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700"></div>
-                      
-                      {/* Button content */}
-                      <span className="relative flex items-center justify-center gap-2 text-white drop-shadow-lg">
-                        <span className="text-sm sm:text-base font-bold">
-                          {submitting ? 'Submitting...' : 'Submit'}
+                      {/* Inner button */}
+                      <div className="relative py-2 sm:py-2.5 px-4 sm:px-5 rounded-lg overflow-hidden backdrop-blur-md">
+                        {/* Shiny transparent gradient background */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-primary-500/70 via-accent-500/70 to-primary-500/70 bg-[length:200%_100%] group-hover/btn:bg-[position:100%_0] transition-all duration-500"></div>
+                        
+                        {/* Glass shine effect */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent"></div>
+                        
+                        {/* Animated shine sweep */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700"></div>
+                        
+                        {/* Button content */}
+                        <span className="relative flex items-center justify-center gap-2 text-white drop-shadow-lg">
+                          <span className="text-sm sm:text-base font-bold">
+                            {submitting ? 'Submitting...' : 'Submit'}
+                          </span>
+                          <span className="text-lg sm:text-xl group-hover/btn:rotate-12 transition-transform duration-300">🧑‍💻</span>
                         </span>
-                        <span className="text-lg sm:text-xl group-hover/btn:rotate-12 transition-transform duration-300">🧑‍💻</span>
-                      </span>
-                    </div>
-                  </button>
+                      </div>
+                    </button>
+                  </div>
                 </form>
 
                 {/* Decorative corner accents */}
