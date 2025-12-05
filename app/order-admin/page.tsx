@@ -113,12 +113,31 @@ export default function AdminDashboard() {
     }
     return true;
   });
-  const [activeTab, setActiveTab] = useState<'food' | 'snooker'>('food');
+  const [activeTab, setActiveTab] = useState<'food' | 'snooker' | 'workspace'>('food');
   const [snookerBookings, setSnookerBookings] = useState<SnookerBooking[]>([]);
   const [snookerLoading, setSnookerLoading] = useState(true);
   const [expandedSnookerBookings, setExpandedSnookerBookings] = useState<Set<string>>(new Set());
   const [newSnookerBookingsCount, setNewSnookerBookingsCount] = useState(0);
   const [previousSnookerBookings, setPreviousSnookerBookings] = useState<SnookerBooking[]>([]);
+  
+  // Workspace bookings state
+  interface WorkspaceBooking {
+    workspace_order_id: string;
+    customer_name: string;
+    customer_phno: string;
+    workspace_seat_id: string;
+    seats_count: number;
+    order_date: string;
+    order_status: 'Received' | 'Accepted' | 'Paid' | 'Delivered' | 'Rejected';
+    created_at: string;
+    workspace_seat_menu_items?: {
+      workspace_seat_id: string;
+      workspace_seat_value: number;
+    };
+  }
+  const [workspaceBookings, setWorkspaceBookings] = useState<WorkspaceBooking[]>([]);
+  const [workspaceLoading, setWorkspaceLoading] = useState(true);
+  const [expandedWorkspaceBookings, setExpandedWorkspaceBookings] = useState<Set<string>>(new Set());
   
   // Use ref to always have the current soundEnabled value (avoids stale closures)
   const soundEnabledRef = useRef(soundEnabled);
@@ -867,6 +886,28 @@ Please collect it from the counter.
     }
   };
 
+  // Fetch Workspace Bookings
+  const fetchWorkspaceBookings = async (showLoading = false) => {
+    try {
+      if (showLoading) {
+        setWorkspaceLoading(true);
+      }
+      const response = await fetch('/api/workspace-bookings');
+      if (response.ok) {
+        const data = await response.json();
+        setWorkspaceBookings(data);
+      } else {
+        console.error('Failed to fetch workspace bookings');
+      }
+    } catch (error) {
+      console.error('Error fetching workspace bookings:', error);
+    } finally {
+      if (showLoading) {
+        setWorkspaceLoading(false);
+      }
+    }
+  };
+
   // End Play Session
   const handleStartPlay = async (bookingId: string) => {
     if (!confirm('Are you sure you want to start this play session?')) {
@@ -918,6 +959,28 @@ Please collect it from the counter.
     }
   };
 
+  // Update Workspace Booking Status
+  const updateWorkspaceBookingStatus = async (bookingId: string, newStatus: 'Received' | 'Accepted' | 'Paid' | 'Delivered' | 'Rejected') => {
+    try {
+      const response = await fetch(`/api/workspace-bookings/${bookingId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_status: newStatus }),
+      });
+
+      if (response.ok) {
+        // Refresh workspace bookings
+        await fetchWorkspaceBookings(false);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        alert(`Failed to update booking status: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating workspace booking status:', error);
+      alert(`Error updating booking status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   // Countdown Timer Component
   const CountdownTimer = ({ startTime }: { startTime: string }) => {
     const [timeElapsed, setTimeElapsed] = useState('00:00:00');
@@ -963,6 +1026,17 @@ Please collect it from the counter.
       fetchSnookerBookings(true);
       // Refresh every 5 seconds without loading state
       const interval = setInterval(() => fetchSnookerBookings(false), 5000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, authChecked]);
+
+  // Fetch workspace bookings when tab is active
+  useEffect(() => {
+    if (activeTab === 'workspace' && authChecked) {
+      // Initial fetch with loading state
+      fetchWorkspaceBookings(true);
+      // Refresh every 5 seconds without loading state
+      const interval = setInterval(() => fetchWorkspaceBookings(false), 5000);
       return () => clearInterval(interval);
     }
   }, [activeTab, authChecked]);
@@ -1262,6 +1336,16 @@ Please collect it from the counter.
                   {newSnookerBookingsCount}
                 </span>
               )}
+            </button>
+            <button
+              onClick={() => setActiveTab('workspace')}
+              className={`px-6 py-3 rounded-xl font-bold text-lg transition-all relative ${
+                activeTab === 'workspace'
+                  ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 shadow-soft'
+              }`}
+            >
+              💼 WorkSpace Booking
             </button>
           </div>
         </div>
@@ -1829,6 +1913,301 @@ Please collect it from the counter.
                                     <span>END PLAY</span>
                                   </button>
                                 )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Workspace Booking Tab */}
+        {activeTab === 'workspace' && (
+          <>
+            {/* Workspace Bookings Header */}
+            <div className="mb-6 md:mb-8">
+              <div className="flex items-center justify-center gap-4 flex-wrap">
+                <h2 className="text-2xl md:text-3xl font-bold text-green-600 flex items-center gap-3">
+                  <span className="text-3xl md:text-4xl">💼</span>
+                  <span>Workspace Bookings</span>
+                </h2>
+              </div>
+              <p className="text-gray-600 mt-2 text-sm md:text-base font-medium text-center">
+                Click on a booking to expand and view details
+              </p>
+            </div>
+
+            {/* Loading State */}
+            {workspaceLoading && (
+              <div className="text-center py-12">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 mb-4 shadow-soft">
+                  <div className="animate-pulse">
+                    <span className="text-5xl text-green-600">⏳</span>
+                  </div>
+                </div>
+                <p className="text-gray-700 font-bold text-lg">Loading Bookings...</p>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!workspaceLoading && workspaceBookings.length === 0 && (
+              <div className="relative rounded-3xl overflow-hidden shadow-soft-lg">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-green-50/80 backdrop-blur-xl"></div>
+                <div className="relative z-10 text-center py-16 md:py-20 px-6">
+                  <div className="inline-flex items-center justify-center w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 mb-6 shadow-soft">
+                    <span className="text-6xl md:text-7xl">💼</span>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold text-transparent bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text mb-3">No bookings yet</h3>
+                  <p className="text-gray-600 font-medium">Workspace bookings will appear here as customers reserve seats</p>
+                </div>
+              </div>
+            )}
+
+            {/* Workspace Bookings Grid */}
+            {!workspaceLoading && workspaceBookings.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                {workspaceBookings
+                  .filter(booking => {
+                    // Show all bookings with status: Received, Accepted, Paid, Delivered, Rejected
+                    const validStatuses = ['Received', 'Accepted', 'Paid', 'Delivered', 'Rejected'];
+                    return validStatuses.includes(booking.order_status);
+                  })
+                  .map(booking => {
+                    const isExpanded = expandedWorkspaceBookings.has(booking.workspace_order_id);
+                    const seatInfo = booking.workspace_seat_menu_items;
+                    const workspaceStatusConfig = {
+                      Received: {
+                        label: 'Received',
+                        color: 'border-yellow-300',
+                        cardBg: 'bg-gradient-to-br from-yellow-50 via-yellow-100/70 to-orange-50/80',
+                        textColor: 'text-yellow-700',
+                        badge: 'bg-gradient-to-r from-yellow-500 to-orange-500',
+                        icon: '⏳',
+                      },
+                      Accepted: {
+                        label: 'Accepted',
+                        color: 'border-blue-300',
+                        cardBg: 'bg-gradient-to-br from-blue-50 via-blue-100/70 to-indigo-50/80',
+                        textColor: 'text-blue-700',
+                        badge: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+                        icon: '✅',
+                      },
+                      Paid: {
+                        label: 'Paid',
+                        color: 'border-green-300',
+                        cardBg: 'bg-gradient-to-br from-green-50 via-green-100/70 to-emerald-50/80',
+                        textColor: 'text-green-700',
+                        badge: 'bg-gradient-to-r from-green-500 to-emerald-500',
+                        icon: '💰',
+                      },
+                      Delivered: {
+                        label: 'Delivered',
+                        color: 'border-gray-300',
+                        cardBg: 'bg-gradient-to-br from-gray-50 via-gray-100/70 to-slate-50/80',
+                        textColor: 'text-gray-700',
+                        badge: 'bg-gradient-to-r from-gray-500 to-slate-500',
+                        icon: '✅',
+                      },
+                      Rejected: {
+                        label: 'Rejected',
+                        color: 'border-red-400',
+                        cardBg: 'bg-gradient-to-br from-red-50 via-red-100/70 to-rose-50/80',
+                        textColor: 'text-red-800',
+                        badge: 'bg-gradient-to-r from-red-600 to-rose-600',
+                        icon: '❌',
+                      },
+                    };
+                    const config = workspaceStatusConfig[booking.order_status] || workspaceStatusConfig.Received;
+                    const totalAmount = seatInfo ? booking.seats_count * seatInfo.workspace_seat_value : 0;
+
+                    return (
+                      <div
+                        key={booking.workspace_order_id}
+                        className="relative rounded-2xl overflow-hidden transition-all shadow-soft hover:shadow-soft-lg"
+                      >
+                        {/* Card Background with Status Color */}
+                        <div className={`relative ${config.cardBg} p-5 md:p-6 border-2 ${config.color} rounded-2xl`}>
+                          {/* Glass Effect Overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent rounded-2xl pointer-events-none"></div>
+                          
+                          {/* Content */}
+                          <div className="relative z-10">
+                            {/* Booking Header - Clickable */}
+                            <div
+                              onClick={() => {
+                                const newExpanded = new Set(expandedWorkspaceBookings);
+                                if (isExpanded) {
+                                  newExpanded.delete(booking.workspace_order_id);
+                                } else {
+                                  newExpanded.add(booking.workspace_order_id);
+                                }
+                                setExpandedWorkspaceBookings(newExpanded);
+                              }}
+                              className="w-full text-left hover:bg-white/30 rounded-xl p-3 -m-3 mb-0 transition-all cursor-pointer"
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                {/* Left Section - Customer Info */}
+                                <div className="flex items-start gap-3 flex-1 min-w-0">
+                                  {/* Status Icon */}
+                                  <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl ${config.badge} flex items-center justify-center shadow-soft flex-shrink-0`}>
+                                    <span className="text-2xl md:text-3xl text-white">{config.icon}</span>
+                                  </div>
+
+                                  {/* Customer Name & Booking ID */}
+                                  <div className="flex-1 min-w-0 space-y-1">
+                                    <h3 className="text-base md:text-lg font-bold text-gray-800 truncate leading-tight">
+                                      {booking.customer_name}
+                                    </h3>
+                                    <p className="text-xs text-gray-600 font-medium truncate">
+                                      📞 {booking.customer_phno || 'N/A'}
+                                    </p>
+                                    <p className="text-xs text-gray-600 font-medium truncate">
+                                      #{booking.workspace_order_id.slice(0, 8)}
+                                      {seatInfo && ` • Seat ID: ${booking.workspace_seat_id}`}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {new Date(booking.created_at).toLocaleString('en-US', { 
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: '2-digit', 
+                                        minute: '2-digit' 
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Right Section - Status */}
+                                <div className="text-right flex-shrink-0 flex flex-col items-end">
+                                  {/* Status Badge */}
+                                  <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${config.badge} mb-2`}>
+                                    <span className="text-xs font-bold text-white uppercase">{config.label}</span>
+                                  </div>
+                                  <p className="text-xs font-semibold text-gray-600 mt-2">
+                                    {isExpanded ? '▲ Hide' : '▼ Show'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Expanded Details */}
+                            {isExpanded && (
+                              <div className="mt-4 pt-4 border-t-2 border-gray-300/50">
+                                {/* Booking Details */}
+                                <div className="mb-4">
+                                  <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2 text-sm md:text-base">
+                                    <span className="text-lg">💼</span>
+                                    <span>Booking Details:</span>
+                                  </h4>
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between items-center bg-white/60 rounded-lg px-3 py-2">
+                                      <span className="text-sm font-semibold text-gray-700">Seats Count:</span>
+                                      <span className="text-sm font-bold text-gray-900">{booking.seats_count}</span>
+                                    </div>
+                                    {seatInfo && (
+                                      <>
+                                        <div className="flex justify-between items-center bg-white/60 rounded-lg px-3 py-2">
+                                          <span className="text-sm font-semibold text-gray-700">Per Seat Cost:</span>
+                                          <span className="text-sm font-bold text-gray-900">₹{seatInfo.workspace_seat_value}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center bg-white/60 rounded-lg px-3 py-2">
+                                          <span className="text-sm font-semibold text-gray-700">Total Amount:</span>
+                                          <span className="text-sm font-bold text-green-700">₹{totalAmount}</span>
+                                        </div>
+                                      </>
+                                    )}
+                                    <div className="flex justify-between items-center bg-white/60 rounded-lg px-3 py-2">
+                                      <span className="text-sm font-semibold text-gray-700">Order Date:</span>
+                                      <span className="text-sm font-bold text-gray-900">{booking.order_date}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Status Update Buttons */}
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateWorkspaceBookingStatus(booking.workspace_order_id, 'Received');
+                                    }}
+                                    disabled={booking.order_status === 'Received'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Received'
+                                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-2 border-yellow-400'
+                                        : 'bg-gradient-to-br from-yellow-100 to-orange-100 text-yellow-700 hover:from-yellow-200 hover:to-orange-200 border border-yellow-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">⏳</span>
+                                    <span>Received</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateWorkspaceBookingStatus(booking.workspace_order_id, 'Accepted');
+                                    }}
+                                    disabled={booking.order_status === 'Accepted'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Accepted'
+                                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-2 border-blue-400'
+                                        : 'bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-700 hover:from-blue-200 hover:to-indigo-200 border border-blue-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">✅</span>
+                                    <span>Accepted</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateWorkspaceBookingStatus(booking.workspace_order_id, 'Rejected');
+                                    }}
+                                    disabled={booking.order_status === 'Rejected'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Rejected'
+                                        ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white border-2 border-red-500'
+                                        : 'bg-gradient-to-br from-red-100 to-rose-100 text-red-800 hover:from-red-200 hover:to-rose-200 border border-red-400'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">❌</span>
+                                    <span>Rejected</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateWorkspaceBookingStatus(booking.workspace_order_id, 'Delivered');
+                                    }}
+                                    disabled={booking.order_status === 'Delivered'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Delivered'
+                                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border-2 border-green-400'
+                                        : 'bg-gradient-to-br from-green-100 to-emerald-100 text-green-700 hover:from-green-200 hover:to-emerald-200 border border-green-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">✅</span>
+                                    <span>Delivered</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateWorkspaceBookingStatus(booking.workspace_order_id, 'Paid');
+                                    }}
+                                    disabled={booking.order_status === 'Paid'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Paid'
+                                        ? 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border-2 border-gray-400'
+                                        : 'bg-gradient-to-br from-gray-100 to-slate-100 text-gray-700 hover:from-gray-200 hover:to-slate-200 border border-gray-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">💰</span>
+                                    <span>Paid</span>
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>

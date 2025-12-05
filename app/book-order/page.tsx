@@ -36,9 +36,9 @@ const bookingOptions: BookingOption[] = [
     title: 'Reserve Workspace',
     description: 'Reserve a workspace seat',
     icon: '💼',
-    route: '/book-cowork-seat',
+    route: '/book-workspace',
     gradient: 'from-green-500 to-green-600',
-    available: false,
+    available: true,
   },
   {
     id: 'eventspace',
@@ -188,19 +188,12 @@ export default function BookOrderPage() {
                   </h3>
                 ) : (
                   <>
-                    {/* Title - Line 1 */}
-                    <h3 className={`text-sm sm:text-base font-bold text-center mb-0.5 ${
-                      option.available ? 'text-gray-800' : 'text-gray-400'
-                    }`} style={{ paddingLeft: '5%', paddingRight: '5%' }}>
-                      {titleParts.line1}
-                    </h3>
-                    
-                    {/* Title - Line 2 */}
-                    {titleParts.line2 && (
+                    {/* Title - Combined Line 1 and Line 2 */}
+                    {titleParts.line1 && (
                       <h3 className={`text-xs sm:text-sm font-bold text-center leading-tight break-words ${
                         option.available ? 'text-gray-800' : 'text-gray-400'
                       }`} style={{ paddingLeft: '5%', paddingRight: '5%', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
-                        {titleParts.line2}
+                        {titleParts.line1}{titleParts.line2 ? ` ${titleParts.line2}` : ''}
                       </h3>
                     )}
                     
