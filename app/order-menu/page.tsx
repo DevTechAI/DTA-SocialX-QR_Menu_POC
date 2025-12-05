@@ -94,9 +94,9 @@ export default function SocialXMenuApp() {
   useEffect(() => {
     setMounted(true);
     
-    // Restore state from localStorage
-    const savedName = localStorage.getItem('customerName');
-    const savedPhone = localStorage.getItem('customerPhone');
+    // Restore state from localStorage and sessionStorage (sessionStorage takes priority)
+    const savedName = sessionStorage.getItem('customerName') || localStorage.getItem('customerName');
+    const savedPhone = sessionStorage.getItem('customerPhone') || localStorage.getItem('customerPhone');
     const savedView = localStorage.getItem('currentView') as ViewState;
     const savedItems = localStorage.getItem('selectedItems');
     const savedOrderPlaced = localStorage.getItem('orderPlaced');
@@ -487,8 +487,22 @@ export default function SocialXMenuApp() {
     setUnavailableItems([]);
   };
 
-  const getTotalAmount = () => {
+  // Calculate discounted price (10% off)
+  const getDiscountedPrice = (originalPrice: number): number => {
+    return Math.round(originalPrice * 0.9);
+  };
+
+  // Get original total (before discount)
+  const getOriginalTotalAmount = () => {
     return selectedItems.reduce((sum, { item, quantity }) => sum + (item.price * quantity), 0);
+  };
+
+  // Get discounted total
+  const getTotalAmount = () => {
+    return selectedItems.reduce((sum, { item, quantity }) => {
+      const discountedPrice = getDiscountedPrice(item.price);
+      return sum + (discountedPrice * quantity);
+    }, 0);
   };
 
   const handleCallWaiter = () => {
@@ -522,43 +536,31 @@ export default function SocialXMenuApp() {
     setEditedName('');
   };
 
-  const handlePlaceOrder = async () => {
+  // Common order placement logic
+  const processOrderPlacement = async (customerName: string, customerPhone: string) => {
     if (selectedItems.length === 0) {
       alert('Please select at least one item!');
       return;
     }
 
-    // Validate checkout form
-    if (!checkoutName.trim()) {
-      alert('Please enter your good Name');
-      return;
-    }
-    
-    // Validate phone number - must be exactly 10 digits
-    const phoneDigits = checkoutPhone.replace(/\D/g, '');
-    if (!phoneDigits || phoneDigits.length !== 10) {
-      alert('Please enter your Phone Number (exactly 10 digits)');
-      return;
-    }
+    // Ensure phone number has +91 prefix
+    const phoneWithPrefix = customerPhone.startsWith('+91') ? customerPhone : `+91${customerPhone}`;
+    const phoneDigits = phoneWithPrefix.startsWith('+91') ? phoneWithPrefix.slice(3) : phoneWithPrefix;
 
-    // Update customer name from Guest to entered name
-    const finalName = checkoutName.trim();
-    setCustomerName(finalName);
-    localStorage.setItem('customerName', finalName);
-
-    // Ensure phone number is exactly 10 digits with +91 prefix
-    const phoneWithPrefix = `+91${phoneDigits}`;
+    // Update customer name and phone in state
+    setCustomerName(customerName);
+    localStorage.setItem('customerName', customerName);
     setCustomerPhone(phoneDigits);
     localStorage.setItem('customerPhone', phoneWithPrefix);
 
     const orderData = {
-      customer_name: finalName,
+      customer_name: customerName,
       customer_phno: phoneWithPrefix,
       items: selectedItems.map(({ item, quantity }) => ({
         menu_item_id: item.id,
         name: item.name,
         quantity,
-        price: item.price,
+        price: getDiscountedPrice(item.price), // Use discounted price
       })),
       total_amount: getTotalAmount(),
       status: 'received',
@@ -589,7 +591,7 @@ export default function SocialXMenuApp() {
       });
 
       if (response.ok) {
-        // Close checkout dialog
+        // Close checkout dialog if it was open
         setShowCheckoutDialog(false);
         // Reset checkout form
         setCheckoutName('');
@@ -626,6 +628,25 @@ export default function SocialXMenuApp() {
       console.error('❌ Error placing order:', error);
       alert('Failed to place order. Please try again.');
     }
+  };
+
+  const handlePlaceOrder = async () => {
+    // Validate checkout form
+    if (!checkoutName.trim()) {
+      alert('Please enter your good Name');
+      return;
+    }
+    
+    // Validate phone number - must be exactly 10 digits
+    const phoneDigits = checkoutPhone.replace(/\D/g, '');
+    if (!phoneDigits || phoneDigits.length !== 10) {
+      alert('Please enter your Phone Number (exactly 10 digits)');
+      return;
+    }
+
+    // Ensure phone number is exactly 10 digits with +91 prefix
+    const phoneWithPrefix = `+91${phoneDigits}`;
+    await processOrderPlacement(checkoutName.trim(), phoneWithPrefix);
   };
 
   // Mock Order ID
@@ -956,6 +977,16 @@ export default function SocialXMenuApp() {
 
               {/* Scrollable Order Items List */}
               <div className="px-4 sm:px-6 max-h-[35vh] sm:max-h-[40vh] md:max-h-[45vh] overflow-y-auto">
+                {/* Total Amount */}
+                <div className="mb-4 pb-3 border-b border-primary-100">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-bold text-gray-700">Total Amount</span>
+                    <div className="text-right">
+                      <span className="text-base line-through text-gray-400 mr-2">₹{getOriginalTotalAmount()}</span>
+                      <span className="text-lg font-bold text-green-600">₹{getTotalAmount()}</span>
+                    </div>
+                  </div>
+                </div>
                 <h3 className="text-sm font-bold text-gray-700 mb-3">Order Items</h3>
                 <div className="space-y-2 pb-4">
                   {selectedItems.map(({ item, quantity }) => (
@@ -1003,7 +1034,10 @@ export default function SocialXMenuApp() {
                   <div className="bg-gradient-to-br from-primary-50 via-accent-50 to-orange-50 rounded-2xl p-4 mb-4">
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-bold text-gray-800">Total Amount</span>
-                      <span className="text-2xl font-bold text-primary-600">₹{getTotalAmount()}</span>
+                      <div className="text-right">
+                        <span className="text-xl line-through text-gray-400 mr-2">₹{getOriginalTotalAmount()}</span>
+                        <span className="text-2xl font-bold text-green-600">₹{getTotalAmount()}</span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1396,7 +1430,10 @@ export default function SocialXMenuApp() {
                   {/* Item name - Smaller */}
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-gray-800 truncate text-[11px] leading-tight">{item.name}</h4>
-                    <p className="text-[9px] text-gray-500 leading-tight">₹{item.price} × {quantity}</p>
+                    <p className="text-[9px] text-gray-500 leading-tight">
+                      <span className="line-through text-gray-400">₹{item.price}</span>
+                      <span className="ml-1 text-green-600 font-bold">₹{getDiscountedPrice(item.price)}</span> × {quantity}
+                    </p>
                   </div>
                   
                   {/* Quantity controls - Smaller */}
@@ -1468,7 +1505,43 @@ export default function SocialXMenuApp() {
           }}
         >
           <button
-            onClick={() => setShowCheckoutDialog(true)}
+            onClick={async () => {
+              // Check if customer details are available from sessionStorage (from workspace booking)
+              const sessionName = sessionStorage.getItem('customerName');
+              const sessionPhone = sessionStorage.getItem('customerPhone');
+              
+              if (sessionName && sessionPhone) {
+                // Customer details available - directly place order without showing dialog
+                // Validate phone number
+                const phoneDigits = sessionPhone.startsWith('+91') ? sessionPhone.slice(3) : sessionPhone;
+                if (phoneDigits.length === 10) {
+                  // Update customer name and phone
+                  setCustomerName(sessionName);
+                  localStorage.setItem('customerName', sessionName);
+                  setCustomerPhone(phoneDigits);
+                  localStorage.setItem('customerPhone', sessionPhone);
+                  
+                  // Directly place order using sessionStorage data
+                  await processOrderPlacement(sessionName, sessionPhone);
+                } else {
+                  // Invalid phone, show dialog
+                  setCheckoutName(sessionName);
+                  setCheckoutPhone(phoneDigits);
+                  setShowCheckoutDialog(true);
+                }
+              } else {
+                // No sessionStorage data - show checkout dialog
+                if (sessionName) {
+                  setCheckoutName(sessionName);
+                }
+                if (sessionPhone) {
+                  // Remove +91 prefix if present (for display in input field)
+                  const phoneWithoutPrefix = sessionPhone.startsWith('+91') ? sessionPhone.slice(3) : sessionPhone;
+                  setCheckoutPhone(phoneWithoutPrefix);
+                }
+                setShowCheckoutDialog(true);
+              }
+            }}
             className="relative w-[45%] min-w-[140px] max-w-[240px] px-4 py-2.5 md:px-5 md:py-3 rounded-xl font-bold text-sm md:text-base transition-all shadow-lg overflow-hidden group/checkout active:scale-95 border-2 border-primary-300"
             style={{
               boxShadow: '0 4px 20px rgba(168, 85, 247, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2)',
@@ -1728,7 +1801,10 @@ export default function SocialXMenuApp() {
                                   }`}>{item.description}</p>
                                   <span className={`text-base font-bold whitespace-nowrap flex-shrink-0 ${
                                     isUnavailable ? 'text-gray-500' : 'text-primary-600'
-                                  }`}>₹{item.price}</span>
+                                  }`}>
+                                    <span className="line-through text-gray-400 text-sm mr-1">₹{item.price}</span>
+                                    <span className="text-green-600">₹{getDiscountedPrice(item.price)}</span>
+                                  </span>
                                 </div>
                               </div>
                             </div>

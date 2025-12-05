@@ -21,6 +21,16 @@ export default function BookWorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showBookingSuccessDialog, setShowBookingSuccessDialog] = useState(false);
+  const [bookingAmount, setBookingAmount] = useState<number>(0);
+  const [showOrderSummary, setShowOrderSummary] = useState(false);
+  const [bookingOrderId, setBookingOrderId] = useState<string>('');
+  const [bookingDetails, setBookingDetails] = useState<{
+    customerName: string;
+    customerPhone: string;
+    seatsCount: number;
+    workspaceSeatId: string;
+    orderDate: string;
+  } | null>(null);
 
   // Fetch workspace seats from API
   useEffect(() => {
@@ -120,6 +130,16 @@ export default function BookWorkspacePage() {
       const data = await response.json();
 
       if (response.ok) {
+        // Store booking details before resetting
+        setBookingAmount(amount);
+        setBookingOrderId(data.workspace_order_id || '');
+        setBookingDetails({
+          customerName: customerName.trim(),
+          customerPhone: phoneWithPrefix,
+          seatsCount: finalSeatsCount,
+          workspaceSeatId: selectedSeatId,
+          orderDate: new Date().toISOString().split('T')[0],
+        });
         // Reset form
         setCustomerName('');
         setCustomerPhone('');
@@ -191,10 +211,11 @@ export default function BookWorkspacePage() {
       </div>
 
       {/* Content Container */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full mt-4 sm:mt-6 md:mt-8">
-        <div className="w-full md:max-w-2xl lg:max-w-3xl px-3 sm:px-0 md:px-4 lg:px-6">
-          {/* Booking Form Card - Same style as snooker booking */}
-          <div className="relative group mb-6 sm:mb-8">
+      {!showOrderSummary && (
+        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full mt-4 sm:mt-6 md:mt-8">
+          <div className="w-full md:max-w-2xl lg:max-w-3xl px-3 sm:px-0 md:px-4 lg:px-6">
+            {/* Booking Form Card - Same style as snooker booking */}
+            <div className="relative group mb-6 sm:mb-8">
             {/* Glowing border effect */}
             <div className="absolute -inset-0.5 gradient-primary rounded-[24px] sm:rounded-[28px] opacity-75 group-hover:opacity-100 blur-sm transition duration-500"></div>
 
@@ -426,7 +447,155 @@ export default function BookWorkspacePage() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      )}
+
+      {/* Workspace Order Summary Card */}
+      {showOrderSummary && bookingDetails && (
+        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full mt-4 sm:mt-6 md:mt-8">
+          <div className="w-full md:max-w-2xl lg:max-w-3xl px-3 sm:px-0 md:px-4 lg:px-6">
+          <div className="relative group">
+            {/* Glowing border effect */}
+            <div className="absolute -inset-0.5 gradient-primary rounded-[28px] opacity-75 blur-md"></div>
+            
+            {/* Main card with glass-morphism */}
+            <div className="relative rounded-3xl overflow-hidden shadow-soft-xl flex flex-col">
+              {/* Glass background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-green-50/80 backdrop-blur-xl"></div>
+              
+              {/* Shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent"></div>
+              
+              {/* Content */}
+              <div className="relative z-10 flex flex-col">
+                {/* Header Section */}
+                <div className="flex-shrink-0 p-4 sm:p-6 pb-0">
+                  {/* Header: Tick Mark + Name + Booking ID */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-500 shadow-soft-lg flex-shrink-0">
+                        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
+                          {bookingDetails.customerName}&apos;s Booking
+                        </h2>
+                        <p className="text-xs font-semibold text-gray-600 mt-0.5">Booking ID: {bookingOrderId.slice(0, 8)}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">Status</p>
+                      <p className="text-sm font-bold text-green-600">Confirmed</p>
+                    </div>
+                  </div>
+
+                  {/* Status Section */}
+                  <div className="mb-4">
+                    <div className="bg-gradient-to-br from-green-50 via-green-50 to-emerald-50 rounded-2xl p-4 border border-green-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-gray-700">WorkSpace Booking Status</span>
+                        <span className="text-lg font-bold text-green-600">Received</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Booking Message */}
+                  <div className="mb-4">
+                    <div className="space-y-2">
+                      <p className="text-base font-bold text-gray-800">
+                        Workspace booking is confirmed
+                      </p>
+                      <p className="text-sm font-semibold text-gray-700 leading-relaxed">
+                        Please pay ₹{bookingAmount} and collect your day pass from the counter.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Booking Details List */}
+                <div className="px-4 sm:px-6 max-h-[35vh] sm:max-h-[40vh] md:max-h-[45vh] overflow-y-auto">
+                  <h3 className="text-sm font-bold text-gray-700 mb-3">Booking Details</h3>
+                  <div className="space-y-2 pb-4">
+                    <div className="relative group/item rounded-2xl overflow-hidden">
+                      <div className="bg-gradient-to-br from-white via-white to-green-50/60 p-4 border border-green-100 shadow-sm">
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-semibold text-gray-700">Customer Name:</span>
+                            <span className="text-sm font-bold text-gray-800">{bookingDetails.customerName}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-semibold text-gray-700">Contact:</span>
+                            <span className="text-sm font-bold text-gray-800">{bookingDetails.customerPhone}</span>
+                          </div>
+                           <div className="flex justify-between items-center">
+                             <span className="text-sm font-semibold text-gray-700">Seats Count:</span>
+                             <span className="text-sm font-bold text-gray-800">{bookingDetails.seatsCount}</span>
+                           </div>
+                           <div className="flex justify-between items-center">
+                             <span className="text-sm font-semibold text-gray-700">Order Date:</span>
+                             <span className="text-sm font-bold text-gray-800">{bookingDetails.orderDate}</span>
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fixed Bottom Section */}
+                <div className="p-4 sm:p-6 pt-3 sm:pt-4 border-t border-green-100 bg-white/50">
+                  {/* Total Amount */}
+                  <div className="bg-gradient-to-br from-green-50 via-green-50 to-emerald-50 rounded-2xl p-4 mb-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-bold text-gray-800">Total Amount</span>
+                      <span className="text-2xl font-bold text-green-600">₹{bookingAmount}</span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Order Food Button */}
+                    <button
+                      onClick={() => {
+                        // Store customer name and phone in sessionStorage
+                        if (bookingDetails) {
+                          sessionStorage.setItem('customerName', bookingDetails.customerName);
+                          sessionStorage.setItem('customerPhone', bookingDetails.customerPhone);
+                        }
+                        router.push('/order-menu');
+                      }}
+                      className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-orange-600"></div>
+                      <span className="relative z-10 text-white flex flex-col items-center">
+                        <span>Order Food</span>
+                        <span className="text-xs sm:text-sm font-bold opacity-95 mt-0.5">(10% off on Day-Pass)</span>
+                      </span>
+                    </button>
+
+                    {/* Book Another Workspace Button */}
+                    <button
+                      onClick={() => {
+                        setShowOrderSummary(false);
+                        setBookingAmount(0);
+                        setBookingOrderId('');
+                        setBookingDetails(null);
+                        router.push('/book-order');
+                      }}
+                      className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
+                    >
+                      <div className="absolute inset-0 gradient-primary"></div>
+                      <span className="relative z-10 text-white">Book Another Workspace</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer - Subtle Bottom Banner */}
       <footer className="w-full mt-auto">
@@ -454,7 +623,7 @@ export default function BookWorkspacePage() {
             // Close when clicking outside
             if (e.target === e.currentTarget) {
               setShowBookingSuccessDialog(false);
-              router.push('/book-order');
+              setShowOrderSummary(true);
             }
           }}
         >
@@ -465,7 +634,7 @@ export default function BookWorkspacePage() {
             <button
               onClick={() => {
                 setShowBookingSuccessDialog(false);
-                router.push('/book-order');
+                setShowOrderSummary(true);
               }}
               className="absolute top-4 right-4 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full p-1.5 transition-all"
               aria-label="Close"
@@ -489,7 +658,7 @@ export default function BookWorkspacePage() {
               </h3>
               <div className="space-y-2">
                 <p className="text-base font-bold text-gray-800">
-                  Thank you for reserving workspace. Your booking has been confirmed!
+                  Your booking is confirmed! Please pay ₹{bookingAmount} and collect your day pass from the counter.
                 </p>
               </div>
             </div>
@@ -498,7 +667,7 @@ export default function BookWorkspacePage() {
             <button
               onClick={() => {
                 setShowBookingSuccessDialog(false);
-                router.push('/book-order');
+                setShowOrderSummary(true);
               }}
               className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
             >
