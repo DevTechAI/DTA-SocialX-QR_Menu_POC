@@ -217,11 +217,11 @@ export default function BookWorkspacePage() {
                 
                 <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                   {/* Name Input */}
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <label htmlFor="name" className="text-sm font-semibold text-gray-700 whitespace-nowrap flex-shrink-0 min-w-[80px] sm:min-w-[100px]">
                       Name <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative group/input">
+                    <div className="relative group/input flex-1">
                       {/* Elite border frame */}
                       <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
                       
@@ -231,7 +231,7 @@ export default function BookWorkspacePage() {
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         placeholder="Please enter your name"
-                        className="relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                        className="relative w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
                         style={{ fontSize: '16px' }}
                         required
                         autoFocus
@@ -240,17 +240,17 @@ export default function BookWorkspacePage() {
                   </div>
 
                   {/* Phone Number Input */}
-                  <div>
-                    <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <label htmlFor="phone" className="text-sm font-semibold text-gray-700 whitespace-nowrap flex-shrink-0 min-w-[80px] sm:min-w-[100px]">
                       Contact <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative group/input">
+                    <div className="relative group/input flex-1">
                       {/* Elite border frame */}
                       <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
                       
                       {/* Phone prefix */}
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-                        <span className="text-base font-medium text-gray-700">+91</span>
+                      <div className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                        <span className="text-sm sm:text-base font-medium text-gray-700">+91</span>
                       </div>
                       
                       <input
@@ -263,7 +263,7 @@ export default function BookWorkspacePage() {
                           setCustomerPhone(numericValue);
                         }}
                         placeholder="Enter 10 digit phone number"
-                        className="relative w-full pl-14 sm:pl-16 pr-4 sm:pr-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                        className="relative w-full pl-12 sm:pl-14 pr-3 sm:pr-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
                         style={{ fontSize: '16px' }}
                         inputMode="numeric"
                         pattern="[0-9]{10}"
@@ -276,11 +276,11 @@ export default function BookWorkspacePage() {
 
                   {/* Workspace Seat Selection (if multiple seats available) */}
                   {workspaceSeats.length > 1 && (
-                    <div>
-                      <label htmlFor="workspaceSeat" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <label htmlFor="workspaceSeat" className="text-sm font-semibold text-gray-700 whitespace-nowrap flex-shrink-0 min-w-[80px] sm:min-w-[100px]">
                         Workspace Seat <span className="text-red-500">*</span>
                       </label>
-                      <div className="relative group/input">
+                      <div className="relative group/input flex-1">
                         {/* Elite border frame */}
                         <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
                         
@@ -288,7 +288,7 @@ export default function BookWorkspacePage() {
                           id="workspaceSeat"
                           value={selectedSeatId}
                           onChange={(e) => setSelectedSeatId(e.target.value)}
-                          className="relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                          className="relative w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
                           style={{ fontSize: '16px' }}
                           required
                           disabled={loading}
@@ -302,17 +302,17 @@ export default function BookWorkspacePage() {
                         </select>
                       </div>
                       {loading && (
-                        <p className="text-xs text-gray-500 mt-1.5">Loading seats...</p>
+                        <p className="text-xs text-gray-500">Loading seats...</p>
                       )}
                     </div>
                   )}
 
                   {/* Seat(s) Count Dropdown */}
-                  <div>
-                    <label htmlFor="seats" className="block text-sm font-semibold text-gray-700 mb-1.5">
-                      Seat(s) Count <span className="text-red-500">*</span>
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <label htmlFor="seats" className="text-sm font-semibold text-gray-700 whitespace-nowrap flex-shrink-0 min-w-[80px] sm:min-w-[100px]">
+                      No. Seats: <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative group/input">
+                    <div className="relative group/input flex-1">
                       {/* Elite border frame */}
                       <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
                       
@@ -320,7 +320,7 @@ export default function BookWorkspacePage() {
                         id="seats"
                         value={seatsCount}
                         onChange={(e) => setSeatsCount(e.target.value)}
-                        className="relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                        className="relative w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
                         style={{ fontSize: '16px' }}
                         required
                       >
@@ -335,11 +335,11 @@ export default function BookWorkspacePage() {
 
                   {/* Custom Seats Count Input (shown when "Custom" is selected) */}
                   {seatsCount === 'custom' && (
-                    <div>
-                      <label htmlFor="customSeats" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <label htmlFor="customSeats" className="text-sm font-semibold text-gray-700 whitespace-nowrap flex-shrink-0 min-w-[80px] sm:min-w-[100px]">
                         Enter Seat Count (Max 50) <span className="text-red-500">*</span>
                       </label>
-                      <div className="relative group/input">
+                      <div className="relative group/input flex-1">
                         {/* Elite border frame */}
                         <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
                         
@@ -354,7 +354,7 @@ export default function BookWorkspacePage() {
                             }
                           }}
                           placeholder="Enter number of seats (1-50)"
-                          className="relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                          className="relative w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-sm sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
                           style={{ fontSize: '16px' }}
                           min={1}
                           max={50}
@@ -365,11 +365,11 @@ export default function BookWorkspacePage() {
                   )}
 
                   {/* Amount Display (Auto-populated) */}
-                  <div>
-                    <label htmlFor="amount" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <label htmlFor="amount" className="text-sm font-semibold text-gray-700 whitespace-nowrap flex-shrink-0 min-w-[80px] sm:min-w-[100px]">
                       Amount
                     </label>
-                    <div className="relative group/input">
+                    <div className="relative group/input flex-1">
                       {/* Elite border frame */}
                       <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
                       
@@ -378,7 +378,7 @@ export default function BookWorkspacePage() {
                         id="amount"
                         value={amount > 0 ? `₹${amount}` : '₹0'}
                         readOnly
-                        className="relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-gray-100/90 backdrop-blur-sm border border-gray-300/50 rounded-xl text-base sm:text-base font-medium cursor-not-allowed"
+                        className="relative w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-100/90 backdrop-blur-sm border border-gray-300/50 rounded-xl text-sm sm:text-base font-medium cursor-not-allowed"
                         style={{ fontSize: '16px' }}
                       />
                     </div>
