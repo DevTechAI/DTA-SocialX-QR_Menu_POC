@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { type MenuItem } from '@/lib/data/menu-items';
 import { useDeviceDetection, getDevicePadding } from '@/hooks/useDeviceDetection';
+import { setSessionData, getSessionData, removeSessionData } from '@/lib/utils/sessionStorage';
 
 type ViewState = 'nameEntry' | 'menu' | 'orderPlaced';
 
@@ -94,14 +95,26 @@ export default function SocialXMenuApp() {
   useEffect(() => {
     setMounted(true);
     
-    // Restore state from localStorage and sessionStorage (sessionStorage takes priority)
-    const savedName = sessionStorage.getItem('customerName') || localStorage.getItem('customerName');
-    const savedPhone = sessionStorage.getItem('customerPhone') || localStorage.getItem('customerPhone');
-    const savedView = localStorage.getItem('currentView') as ViewState;
-    const savedItems = localStorage.getItem('selectedItems');
-    const savedOrderPlaced = localStorage.getItem('orderPlaced');
-    const savedOrderStatus = localStorage.getItem('orderStatus');
-    const savedOrderId = localStorage.getItem('orderId');
+    // Restore state from 12-hour session storage (takes priority) or regular storage
+    const savedName = getSessionData<string>('food_customerName') || 
+                     sessionStorage.getItem('customerName') || 
+                     localStorage.getItem('customerName');
+    const savedPhone = getSessionData<string>('food_customerPhone') || 
+                      sessionStorage.getItem('customerPhone') || 
+                      localStorage.getItem('customerPhone');
+    const savedView = getSessionData<ViewState>('food_currentView') || 
+                     (localStorage.getItem('currentView') as ViewState);
+    const savedItems = getSessionData<{ item: MenuItem; quantity: number }[]>('food_selectedItems') || 
+                      (() => {
+                        const items = localStorage.getItem('selectedItems');
+                        return items ? JSON.parse(items) : null;
+                      })();
+    const savedOrderPlaced = getSessionData<boolean>('food_orderPlaced') || 
+                           (localStorage.getItem('orderPlaced') === 'true');
+    const savedOrderStatus = getSessionData<string>('food_orderStatus') || 
+                            localStorage.getItem('orderStatus');
+    const savedOrderId = getSessionData<string>('food_orderId') || 
+                        localStorage.getItem('orderId');
     
     // Only restore name if it exists and is not 'Guest' (to allow Guest as default)
     if (savedName && savedName !== 'Guest') {
@@ -114,12 +127,12 @@ export default function SocialXMenuApp() {
     }
     if (savedItems) {
       try {
-        setSelectedItems(JSON.parse(savedItems));
+        setSelectedItems(savedItems);
       } catch (error) {
         console.error('Error loading saved items:', error);
       }
     }
-    if (savedOrderPlaced === 'true' && savedView === 'orderPlaced') {
+    if (savedOrderPlaced && savedView === 'orderPlaced') {
       setCurrentView('orderPlaced');
     } else {
       // Default to menu view, skip nameEntry
@@ -547,11 +560,13 @@ export default function SocialXMenuApp() {
     const phoneWithPrefix = customerPhone.startsWith('+91') ? customerPhone : `+91${customerPhone}`;
     const phoneDigits = phoneWithPrefix.startsWith('+91') ? phoneWithPrefix.slice(3) : phoneWithPrefix;
 
-    // Update customer name and phone in state
+    // Update customer name and phone in state and 12-hour session storage
     setCustomerName(customerName);
-    localStorage.setItem('customerName', customerName);
+    setSessionData('food_customerName', customerName);
+    localStorage.setItem('customerName', customerName); // Keep for backward compatibility
     setCustomerPhone(phoneDigits);
-    localStorage.setItem('customerPhone', phoneWithPrefix);
+    setSessionData('food_customerPhone', phoneWithPrefix);
+    localStorage.setItem('customerPhone', phoneWithPrefix); // Keep for backward compatibility
 
     const orderData = {
       customer_name: customerName,
@@ -596,11 +611,29 @@ export default function SocialXMenuApp() {
         // Reset checkout form
         setCheckoutName('');
         setCheckoutPhone('');
-        // Order placed successfully
+        // Order placed successfully - save to 12-hour session storage
         const orderId = responseData.id || getMockOrderId();
         setOrderId(orderId);
-        localStorage.setItem('orderId', orderId);
-        localStorage.setItem('orderPlaced', 'true');
+        setSessionData('food_orderId', orderId);
+        setSessionData('food_orderPlaced', true);
+        setSessionData('food_orderStatus', 'Received');
+        setSessionData('food_orderSummary', {
+          orderId,
+          customerName,
+          customerPhone: phoneWithPrefix,
+          items: selectedItems.map(({ item, quantity }) => ({
+            menu_item_id: item.id,
+            name: item.name,
+            quantity,
+            price: getDiscountedPrice(item.price),
+          })),
+          totalAmount: getTotalAmount(),
+          originalTotalAmount: getOriginalTotalAmount(),
+          status: 'Received',
+          orderDate: new Date().toISOString(),
+        });
+        localStorage.setItem('orderId', orderId); // Keep for backward compatibility
+        localStorage.setItem('orderPlaced', 'true'); // Keep for backward compatibility
         navigateToView('orderPlaced');
         // Dialog will be shown by useEffect
       } else if (response.status === 400) {
