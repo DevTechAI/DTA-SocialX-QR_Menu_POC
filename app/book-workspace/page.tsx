@@ -487,17 +487,7 @@ export default function BookWorkspacePage() {
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-gray-500">Status</p>
-                      <p className="text-sm font-bold text-green-600">Confirmed</p>
-                    </div>
-                  </div>
-
-                  {/* Status Section */}
-                  <div className="mb-4">
-                    <div className="bg-gradient-to-br from-green-50 via-green-50 to-emerald-50 rounded-2xl p-4 border border-green-100">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-gray-700">WorkSpace Booking Status</span>
-                        <span className="text-lg font-bold text-green-600">Received</span>
-                      </div>
+                      <p className="text-lg font-bold text-green-600">Received</p>
                     </div>
                   </div>
 
