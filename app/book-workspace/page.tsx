@@ -207,7 +207,7 @@ export default function BookWorkspacePage() {
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
               
               {/* Content */}
-              <div className="relative z-10 p-6 sm:p-8 md:p-10 -mt-2 sm:-mt-3 md:-mt-4">
+              <div className="relative z-10 p-6 sm:p-8 md:p-10 -mt-2.5 sm:-mt-3.5 md:-mt-5">
                 {/* Form Header */}
                 <div className="text-center mb-6 sm:mb-8">
                   <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text leading-tight">
@@ -385,7 +385,7 @@ export default function BookWorkspacePage() {
                   </div>
 
                   {/* Submit Button - Same style as snooker form */}
-                  <div className="flex justify-center">
+                  <div className="flex justify-center mt-4 sm:mt-5">
                     <button
                       type="submit"
                       disabled={submitting || loading}
@@ -395,7 +395,7 @@ export default function BookWorkspacePage() {
                       <div className="absolute -inset-px bg-gradient-to-r from-primary-400/60 via-accent-400/60 to-primary-400/60 rounded-lg opacity-100 group-hover/btn:opacity-100 transition duration-300 blur-[0.5px]"></div>
                       
                       {/* Inner button */}
-                      <div className="relative py-2 sm:py-2.5 px-4 sm:px-5 rounded-lg overflow-hidden backdrop-blur-md">
+                      <div className="relative py-2 sm:py-2.5 px-[1.1rem] sm:px-[1.375rem] rounded-lg overflow-hidden backdrop-blur-md">
                         {/* Shiny transparent gradient background */}
                         <div className="absolute inset-0 bg-gradient-to-r from-primary-500/70 via-accent-500/70 to-primary-500/70 bg-[length:200%_100%] group-hover/btn:bg-[position:100%_0] transition-all duration-500"></div>
                         
