@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getSessionData, setSessionData } from '@/lib/utils/sessionStorage';
 
 type Board = {
   snooker_board_id: string;
@@ -20,6 +21,24 @@ export default function BookSnookerPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showBookingSuccessDialog, setShowBookingSuccessDialog] = useState(false);
+
+  // Restore customer info from sessionStorage or 12-hour session storage (from workspace booking)
+  useEffect(() => {
+    // Check 12-hour session storage first, then regular sessionStorage
+    const savedName = getSessionData<string>('snooker_customerName') || 
+                     sessionStorage.getItem('customerName');
+    const savedPhone = getSessionData<string>('snooker_customerPhone') || 
+                      sessionStorage.getItem('customerPhone');
+    
+    if (savedName) {
+      setCustomerName(savedName);
+    }
+    if (savedPhone) {
+      // Remove +91 prefix if present (for display in input field)
+      const phoneWithoutPrefix = savedPhone.startsWith('+91') ? savedPhone.slice(3) : savedPhone;
+      setCustomerPhone(phoneWithoutPrefix);
+    }
+  }, []);
 
   // Fetch boards from API
   useEffect(() => {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { setSessionData, getSessionData, removeSessionData } from '@/lib/utils/sessionStorage';
 
 type WorkspaceSeat = {
   workspace_seat_id: string;
@@ -31,6 +32,79 @@ export default function BookWorkspacePage() {
     workspaceSeatId: string;
     orderDate: string;
   } | null>(null);
+
+  // Restore booking data from 12-hour session storage or server on page load
+  useEffect(() => {
+    const restoreBookingData = async () => {
+      // First, try to restore from client-side 12-hour session storage
+      const savedBookingDetails = getSessionData<{
+        customerName: string;
+        customerPhone: string;
+        seatsCount: number;
+        workspaceSeatId: string;
+        orderDate: string;
+      }>('workspace_bookingDetails');
+      
+      const savedBookingAmount = getSessionData<number>('workspace_bookingAmount');
+      const savedBookingOrderId = getSessionData<string>('workspace_bookingOrderId');
+      const savedShowOrderSummary = getSessionData<boolean>('workspace_showOrderSummary');
+
+      if (savedBookingDetails && savedBookingOrderId) {
+        // Restore from client-side storage
+        setBookingDetails(savedBookingDetails);
+        setBookingAmount(savedBookingAmount || 0);
+        setBookingOrderId(savedBookingOrderId);
+        // Always show order summary if we have saved booking data
+        setShowOrderSummary(true);
+        // If showing order summary, we don't need to wait for seats to load
+        setLoading(false);
+        return;
+      }
+
+      // If no client-side data, try to restore from server using phone number
+      // Check if there's a phone number in sessionStorage (from previous booking)
+      const savedPhone = sessionStorage.getItem('customerPhone') || 
+                        getSessionData<string>('workspace_customerPhone');
+      
+      if (savedPhone) {
+        try {
+          const response = await fetch(`/api/workspace-bookings/by-phone?phone=${encodeURIComponent(savedPhone)}`);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.data) {
+              // Found booking on server, restore it
+              const booking = result.data;
+              const bookingDetails = {
+                customerName: booking.customer_name,
+                customerPhone: booking.customer_phno,
+                seatsCount: booking.seats_count,
+                workspaceSeatId: booking.workspace_seat_id,
+                orderDate: booking.order_date || new Date(booking.created_at).toISOString().split('T')[0],
+              };
+              
+              setBookingDetails(bookingDetails);
+              setBookingAmount(booking.total_order_value || 0);
+              setBookingOrderId(booking.workspace_order_id);
+              // Always show order summary when restoring from server
+              setShowOrderSummary(true);
+              setLoading(false);
+              
+              // Also save to client-side storage for future use
+              setSessionData('workspace_bookingDetails', bookingDetails);
+              setSessionData('workspace_bookingAmount', booking.total_order_value || 0);
+              setSessionData('workspace_bookingOrderId', booking.workspace_order_id);
+              setSessionData('workspace_showOrderSummary', true);
+              setSessionData('workspace_customerPhone', booking.customer_phno);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching booking from server:', error);
+        }
+      }
+    };
+
+    restoreBookingData();
+  }, []);
 
   // Fetch workspace seats from API
   useEffect(() => {
@@ -131,15 +205,29 @@ export default function BookWorkspacePage() {
 
       if (response.ok) {
         // Store booking details before resetting
-        setBookingAmount(amount);
-        setBookingOrderId(data.workspace_order_id || '');
-        setBookingDetails({
+        const bookingDetails = {
           customerName: customerName.trim(),
           customerPhone: phoneWithPrefix,
           seatsCount: finalSeatsCount,
           workspaceSeatId: selectedSeatId,
           orderDate: new Date().toISOString().split('T')[0],
-        });
+        };
+        
+        setBookingAmount(amount);
+        setBookingOrderId(data.workspace_order_id || '');
+        setBookingDetails(bookingDetails);
+        
+        // Save to 12-hour session storage for persistence across refreshes
+        setSessionData('workspace_bookingDetails', bookingDetails);
+        setSessionData('workspace_bookingAmount', amount);
+        setSessionData('workspace_bookingOrderId', data.workspace_order_id || '');
+        setSessionData('workspace_showOrderSummary', true);
+        setSessionData('workspace_customerPhone', phoneWithPrefix);
+        
+        // Also save to sessionStorage for compatibility with order-menu page
+        sessionStorage.setItem('customerName', customerName.trim());
+        sessionStorage.setItem('customerPhone', phoneWithPrefix);
+        
         // Reset form
         setCustomerName('');
         setCustomerPhone('');
@@ -567,16 +655,52 @@ export default function BookWorkspacePage() {
                     {/* Book Another Workspace Button */}
                     <button
                       onClick={() => {
+                        // Clear all booking data and session storage
                         setShowOrderSummary(false);
                         setBookingAmount(0);
                         setBookingOrderId('');
                         setBookingDetails(null);
-                        router.push('/book-order');
+                        
+                        // Clear 12-hour session storage
+                        removeSessionData('workspace_bookingDetails');
+                        removeSessionData('workspace_bookingAmount');
+                        removeSessionData('workspace_bookingOrderId');
+                        removeSessionData('workspace_showOrderSummary');
+                        removeSessionData('workspace_customerPhone');
+                        
+                        // Clear form fields
+                        setCustomerName('');
+                        setCustomerPhone('');
+                        setSelectedSeatId(workspaceSeats.length === 1 ? workspaceSeats[0].workspace_seat_id : '');
+                        setSeatsCount('1');
+                        setCustomSeatsCount('');
+                        setAmount(0);
                       }}
                       className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
                     >
                       <div className="absolute inset-0 gradient-primary"></div>
                       <span className="relative z-10 text-white">Book Another Workspace</span>
+                    </button>
+
+                    {/* Book Snooker Button */}
+                    <button
+                      onClick={() => {
+                        // Store customer info and total order value for snooker booking
+                        if (bookingDetails) {
+                          // Store in both sessionStorage and 12-hour session storage for snooker page to pre-fill
+                          sessionStorage.setItem('customerName', bookingDetails.customerName);
+                          sessionStorage.setItem('customerPhone', bookingDetails.customerPhone);
+                          setSessionData('snooker_customerName', bookingDetails.customerName);
+                          setSessionData('snooker_customerPhone', bookingDetails.customerPhone);
+                          // Also store total order value for reference
+                          sessionStorage.setItem('workspaceTotalAmount', bookingAmount.toString());
+                        }
+                        router.push('/book-snooker');
+                      }}
+                      className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn mt-3"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600"></div>
+                      <span className="relative z-10 text-white">Book Snooker</span>
                     </button>
                   </div>
                 </div>
@@ -614,6 +738,8 @@ export default function BookWorkspacePage() {
             if (e.target === e.currentTarget) {
               setShowBookingSuccessDialog(false);
               setShowOrderSummary(true);
+              // Save state to session storage
+              setSessionData('workspace_showOrderSummary', true);
             }
           }}
         >
@@ -625,6 +751,8 @@ export default function BookWorkspacePage() {
               onClick={() => {
                 setShowBookingSuccessDialog(false);
                 setShowOrderSummary(true);
+                // Save state to session storage
+                setSessionData('workspace_showOrderSummary', true);
               }}
               className="absolute top-4 right-4 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full p-1.5 transition-all"
               aria-label="Close"
@@ -658,6 +786,8 @@ export default function BookWorkspacePage() {
               onClick={() => {
                 setShowBookingSuccessDialog(false);
                 setShowOrderSummary(true);
+                // Save state to session storage
+                setSessionData('workspace_showOrderSummary', true);
               }}
               className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
             >
