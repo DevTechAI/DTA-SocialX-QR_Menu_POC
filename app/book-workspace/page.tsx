@@ -14,7 +14,7 @@ export default function BookWorkspacePage() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [selectedSeatId, setSelectedSeatId] = useState('');
-  const [seatsCount, setSeatsCount] = useState('1');
+  const [seatsCount, setSeatsCount] = useState('');
   const [customSeatsCount, setCustomSeatsCount] = useState('');
   const [workspaceSeats, setWorkspaceSeats] = useState<WorkspaceSeat[]>([]);
   const [seatValue, setSeatValue] = useState<number>(0);
@@ -117,9 +117,11 @@ export default function BookWorkspacePage() {
           setWorkspaceSeats(data);
           
           // If only one seat found, default select it
+          // Amount will be calculated when user selects seat count
           if (data.length === 1) {
             setSelectedSeatId(data[0].workspace_seat_id);
             setSeatValue(data[0].workspace_seat_value);
+            // Don't calculate amount yet - wait for user to select seat count
           }
         } else {
           console.error('Failed to fetch workspace seats');
@@ -134,22 +136,38 @@ export default function BookWorkspacePage() {
     fetchWorkspaceSeats();
   }, []);
 
-  // Update amount when seat or count changes
+  // Update amount when seat or count changes - always calculate seats count × seat value
   useEffect(() => {
-    if (selectedSeatId && seatValue) {
-      const count = seatsCount === 'custom' ? parseInt(customSeatsCount) || 0 : parseInt(seatsCount) || 0;
-      setAmount(count * seatValue);
+    if (selectedSeatId && seatValue > 0 && seatsCount && seatsCount !== '') {
+      // Parse seats count - must have a valid selection
+      let count = 1;
+      if (seatsCount === 'custom') {
+        count = parseInt(customSeatsCount) || 0;
+      } else if (seatsCount) {
+        count = parseInt(seatsCount) || 0;
+      }
+      // Only calculate if count is valid (>= 1)
+      if (count >= 1) {
+        const calculatedAmount = count * seatValue;
+        setAmount(calculatedAmount);
+      } else {
+        setAmount(0);
+      }
     } else {
+      // Set to 0 if no seat selected or no seat count selected
       setAmount(0);
     }
   }, [selectedSeatId, seatValue, seatsCount, customSeatsCount]);
 
   // Update seat value when selected seat changes
   useEffect(() => {
-    if (selectedSeatId) {
+    if (selectedSeatId && workspaceSeats.length > 0) {
       const selectedSeat = workspaceSeats.find(seat => seat.workspace_seat_id === selectedSeatId);
       if (selectedSeat) {
-        setSeatValue(selectedSeat.workspace_seat_value);
+        const newSeatValue = selectedSeat.workspace_seat_value;
+        setSeatValue(newSeatValue);
+        // Amount will be recalculated by the amount calculation useEffect
+        // when both seatValue and seatsCount are available
       }
     }
   }, [selectedSeatId, workspaceSeats]);
@@ -174,9 +192,19 @@ export default function BookWorkspacePage() {
       return;
     }
 
+    if (!seatsCount || seatsCount === '') {
+      alert('Please select seats count');
+      return;
+    }
+
     const finalSeatsCount = seatsCount === 'custom' ? parseInt(customSeatsCount) : parseInt(seatsCount);
     if (!finalSeatsCount || finalSeatsCount < 1) {
       alert('Please select at least 1 seat');
+      return;
+    }
+    
+    if (amount <= 0) {
+      alert('Please ensure amount is calculated correctly');
       return;
     }
 
@@ -316,7 +344,7 @@ export default function BookWorkspacePage() {
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
               
               {/* Content */}
-              <div className="relative z-10 p-6 sm:p-8 md:p-10 -mt-2.5 sm:-mt-3.5 md:-mt-5">
+              <div className="relative z-10 p-6 sm:p-8 md:p-10 -mt-4 sm:-mt-5 md:-mt-7">
                 {/* Form Header */}
                 <div className="text-center mb-6 sm:mb-8">
                   <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text leading-tight">
@@ -433,6 +461,7 @@ export default function BookWorkspacePage() {
                         style={{ fontSize: '16px' }}
                         required
                       >
+                        <option value="">Select Seats Count</option>
                         <option value="1">1</option>
                         <option value="2">2</option>
                         <option value="3">3</option>
@@ -497,7 +526,13 @@ export default function BookWorkspacePage() {
                   <div className="flex justify-center mt-4 sm:mt-5">
                     <button
                       type="submit"
-                      disabled={submitting || loading}
+                      disabled={
+                        submitting || 
+                        loading || 
+                        amount <= 0 || 
+                        !customerPhone || 
+                        customerPhone.replace(/\D/g, '').length !== 10
+                      }
                       className="relative inline-block group/btn transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {/* Elite outer border */}
@@ -527,8 +562,8 @@ export default function BookWorkspacePage() {
                 </form>
 
                 {/* Decorative corner accents */}
-                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 w-6 h-6 sm:w-8 sm:h-8 border-t-2 border-l-2 border-primary-300 rounded-tl-2xl opacity-50"></div>
-                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 border-t-2 border-r-2 border-accent-300 rounded-tr-2xl opacity-50"></div>
+                <div className="absolute top-5 left-3 sm:top-6 sm:left-4 w-6 h-6 sm:w-8 sm:h-8 border-t-2 border-l-2 border-primary-300 rounded-tl-2xl opacity-50"></div>
+                <div className="absolute top-5 right-3 sm:top-6 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 border-t-2 border-r-2 border-accent-300 rounded-tr-2xl opacity-50"></div>
                 <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 w-6 h-6 sm:w-8 sm:h-8 border-b-2 border-l-2 border-primary-300 rounded-bl-2xl opacity-50"></div>
                 <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 border-b-2 border-r-2 border-accent-300 rounded-br-2xl opacity-50"></div>
               </div>
@@ -640,16 +675,15 @@ export default function BookWorkspacePage() {
                         if (bookingDetails) {
                           sessionStorage.setItem('customerName', bookingDetails.customerName);
                           sessionStorage.setItem('customerPhone', bookingDetails.customerPhone);
+                          // Set flag to indicate user came from booking page (for discount eligibility)
+                          sessionStorage.setItem('fromBookingPage', 'true');
                         }
                         router.push('/order-menu');
                       }}
                       className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-orange-600"></div>
-                      <span className="relative z-10 text-white flex flex-col items-center">
-                        <span>Order Food</span>
-                        <span className="text-xs sm:text-sm font-bold opacity-95 mt-0.5">(10% off with Day-Pass)</span>
-                      </span>
+                      <span className="relative z-10 text-white">Order Food</span>
                     </button>
 
                     {/* Book Another Workspace Button */}
