@@ -648,7 +648,7 @@ export default function BookWorkspacePage() {
                       <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-orange-600"></div>
                       <span className="relative z-10 text-white flex flex-col items-center">
                         <span>Order Food</span>
-                        <span className="text-xs sm:text-sm font-bold opacity-95 mt-0.5">(10% off on Day-Pass)</span>
+                        <span className="text-xs sm:text-sm font-bold opacity-95 mt-0.5">(10% off with Day-Pass)</span>
                       </span>
                     </button>
 
