@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { type MenuItem } from '@/lib/data/menu-items';
 import { useDeviceDetection, getDevicePadding } from '@/hooks/useDeviceDetection';
 import { setSessionData, getSessionData, removeSessionData } from '@/lib/utils/sessionStorage';
@@ -9,6 +10,7 @@ import { setSessionData, getSessionData, removeSessionData } from '@/lib/utils/s
 type ViewState = 'nameEntry' | 'menu' | 'orderPlaced';
 
 export default function SocialXMenuApp() {
+  const router = useRouter();
   // Device detection
   const deviceInfo = useDeviceDetection();
   const devicePadding = getDevicePadding(deviceInfo);
@@ -1075,14 +1077,36 @@ export default function SocialXMenuApp() {
                   </div>
                 )}
 
-                {/* Action Button */}
-                <button
-                  onClick={handleStartNewOrder}
-                  className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
-                >
-                  <div className="absolute inset-0 gradient-primary"></div>
-                  <span className="relative z-10 text-white">Start New Order</span>
-                </button>
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-3">
+                  {/* Start New Order Button */}
+                  <button
+                    onClick={handleStartNewOrder}
+                    className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
+                  >
+                    <div className="absolute inset-0 gradient-primary"></div>
+                    <span className="relative z-10 text-white">Start New Order</span>
+                  </button>
+
+                  {/* Book Snooker Button */}
+                  <button
+                    onClick={() => {
+                      // Store customer info for snooker booking page to pre-fill
+                      if (customerName && customerPhone) {
+                        const phoneWithPrefix = customerPhone.startsWith('+91') ? customerPhone : `+91${customerPhone}`;
+                        sessionStorage.setItem('customerName', customerName);
+                        sessionStorage.setItem('customerPhone', phoneWithPrefix);
+                        setSessionData('snooker_customerName', customerName);
+                        setSessionData('snooker_customerPhone', phoneWithPrefix);
+                      }
+                      router.push('/book-snooker');
+                    }}
+                    className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600"></div>
+                    <span className="relative z-10 text-white">Book Snooker</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
