@@ -46,6 +46,7 @@ export default function SocialXMenuApp() {
   const [showCheckoutDialog, setShowCheckoutDialog] = useState(false);
   const [checkoutName, setCheckoutName] = useState('');
   const [checkoutPhone, setCheckoutPhone] = useState('');
+  const [isDiscountEligible, setIsDiscountEligible] = useState(false);
   
   // Ref for selected items scroll container
   const selectedItemsScrollRef = useRef<HTMLDivElement>(null);
@@ -92,6 +93,78 @@ export default function SocialXMenuApp() {
     }, 20000); // 20 seconds
 
     return () => clearInterval(pollInterval);
+  }, []);
+
+  // Check for active booking and discount eligibility on page load
+  // Discount ONLY applies when navigating from Snooker or Workspace Order Summary cards
+  useEffect(() => {
+    const checkDiscountEligibility = async () => {
+      // Check if user came from a booking page (snooker or workspace)
+      const fromBookingPage = sessionStorage.getItem('fromBookingPage') === 'true';
+      
+      // Clear any saved discount eligibility - only apply if coming from booking page
+      removeSessionData('food_discountEligible');
+      
+      if (fromBookingPage) {
+        // Get phone number - try multiple sources in order of priority
+        let phone = sessionStorage.getItem('customerPhone');
+        
+        // If not found in sessionStorage, try 12-hour session storage
+        if (!phone) {
+          phone = getSessionData<string>('snooker_customerPhone') ||
+                  getSessionData<string>('workspace_customerPhone') ||
+                  getSessionData<string>('food_customerPhone');
+        }
+        
+        if (phone) {
+          try {
+            // Normalize phone number: ensure it has +91 prefix
+            // Remove any spaces or dashes
+            let phoneForApi = phone.replace(/\s+/g, '').replace(/-/g, '');
+            
+            // Add +91 prefix if not present
+            if (!phoneForApi.startsWith('+91')) {
+              // Remove any leading 0 or 91
+              phoneForApi = phoneForApi.replace(/^(0|91)/, '');
+              phoneForApi = `+91${phoneForApi}`;
+            }
+            
+            // Check for active snooker booking
+            const snookerResponse = await fetch(`/api/snooker-bookings/by-phone?phone=${encodeURIComponent(phoneForApi)}`);
+            const snookerResult = snookerResponse.ok ? await snookerResponse.json() : { data: null };
+            
+            // Check for active workspace booking
+            const workspaceResponse = await fetch(`/api/workspace-bookings/by-phone?phone=${encodeURIComponent(phoneForApi)}`);
+            const workspaceResult = workspaceResponse.ok ? await workspaceResponse.json() : { data: null };
+            
+            // If user has an active booking (within 12 hours), they're eligible for discount
+            if (snookerResult.data || workspaceResult.data) {
+              setIsDiscountEligible(true);
+            } else {
+              setIsDiscountEligible(false);
+            }
+          } catch (error) {
+            console.error('Error checking booking eligibility:', error);
+            setIsDiscountEligible(false);
+          }
+        } else {
+          setIsDiscountEligible(false);
+        }
+        
+        // Clear the flag immediately after checking (so it doesn't persist)
+        sessionStorage.removeItem('fromBookingPage');
+      } else {
+        // Not coming from booking page - no discount
+        setIsDiscountEligible(false);
+      }
+    };
+
+    // Small delay to ensure sessionStorage is ready after navigation
+    const timeoutId = setTimeout(() => {
+      checkDiscountEligibility();
+    }, 150);
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   useEffect(() => {
@@ -502,8 +575,11 @@ export default function SocialXMenuApp() {
     setUnavailableItems([]);
   };
 
-  // Calculate discounted price (10% off)
+  // Calculate discounted price (10% off) - only if eligible
   const getDiscountedPrice = (originalPrice: number): number => {
+    if (!isDiscountEligible) {
+      return originalPrice; // Return original price if not eligible
+    }
     return Math.round(originalPrice * 0.9);
   };
 
@@ -512,11 +588,11 @@ export default function SocialXMenuApp() {
     return selectedItems.reduce((sum, { item, quantity }) => sum + (item.price * quantity), 0);
   };
 
-  // Get discounted total
+  // Get total amount (discounted if eligible, otherwise original)
   const getTotalAmount = () => {
     return selectedItems.reduce((sum, { item, quantity }) => {
-      const discountedPrice = getDiscountedPrice(item.price);
-      return sum + (discountedPrice * quantity);
+      const finalPrice = getDiscountedPrice(item.price);
+      return sum + (finalPrice * quantity);
     }, 0);
   };
 
@@ -577,7 +653,7 @@ export default function SocialXMenuApp() {
         menu_item_id: item.id,
         name: item.name,
         quantity,
-        price: getDiscountedPrice(item.price), // Use discounted price
+        price: isDiscountEligible ? getDiscountedPrice(item.price) : item.price, // Use discounted price only if eligible
       })),
       total_amount: getTotalAmount(),
       status: 'received',
@@ -627,7 +703,7 @@ export default function SocialXMenuApp() {
             menu_item_id: item.id,
             name: item.name,
             quantity,
-            price: getDiscountedPrice(item.price),
+            price: isDiscountEligible ? getDiscountedPrice(item.price) : item.price,
           })),
           totalAmount: getTotalAmount(),
           originalTotalAmount: getOriginalTotalAmount(),
@@ -636,6 +712,8 @@ export default function SocialXMenuApp() {
         });
         localStorage.setItem('orderId', orderId); // Keep for backward compatibility
         localStorage.setItem('orderPlaced', 'true'); // Keep for backward compatibility
+        // Clear the fromBookingPage flag after order is placed
+        sessionStorage.removeItem('fromBookingPage');
         navigateToView('orderPlaced');
         // Dialog will be shown by useEffect
       } else if (response.status === 400) {
@@ -1017,8 +1095,14 @@ export default function SocialXMenuApp() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-bold text-gray-700">Total Amount</span>
                     <div className="text-right">
-                      <span className="text-base line-through text-gray-400 mr-2">₹{getOriginalTotalAmount()}</span>
-                      <span className="text-lg font-bold text-green-600">₹{getTotalAmount()}</span>
+                      {isDiscountEligible && getOriginalTotalAmount() !== getTotalAmount() ? (
+                        <>
+                          <span className="text-base line-through text-gray-400 mr-2">₹{getOriginalTotalAmount()}</span>
+                          <span className="text-lg font-bold text-green-600">₹{getTotalAmount()}</span>
+                        </>
+                      ) : (
+                        <span className="text-lg font-bold text-primary-600">₹{getTotalAmount()}</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1070,8 +1154,14 @@ export default function SocialXMenuApp() {
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-bold text-gray-800">Total Amount</span>
                       <div className="text-right">
-                        <span className="text-xl line-through text-gray-400 mr-2">₹{getOriginalTotalAmount()}</span>
-                        <span className="text-2xl font-bold text-green-600">₹{getTotalAmount()}</span>
+                        {isDiscountEligible && getOriginalTotalAmount() !== getTotalAmount() ? (
+                          <>
+                            <span className="text-xl line-through text-gray-400 mr-2">₹{getOriginalTotalAmount()}</span>
+                            <span className="text-2xl font-bold text-green-600">₹{getTotalAmount()}</span>
+                          </>
+                        ) : (
+                      <span className="text-2xl font-bold text-primary-600">₹{getTotalAmount()}</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1080,17 +1170,24 @@ export default function SocialXMenuApp() {
                 {/* Action Buttons */}
                 <div className="flex flex-col gap-3">
                   {/* Start New Order Button */}
-                  <button
-                    onClick={handleStartNewOrder}
-                    className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
-                  >
-                    <div className="absolute inset-0 gradient-primary"></div>
-                    <span className="relative z-10 text-white">Start New Order</span>
-                  </button>
+                <button
+                  onClick={handleStartNewOrder}
+                  className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
+                >
+                  <div className="absolute inset-0 gradient-primary"></div>
+                  <span className="relative z-10 text-white">Start New Order</span>
+                </button>
 
                   {/* Book Snooker Button */}
                   <button
                     onClick={() => {
+                      // Clear any existing snooker booking data to show empty form
+                      removeSessionData('snooker_bookingDetails');
+                      removeSessionData('snooker_bookingOrderId');
+                      removeSessionData('snooker_showOrderSummary');
+                      // Set flag to indicate we're starting a new booking (not restoring)
+                      sessionStorage.setItem('startNewSnookerBooking', 'true');
+                      
                       // Store customer info for snooker booking page to pre-fill
                       if (customerName && customerPhone) {
                         const phoneWithPrefix = customerPhone.startsWith('+91') ? customerPhone : `+91${customerPhone}`;
@@ -1105,6 +1202,28 @@ export default function SocialXMenuApp() {
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600"></div>
                     <span className="relative z-10 text-white">Book Snooker</span>
+                  </button>
+
+                  {/* Home Button */}
+                  <button
+                    onClick={() => {
+                      // Store customer info in memory for future bookings (snooker/workspace)
+                      if (customerName && customerPhone) {
+                        const phoneWithPrefix = customerPhone.startsWith('+91') ? customerPhone : `+91${customerPhone}`;
+                        sessionStorage.setItem('customerName', customerName);
+                        sessionStorage.setItem('customerPhone', phoneWithPrefix);
+                        // Store in 12-hour session storage for snooker and workspace bookings
+                        setSessionData('snooker_customerName', customerName);
+                        setSessionData('snooker_customerPhone', phoneWithPrefix);
+                        setSessionData('workspace_customerName', customerName);
+                        setSessionData('workspace_customerPhone', phoneWithPrefix);
+                      }
+                      router.push('/book-order');
+                    }}
+                    className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn mt-3"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-gray-600 to-gray-700"></div>
+                    <span className="relative z-10 text-white">Home</span>
                   </button>
                 </div>
               </div>
@@ -1488,8 +1607,14 @@ export default function SocialXMenuApp() {
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-gray-800 truncate text-[11px] leading-tight">{item.name}</h4>
                     <p className="text-[9px] text-gray-500 leading-tight">
-                      <span className="line-through text-gray-400">₹{item.price}</span>
-                      <span className="ml-1 text-green-600 font-bold">₹{getDiscountedPrice(item.price)}</span> × {quantity}
+                      {isDiscountEligible && item.price !== getDiscountedPrice(item.price) ? (
+                        <>
+                          <span className="line-through text-gray-400">₹{item.price}</span>
+                          <span className="ml-1 text-green-600 font-bold">₹{getDiscountedPrice(item.price)}</span> × {quantity}
+                        </>
+                      ) : (
+                        <>₹{item.price} × {quantity}</>
+                      )}
                     </p>
                   </div>
                   
@@ -1563,9 +1688,39 @@ export default function SocialXMenuApp() {
         >
           <button
             onClick={async () => {
-              // Check if customer details are available from sessionStorage (from workspace booking)
+              // Check if customer details are available from sessionStorage (from workspace/snooker booking)
               const sessionName = sessionStorage.getItem('customerName');
               const sessionPhone = sessionStorage.getItem('customerPhone');
+              const fromBookingPage = sessionStorage.getItem('fromBookingPage') === 'true';
+              
+              // If coming from booking page, verify discount eligibility
+              if (fromBookingPage && sessionPhone) {
+                try {
+                  // Normalize phone number: ensure it has +91 prefix
+                  let phoneForApi = sessionPhone.replace(/\s+/g, '').replace(/-/g, '');
+                  if (!phoneForApi.startsWith('+91')) {
+                    phoneForApi = phoneForApi.replace(/^(0|91)/, '');
+                    phoneForApi = `+91${phoneForApi}`;
+                  }
+                  
+                  const snookerResponse = await fetch(`/api/snooker-bookings/by-phone?phone=${encodeURIComponent(phoneForApi)}`);
+                  const snookerResult = snookerResponse.ok ? await snookerResponse.json() : { data: null };
+                  
+                  const workspaceResponse = await fetch(`/api/workspace-bookings/by-phone?phone=${encodeURIComponent(phoneForApi)}`);
+                  const workspaceResult = workspaceResponse.ok ? await workspaceResponse.json() : { data: null };
+                  
+                  if (snookerResult.data || workspaceResult.data) {
+                    setIsDiscountEligible(true);
+                  } else {
+                    setIsDiscountEligible(false);
+                  }
+                  // Clear the flag after checking
+                  sessionStorage.removeItem('fromBookingPage');
+                } catch (error) {
+                  console.error('Error checking booking eligibility:', error);
+                  setIsDiscountEligible(false);
+                }
+              }
               
               if (sessionName && sessionPhone) {
                 // Customer details available - directly place order without showing dialog
@@ -1588,6 +1743,11 @@ export default function SocialXMenuApp() {
                 }
               } else {
                 // No sessionStorage data - show checkout dialog
+                // Also clear discount eligibility if not from booking page
+                if (!fromBookingPage) {
+                  setIsDiscountEligible(false);
+                  removeSessionData('food_discountEligible');
+                }
                 if (sessionName) {
                   setCheckoutName(sessionName);
                 }
@@ -1859,8 +2019,14 @@ export default function SocialXMenuApp() {
                                   <span className={`text-base font-bold whitespace-nowrap flex-shrink-0 ${
                                     isUnavailable ? 'text-gray-500' : 'text-primary-600'
                                   }`}>
-                                    <span className="line-through text-gray-400 text-sm mr-1">₹{item.price}</span>
-                                    <span className="text-green-600">₹{getDiscountedPrice(item.price)}</span>
+                                    {isDiscountEligible && item.price !== getDiscountedPrice(item.price) ? (
+                                      <>
+                                        <span className="line-through text-gray-400 text-sm mr-1">₹{item.price}</span>
+                                        <span className="text-green-600">₹{getDiscountedPrice(item.price)}</span>
+                                      </>
+                                    ) : (
+                                      <span>₹{item.price}</span>
+                                    )}
                                   </span>
                                 </div>
                               </div>
