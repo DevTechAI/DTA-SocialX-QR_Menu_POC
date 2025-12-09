@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import Link from 'next/link';
+import CustomerBillingTab from './customer-billing';
 
 interface OrderItem {
   menu_item_id: string;
@@ -113,7 +114,7 @@ export default function AdminDashboard() {
     }
     return true;
   });
-  const [activeTab, setActiveTab] = useState<'food' | 'snooker' | 'workspace'>('food');
+  const [activeTab, setActiveTab] = useState<'food' | 'snooker' | 'workspace' | 'billing'>('food');
   const [snookerBookings, setSnookerBookings] = useState<SnookerBooking[]>([]);
   const [snookerLoading, setSnookerLoading] = useState(true);
   const [expandedSnookerBookings, setExpandedSnookerBookings] = useState<Set<string>>(new Set());
@@ -1347,6 +1348,16 @@ Please collect it from the counter.
             >
               💼 WorkSpace Booking
             </button>
+            <button
+              onClick={() => setActiveTab('billing')}
+              className={`px-6 py-3 rounded-xl font-bold text-lg transition-all relative ${
+                activeTab === 'billing'
+                  ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 shadow-soft'
+              }`}
+            >
+              🧾 Customer Billing
+            </button>
           </div>
         </div>
 
@@ -2336,6 +2347,11 @@ Please collect it from the counter.
           </div>
         </div>
       )}
+
+        {/* Customer Billing Tab */}
+        {activeTab === 'billing' && (
+          <CustomerBillingTab />
+        )}
 
         {/* Footer */}
       <footer className="mt-12 py-6 text-center border-t border-gray-200/50">
