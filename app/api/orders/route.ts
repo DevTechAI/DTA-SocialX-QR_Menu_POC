@@ -3,6 +3,7 @@ import { OrderService } from '@/services/OrderService';
 import { AuthService } from '@/services/AuthService';
 import { MenuService } from '@/services/MenuService';
 import { getMockOrders, addMockOrder, clearMockOrders } from '@/lib/mock/orders';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,11 +21,27 @@ export async function GET(request: NextRequest) {
     const date = searchParams.get('date');
     const customerName = searchParams.get('customer_name');
     const businessDay = searchParams.get('business_day'); // New parameter for 8 AM to 8 AM window
+    const ids = searchParams.get('ids'); // Comma-separated list of order IDs
 
     const orderService = new OrderService();
     
     let orders;
-    if (businessDay === 'true') {
+    if (ids) {
+      // Fetch orders by IDs
+      const orderIds = ids.split(',').filter(id => id.trim());
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .in('id', orderIds);
+      
+      if (error) {
+        console.error('Error fetching orders by IDs:', error);
+        orders = [];
+      } else {
+        orders = data || [];
+      }
+    } else if (businessDay === 'true') {
       // Use business day window (8 AM to 8 AM)
       orders = await orderService.getOrdersByBusinessDay();
     } else if (date) {

@@ -1321,6 +1321,40 @@ Please collect it from the counter.
     }
   }, [activeTab, authChecked]);
 
+  // Keyboard navigation for tabs (Left/Right Arrow keys)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle arrow keys if not typing in an input/textarea
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return; // Don't interfere with text input
+      }
+
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        
+        const tabs: Array<'billing' | 'food' | 'snooker' | 'workspace'> = ['billing', 'food', 'snooker', 'workspace'];
+        const currentIndex = tabs.indexOf(activeTab);
+        
+        let newIndex: number;
+        if (event.key === 'ArrowLeft') {
+          // Move to previous tab (left)
+          newIndex = currentIndex > 0 ? currentIndex - 1 : tabs.length - 1;
+        } else {
+          // Move to next tab (right)
+          newIndex = currentIndex < tabs.length - 1 ? currentIndex + 1 : 0;
+        }
+        
+        setActiveTab(tabs[newIndex]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeTab]);
+
   // Orders are already filtered by business day (8 AM to 8 AM) from the API
   // So we can use them directly - no need for additional client-side filtering
   const allTodayOrders = orders; // Already filtered by business day from server
@@ -1426,8 +1460,15 @@ Please collect it from the counter.
           {/* Content */}
           <div className="relative z-10">
             <div className="flex items-center justify-between flex-wrap gap-4">
-              {/* Left spacer for balance */}
-              <div className="flex-1"></div>
+              {/* Left side - Vendor StockYard Button */}
+              <div className="flex-1 flex flex-col items-start gap-2">
+                <Link
+                  href="/order-admin/vendor-stock-manage"
+                  className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
+                >
+                  📦 Vendor StockYard
+                </Link>
+              </div>
               
               {/* Centered Admin Dashboard */}
               <div className="flex-1 flex flex-col items-center text-center">
@@ -3477,20 +3518,20 @@ Please collect it from the counter.
         </div>
       )}
 
-        {/* Footer */}
-      <footer className="mt-12 py-6 text-center border-t border-gray-200/50">
-          <p className="text-sm text-gray-600">
-            Tech Powered by{' '}
-            <a
-              href="https://www.devtechai.org"
-              target="_blank"
-              rel="noopener noreferrer"
+      {/* Footer */}
+      <footer className="mt-12 py-6 text-center border-t border-gray-200/50 bg-white/60 backdrop-blur-sm">
+        <p className="text-sm text-gray-600">
+          Tech Powered by{' '}
+          <a
+            href="https://www.devtechai.org"
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-primary-600 hover:text-primary-700 font-semibold underline transition-colors"
-            >
-              DevTechAi.Org
-            </a>
-          </p>
-        </footer>
+          >
+            DevTechAi.Org
+          </a>
+        </p>
+      </footer>
       </div>
   );
 }

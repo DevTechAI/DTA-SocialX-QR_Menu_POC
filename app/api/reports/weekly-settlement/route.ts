@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     // Fetch Food Orders for the week
     const { data: foodOrders, error: foodError } = await supabase
       .from('orders')
-      .select('total_amount, status, created_at')
+      .select('id, total_amount, status, created_at')
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
 
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     // Fetch Snooker Bookings for the week
     const { data: snookerBookings, error: snookerError } = await supabase
       .from('snooker_booking_orders')
-      .select('total_order_amount, order_status, created_at')
+      .select('snooker_order_id, total_order_amount, order_status, created_at')
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
 
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     // Fetch Workspace Bookings for the week
     const { data: workspaceBookings, error: workspaceError } = await supabase
       .from('workspace_seat_booking_orders')
-      .select('total_order_value, created_at')
+      .select('workspace_order_id, total_order_value, order_status, created_at')
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
 
@@ -62,6 +62,31 @@ export async function GET(request: NextRequest) {
     const workspaceBookingCount = workspaceBookings?.length || 0;
     const totalOrderCount = foodOrderCount + snookerBookingCount + workspaceBookingCount;
 
+    // Calculate status breakdowns (same as daily report)
+    const foodStatusBreakdown = calculateStatusBreakdown(
+      foodOrders || [],
+      'food',
+      (order: any) => order.id,
+      (order: any) => parseFloat(order.total_amount?.toString() || '0') || 0,
+      (order: any) => order.status
+    );
+
+    const snookerStatusBreakdown = calculateStatusBreakdown(
+      snookerBookings || [],
+      'snooker',
+      (booking: any) => booking.snooker_order_id,
+      (booking: any) => parseFloat(booking.total_order_amount?.toString() || '0') || 0,
+      (booking: any) => booking.order_status
+    );
+
+    const workspaceStatusBreakdown = calculateStatusBreakdown(
+      workspaceBookings || [],
+      'workspace',
+      (booking: any) => booking.workspace_order_id,
+      (booking: any) => parseFloat(booking.total_order_value?.toString() || '0') || 0,
+      (booking: any) => booking.order_status
+    );
+
     // Calculate daily breakdown
     const dailyBreakdown = calculateDailyBreakdown(foodOrders || [], snookerBookings || [], workspaceBookings || [], startDate);
 
@@ -72,17 +97,20 @@ export async function GET(request: NextRequest) {
         foodOrders: {
           count: foodOrderCount,
           total: foodTotal,
-          currency: 'INR'
+          currency: 'INR',
+          statusBreakdown: foodStatusBreakdown
         },
         snookerBookings: {
           count: snookerBookingCount,
           total: snookerTotal,
-          currency: 'INR'
+          currency: 'INR',
+          statusBreakdown: snookerStatusBreakdown
         },
         workspaceBookings: {
           count: workspaceBookingCount,
           total: workspaceTotal,
-          currency: 'INR'
+          currency: 'INR',
+          statusBreakdown: workspaceStatusBreakdown
         },
         overall: {
           totalOrders: totalOrderCount,
@@ -166,5 +194,69 @@ function calculateDailyBreakdown(
     date,
     ...values
   }));
+}
+
+function calculateStatusBreakdown(
+  orders: any[],
+  type: 'food' | 'snooker' | 'workspace',
+  getId: (order: any) => string,
+  getAmount: (order: any) => number,
+  getStatus: (order: any) => string
+): { delivered: { count: number; total: number; orderIds: string[] }; paid: { count: number; total: number; orderIds: string[] }; unpaid: { count: number; total: number; orderIds: string[] } } {
+  const delivered: { count: number; total: number; orderIds: string[] } = { count: 0, total: 0, orderIds: [] };
+  const paid: { count: number; total: number; orderIds: string[] } = { count: 0, total: 0, orderIds: [] };
+  const unpaid: { count: number; total: number; orderIds: string[] } = { count: 0, total: 0, orderIds: [] };
+
+  orders.forEach((order) => {
+    const id = getId(order);
+    const amount = getAmount(order);
+    const status = getStatus(order)?.toLowerCase() || '';
+
+    if (type === 'food') {
+      if (status === 'delivered') {
+        delivered.count++;
+        delivered.total += amount;
+        delivered.orderIds.push(id);
+      } else if (status === 'paid') {
+        paid.count++;
+        paid.total += amount;
+        paid.orderIds.push(id);
+      } else if (status === 'unpaid' || status === 'received' || status === 'accepted') {
+        unpaid.count++;
+        unpaid.total += amount;
+        unpaid.orderIds.push(id);
+      }
+    } else if (type === 'snooker') {
+      if (status === 'ended') {
+        delivered.count++;
+        delivered.total += amount;
+        delivered.orderIds.push(id);
+      } else if (status === 'paid') {
+        paid.count++;
+        paid.total += amount;
+        paid.orderIds.push(id);
+      } else {
+        unpaid.count++;
+        unpaid.total += amount;
+        unpaid.orderIds.push(id);
+      }
+    } else if (type === 'workspace') {
+      if (status === 'delivered' || status === 'pass-delivered') {
+        delivered.count++;
+        delivered.total += amount;
+        delivered.orderIds.push(id);
+      } else if (status === 'paid') {
+        paid.count++;
+        paid.total += amount;
+        paid.orderIds.push(id);
+      } else {
+        unpaid.count++;
+        unpaid.total += amount;
+        unpaid.orderIds.push(id);
+      }
+    }
+  });
+
+  return { delivered, paid, unpaid };
 }
 

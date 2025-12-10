@@ -386,6 +386,21 @@ export default function MenuEditorPage() {
           </>
         )}
       </div>
+
+      {/* Footer */}
+      <footer className="mt-12 py-6 text-center border-t border-gray-200/50 bg-white/60 backdrop-blur-sm">
+        <p className="text-sm text-gray-600">
+          Tech Powered by{' '}
+          <a
+            href="https://www.devtechai.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-600 hover:text-primary-700 font-semibold underline transition-colors"
+          >
+            DevTechAi.Org
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }

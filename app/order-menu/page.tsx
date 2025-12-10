@@ -1774,7 +1774,7 @@ export default function SocialXMenuApp() {
             {!isEditingName ? (
               <>
                 <h1 className="text-lg md:text-2xl font-bold text-gray-800 flex items-center gap-2">
-                  <span>Hi, {customerName}!</span>
+              <span>Hi, {customerName}!</span>
                   <button
                     onClick={handleEditName}
                     className="inline-flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full bg-primary-100 hover:bg-primary-200 active:bg-primary-300 transition-all active:scale-95 p-1"
@@ -1794,8 +1794,8 @@ export default function SocialXMenuApp() {
                       />
                     </svg>
                   </button>
-                  <span className="text-xl md:text-3xl">👋</span>
-                </h1>
+              <span className="text-xl md:text-3xl">👋</span>
+            </h1>
                 <p className="text-gray-600 text-xs md:text-sm font-semibold mt-0.5 md:mt-1">Choose from menu</p>
               </>
             ) : (
