@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import Link from 'next/link';
-import CustomerBillingTab from './customer-billing';
 
 interface OrderItem {
   menu_item_id: string;
@@ -121,6 +120,17 @@ export default function AdminDashboard() {
   const [newSnookerBookingsCount, setNewSnookerBookingsCount] = useState(0);
   const [previousSnookerBookings, setPreviousSnookerBookings] = useState<SnookerBooking[]>([]);
   
+  // Continuous notification sound state
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+  const [pendingSnookerCount, setPendingSnookerCount] = useState(0);
+  const [pendingWorkspaceCount, setPendingWorkspaceCount] = useState(0);
+  const [pendingBillingCount, setPendingBillingCount] = useState(0);
+  const soundIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingOrdersRef = useRef(0);
+  const pendingSnookerRef = useRef(0);
+  const pendingWorkspaceRef = useRef(0);
+  const pendingBillingRef = useRef(0);
+  
   // Workspace bookings state
   interface WorkspaceBooking {
     workspace_order_id: string;
@@ -139,6 +149,47 @@ export default function AdminDashboard() {
   const [workspaceBookings, setWorkspaceBookings] = useState<WorkspaceBooking[]>([]);
   const [workspaceLoading, setWorkspaceLoading] = useState(true);
   const [expandedWorkspaceBookings, setExpandedWorkspaceBookings] = useState<Set<string>>(new Set());
+  
+  // Customer Billing state
+  interface CustomerBilling {
+    customer_phno: string;
+    customer_name: string;
+    total_ordered_value_at_socialx: number;
+    order_history_json: Array<{
+      order_date: string;
+      Customer_PhNo: string;
+      Customer_Name: string;
+      allorder_value: number;
+      FoodOrderUUID?: string;
+      WorkSpaceOrderUUID?: string;
+      SnookerOrderUUID?: string;
+      allOrder_Status: 'PAID' | 'UNPAID';
+      foodOrders?: any[];
+      snookerBookings?: any[];
+      workspaceBookings?: any[];
+    }>;
+    latestdate_allorder_json: {
+      order_date: string;
+      Customer_PhNo: string;
+      Customer_Name: string;
+      allorder_value: number;
+      FoodOrderUUID?: string;
+      WorkSpaceOrderUUID?: string;
+      SnookerOrderUUID?: string;
+      allOrder_Status: 'PAID' | 'UNPAID';
+      foodOrders?: any[];
+      snookerBookings?: any[];
+      workspaceBookings?: any[];
+    };
+    latestdate_allorder_value: number;
+    latestdate_allorder_status: 'PAID' | 'UNPAID';
+    created_at: string;
+    updated_at: string;
+  }
+  const [customerBillings, setCustomerBillings] = useState<CustomerBilling[]>([]);
+  const [billingLoading, setBillingLoading] = useState(true);
+  const [expandedBillings, setExpandedBillings] = useState<Set<string>>(new Set());
+  const [expandedSubCards, setExpandedSubCards] = useState<Set<string>>(new Set());
   
   // Use ref to always have the current soundEnabled value (avoids stale closures)
   const soundEnabledRef = useRef(soundEnabled);
@@ -197,6 +248,68 @@ export default function AdminDashboard() {
   useEffect(() => {
     newOrdersCountRef.current = newOrdersCount;
   }, [newOrdersCount]);
+
+  // Update refs for pending orders
+  useEffect(() => {
+    pendingOrdersRef.current = pendingOrdersCount;
+  }, [pendingOrdersCount]);
+
+  useEffect(() => {
+    pendingSnookerRef.current = pendingSnookerCount;
+  }, [pendingSnookerCount]);
+
+  useEffect(() => {
+    pendingWorkspaceRef.current = pendingWorkspaceCount;
+  }, [pendingWorkspaceCount]);
+
+  useEffect(() => {
+    pendingBillingRef.current = pendingBillingCount;
+  }, [pendingBillingCount]);
+
+  // Continuous notification sound - plays until all pending orders are accepted
+  useEffect(() => {
+    const totalPending = pendingOrdersCount + pendingSnookerCount + pendingWorkspaceCount + pendingBillingCount;
+    
+    // Clear existing interval if any
+    if (soundIntervalRef.current) {
+      clearInterval(soundIntervalRef.current);
+      soundIntervalRef.current = null;
+    }
+
+    // If there are pending orders and sound is enabled, start continuous notification
+    if (totalPending > 0 && soundEnabledRef.current) {
+      console.log(`🔔 Starting continuous notification for ${totalPending} pending order(s)`);
+      
+      // Play immediately
+      playAlertSound();
+      
+      // Then play every 3 seconds until all orders are accepted
+      soundIntervalRef.current = setInterval(() => {
+        const currentPending = pendingOrdersRef.current + pendingSnookerRef.current + pendingWorkspaceRef.current + pendingBillingRef.current;
+        
+        if (currentPending > 0 && soundEnabledRef.current) {
+          playAlertSound();
+        } else {
+          // Stop if no pending orders or sound disabled
+          if (soundIntervalRef.current) {
+            clearInterval(soundIntervalRef.current);
+            soundIntervalRef.current = null;
+            console.log('🔇 Stopped continuous notification - no pending orders');
+          }
+        }
+      }, 3000); // Play every 3 seconds
+    } else {
+      console.log('🔇 Continuous notification stopped - no pending orders or sound disabled');
+    }
+
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (soundIntervalRef.current) {
+        clearInterval(soundIntervalRef.current);
+        soundIntervalRef.current = null;
+      }
+    };
+  }, [pendingOrdersCount, pendingSnookerCount, pendingWorkspaceCount, soundEnabled]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -753,6 +866,9 @@ Please collect it from the counter.
           (order: Order) => order.status === 'received'
         ).length;
         
+        // Update pending orders count - this will trigger continuous notification
+        setPendingOrdersCount(receivedCount);
+        
         // Play sound if count is 1 or greater (and count increased)
         // This ensures sound plays when count goes from 0 to 1 or more
         // Only play if we didn't already play for new orders detection above
@@ -812,6 +928,8 @@ Please collect it from the counter.
           // Recalculate new orders count
           const receivedCount = updated.filter(order => order.status === 'received').length;
           setNewOrdersCount(receivedCount);
+          // Update pending orders count - this will stop notification if count becomes 0
+          setPendingOrdersCount(receivedCount);
           const currentSnookerCount = newSnookerBookingsCountRef.current;
           updateTabTitle(receivedCount, currentSnookerCount);
           
@@ -863,6 +981,9 @@ Please collect it from the counter.
           (booking: SnookerBooking) => booking.order_status === 'Received'
         ).length;
         
+        // Update pending snooker count - this will trigger continuous notification
+        setPendingSnookerCount(receivedCount);
+        
         // Play sound if count is 1 or greater (and count increased)
         // Only play if we didn't already play for new bookings detection above
         const previousCount = newSnookerBookingsCountRef.current;
@@ -897,6 +1018,14 @@ Please collect it from the counter.
       if (response.ok) {
         const data = await response.json();
         setWorkspaceBookings(data);
+        
+        // Calculate pending workspace bookings count (Received status)
+        const receivedCount = data.filter(
+          (booking: WorkspaceBooking) => booking.order_status === 'Received'
+        ).length;
+        
+        // Update pending workspace count - this will trigger continuous notification
+        setPendingWorkspaceCount(receivedCount);
       } else {
         console.error('Failed to fetch workspace bookings');
       }
@@ -970,6 +1099,16 @@ Please collect it from the counter.
       });
 
       if (response.ok) {
+        // Update pending count immediately if status changed from Received
+        if (newStatus !== 'Received') {
+          setWorkspaceBookings(prev => {
+            const receivedCount = prev.filter(b => b.order_status === 'Received' && b.workspace_order_id !== bookingId).length;
+            setPendingWorkspaceCount(receivedCount);
+            return prev.map(b => 
+              b.workspace_order_id === bookingId ? { ...b, order_status: newStatus } : b
+            );
+          });
+        }
         // Refresh workspace bookings
         await fetchWorkspaceBookings(false);
       } else {
@@ -979,6 +1118,135 @@ Please collect it from the counter.
     } catch (error) {
       console.error('Error updating workspace booking status:', error);
       alert(`Error updating booking status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Update Snooker Booking Status
+  const updateSnookerBookingStatus = async (bookingId: string, newStatus: 'Received' | 'Accepted' | 'Started' | 'Paused' | 'Resumed' | 'Ended') => {
+    try {
+      const response = await fetch(`/api/snooker-bookings/${bookingId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_status: newStatus }),
+      });
+
+      if (response.ok) {
+        // Update pending count immediately if status changed from Received
+        if (newStatus !== 'Received') {
+          setSnookerBookings(prev => {
+            const receivedCount = prev.filter(b => b.order_status === 'Received' && b.snooker_order_id !== bookingId).length;
+            setPendingSnookerCount(receivedCount);
+            return prev.map(b => 
+              b.snooker_order_id === bookingId ? { ...b, order_status: newStatus } : b
+            );
+          });
+        }
+        // Refresh snooker bookings
+        await fetchSnookerBookings(false);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        alert(`Failed to update booking status: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating snooker booking status:', error);
+      alert(`Error updating booking status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Fetch Customer Billings
+  const fetchCustomerBillings = async (showLoading = true) => {
+    if (showLoading) setBillingLoading(true);
+    try {
+      const response = await fetch('/api/customer-billing');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Fetched customer billings:', data?.length || 0, 'records');
+        setCustomerBillings(data || []);
+        
+        // Calculate pending billings (UNPAID status)
+        const unpaidCount = (data || []).filter(
+          (billing: CustomerBilling) => billing.latestdate_allorder_status === 'UNPAID'
+        ).length;
+        setPendingBillingCount(unpaidCount);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ Failed to fetch customer billings:', errorData);
+        setCustomerBillings([]);
+        setPendingBillingCount(0);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching customer billings:', error);
+      setCustomerBillings([]);
+      setPendingBillingCount(0);
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  // Update Customer Billing Status
+  const updateCustomerBillingStatus = async (phone: string, newStatus: 'PAID' | 'UNPAID' | 'ACCEPT' | 'REJECT') => {
+    try {
+      const response = await fetch(`/api/customer-billing/${encodeURIComponent(phone)}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        // Play notification sound
+        if (soundEnabledRef.current && audioRef.current) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        }
+        // Refresh customer billings
+        await fetchCustomerBillings(false);
+        // Also refresh other tabs to sync status
+        if (activeTab === 'food') await fetchOrders(false);
+        if (activeTab === 'snooker') await fetchSnookerBookings(false);
+        if (activeTab === 'workspace') await fetchWorkspaceBookings(false);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        alert(`Failed to update billing status: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating customer billing status:', error);
+      alert(`Error updating billing status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Update Individual Order Status
+  const updateIndividualOrderStatus = async (phone: string, orderType: 'food' | 'workspace' | 'snooker', orderId: string, status: 'PAID' | 'UNPAID') => {
+    try {
+      const response = await fetch(`/api/customer-billing/${encodeURIComponent(phone)}/order-status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderType, orderId, status }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Play notification sound
+        if (soundEnabledRef.current && audioRef.current) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        }
+        // Refresh customer billings
+        await fetchCustomerBillings(false);
+        // Also refresh other tabs to sync status
+        if (activeTab === 'food') await fetchOrders(false);
+        if (activeTab === 'snooker') await fetchSnookerBookings(false);
+        if (activeTab === 'workspace') await fetchWorkspaceBookings(false);
+        
+        if (result.mainStatusUpdated) {
+          console.log('✅ All orders are now PAID - main card status updated to PAID');
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        alert(`Failed to update order status: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating individual order status:', error);
+      alert(`Error updating order status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -1038,6 +1306,17 @@ Please collect it from the counter.
       fetchWorkspaceBookings(true);
       // Refresh every 5 seconds without loading state
       const interval = setInterval(() => fetchWorkspaceBookings(false), 5000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, authChecked]);
+
+  // Fetch customer billings when tab is active
+  useEffect(() => {
+    if (activeTab === 'billing' && authChecked) {
+      // Initial fetch with loading state
+      fetchCustomerBillings(true);
+      // Refresh every 5 seconds without loading state
+      const interval = setInterval(() => fetchCustomerBillings(false), 5000);
       return () => clearInterval(interval);
     }
   }, [activeTab, authChecked]);
@@ -1317,6 +1596,11 @@ Please collect it from the counter.
               }`}
             >
               🍽️ Food Orders
+              {pendingOrdersCount > 0 && (
+                <span className="ml-2 text-xl animate-pulse" title="Notification sound active - pending orders">
+                  🔊
+                </span>
+              )}
               {newOrdersCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
                   {newOrdersCount}
@@ -1332,6 +1616,11 @@ Please collect it from the counter.
               }`}
             >
               🎱 Snooker Booking
+              {pendingSnookerCount > 0 && (
+                <span className="ml-2 text-xl animate-pulse" title="Notification sound active - pending bookings">
+                  🔊
+                </span>
+              )}
               {newSnookerBookingsCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
                   {newSnookerBookingsCount}
@@ -1347,6 +1636,11 @@ Please collect it from the counter.
               }`}
             >
               💼 WorkSpace Booking
+              {pendingWorkspaceCount > 0 && (
+                <span className="ml-2 text-xl animate-pulse" title="Notification sound active - pending bookings">
+                  🔊
+                </span>
+              )}
             </button>
             <button
               onClick={() => setActiveTab('billing')}
@@ -1356,7 +1650,12 @@ Please collect it from the counter.
                   : 'bg-white text-gray-700 hover:bg-gray-100 shadow-soft'
               }`}
             >
-              🧾 Customer Billing
+              💳 Customer Billing
+              {pendingBillingCount > 0 && (
+                <span className="ml-2 text-xl animate-pulse" title="Notification sound active - pending billings">
+                  🔊
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -1496,6 +1795,11 @@ Please collect it from the counter.
                             {/* Status Badge */}
                             <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${config.badge} mt-1 mb-1`}>
                               <span className="text-xs font-bold text-white uppercase">{config.label}</span>
+                              {(order.status === 'received' || order.status === 'unpaid') && (
+                                <span className="text-sm animate-pulse" title="Notification sound active - needs attention">
+                                  🔊
+                                </span>
+                              )}
                             </div>
                             <p className="text-xs font-semibold text-gray-600 mt-1">
                               {isExpanded ? '▲ Hide' : '▼ Show'}
@@ -1813,6 +2117,11 @@ Please collect it from the counter.
                                   {/* Status Badge */}
                                   <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${config.badge} mb-2`}>
                                     <span className="text-xs font-bold text-white uppercase">{config.label}</span>
+                                    {booking.order_status === 'Received' && (
+                                      <span className="text-sm animate-pulse" title="Notification sound active - needs attention">
+                                        🔊
+                                      </span>
+                                    )}
                                   </div>
                                   {/* START PLAY Button - Show for Received orders (DISABLED) */}
                                   {normalizedStatus === 'Received' && (
@@ -1918,12 +2227,111 @@ Please collect it from the counter.
                                       e.stopPropagation();
                                       handleEndPlay(booking.snooker_order_id);
                                     }}
-                                    className="w-full py-3 px-4 rounded-xl font-bold text-sm md:text-base transition-all shadow-soft hover:shadow-soft-lg active:scale-95 bg-gradient-to-r from-red-500 to-red-600 text-white border-2 border-red-400"
+                                    className="w-full py-3 px-4 rounded-xl font-bold text-sm md:text-base transition-all shadow-soft hover:shadow-soft-lg active:scale-95 bg-gradient-to-r from-red-500 to-red-600 text-white border-2 border-red-400 mb-4"
                                   >
                                     <span className="block text-lg mb-1">🛑</span>
                                     <span>END PLAY</span>
                                   </button>
                                 )}
+
+                                {/* Status Update Buttons */}
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateSnookerBookingStatus(booking.snooker_order_id, 'Received');
+                                    }}
+                                    disabled={booking.order_status === 'Received'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Received'
+                                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-2 border-yellow-400'
+                                        : 'bg-gradient-to-br from-yellow-100 to-orange-100 text-yellow-700 hover:from-yellow-200 hover:to-orange-200 border border-yellow-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">⏳</span>
+                                    <span>Received</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateSnookerBookingStatus(booking.snooker_order_id, 'Accepted');
+                                    }}
+                                    disabled={booking.order_status === 'Accepted'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Accepted'
+                                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-2 border-blue-400'
+                                        : 'bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-700 hover:from-blue-200 hover:to-indigo-200 border border-blue-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">✅</span>
+                                    <span>Accepted</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateSnookerBookingStatus(booking.snooker_order_id, 'Started');
+                                    }}
+                                    disabled={booking.order_status === 'Started' || booking.order_status === 'STARTED'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Started' || booking.order_status === 'STARTED'
+                                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border-2 border-green-400'
+                                        : 'bg-gradient-to-br from-green-100 to-emerald-100 text-green-700 hover:from-green-200 hover:to-emerald-200 border border-green-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">▶️</span>
+                                    <span>Started</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateSnookerBookingStatus(booking.snooker_order_id, 'Paused');
+                                    }}
+                                    disabled={booking.order_status === 'Paused'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Paused'
+                                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-2 border-purple-400'
+                                        : 'bg-gradient-to-br from-purple-100 to-pink-100 text-purple-700 hover:from-purple-200 hover:to-pink-200 border border-purple-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">⏸️</span>
+                                    <span>Paused</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateSnookerBookingStatus(booking.snooker_order_id, 'Resumed');
+                                    }}
+                                    disabled={booking.order_status === 'Resumed'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Resumed'
+                                        ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white border-2 border-cyan-400'
+                                        : 'bg-gradient-to-br from-cyan-100 to-teal-100 text-cyan-700 hover:from-cyan-200 hover:to-teal-200 border border-cyan-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">▶️</span>
+                                    <span>Resumed</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateSnookerBookingStatus(booking.snooker_order_id, 'Ended');
+                                    }}
+                                    disabled={booking.order_status === 'Ended' || booking.order_status === 'ENDED'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Ended' || booking.order_status === 'ENDED'
+                                        ? 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border-2 border-gray-400'
+                                        : 'bg-gradient-to-br from-gray-100 to-slate-100 text-gray-700 hover:from-gray-200 hover:to-slate-200 border border-gray-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">✅</span>
+                                    <span>Ended</span>
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -2096,6 +2504,11 @@ Please collect it from the counter.
                                   {/* Status Badge */}
                                   <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${config.badge} mb-2`}>
                                     <span className="text-xs font-bold text-white uppercase">{config.label}</span>
+                                    {booking.order_status === 'Received' && (
+                                      <span className="text-sm animate-pulse" title="Notification sound active - needs attention">
+                                        🔊
+                                      </span>
+                                    )}
                                   </div>
                                   <p className="text-xs font-semibold text-gray-600 mt-2">
                                     {isExpanded ? '▲ Hide' : '▼ Show'}
@@ -2230,6 +2643,661 @@ Please collect it from the counter.
             )}
           </>
         )}
+
+        {/* Customer Billing Tab */}
+        {activeTab === 'billing' && (
+          <>
+            {/* Customer Billing Header */}
+            <div className="mb-6 md:mb-8">
+              <div className="flex items-center justify-center gap-4 flex-wrap">
+                <h2 className="text-2xl md:text-3xl font-bold text-purple-600 flex items-center gap-3">
+                  <span className="text-3xl md:text-4xl">💳</span>
+                  <span>Customer Billing</span>
+                </h2>
+              </div>
+              <p className="text-gray-600 mt-2 text-sm md:text-base font-medium text-center">
+                Click on a customer to expand and view consolidated billing details
+              </p>
+            </div>
+
+            {/* Loading State */}
+            {billingLoading && (
+              <div className="text-center py-12">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 mb-4 shadow-soft">
+                  <div className="animate-pulse">
+                    <span className="text-5xl text-purple-600">⏳</span>
+                  </div>
+                </div>
+                <p className="text-gray-700 font-bold text-lg">Loading Billing Records...</p>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!billingLoading && customerBillings.length === 0 && (
+              <div className="relative rounded-3xl overflow-hidden shadow-soft-lg">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-purple-50/80 backdrop-blur-xl"></div>
+                <div className="relative z-10 text-center py-16 md:py-20 px-6">
+                  <div className="inline-flex items-center justify-center w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 mb-6 shadow-soft">
+                    <span className="text-6xl md:text-7xl">💳</span>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold text-transparent bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text mb-3">No billing records yet</h3>
+                  <p className="text-gray-600 font-medium">Customer billing records will appear here as orders are placed</p>
+                </div>
+              </div>
+            )}
+
+            {/* Customer Billing Grid */}
+            {!billingLoading && customerBillings.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                {customerBillings.map((billing) => {
+                  const isExpanded = expandedBillings.has(billing.customer_phno);
+                  const latestOrder = billing.latestdate_allorder_json || {};
+                  const billingStatusConfig = {
+                    PAID: {
+                      label: 'Paid',
+                      color: 'border-green-300',
+                      cardBg: 'bg-gradient-to-br from-green-50 via-green-100/70 to-emerald-50/80',
+                      textColor: 'text-green-700',
+                      badge: 'bg-gradient-to-r from-green-500 to-emerald-500',
+                      icon: '💰',
+                    },
+                    UNPAID: {
+                      label: 'Unpaid',
+                      color: 'border-red-300',
+                      cardBg: 'bg-gradient-to-br from-red-50 via-orange-100/70 to-red-50/80',
+                      textColor: 'text-red-700',
+                      badge: 'bg-gradient-to-r from-red-500 to-orange-500',
+                      icon: '💳',
+                    },
+                  };
+                  const config = billingStatusConfig[billing.latestdate_allorder_status] || billingStatusConfig.UNPAID;
+
+                  return (
+                    <div
+                      key={billing.customer_phno}
+                      className="relative rounded-2xl overflow-hidden transition-all shadow-soft hover:shadow-soft-lg"
+                    >
+                      <div className={`relative ${config.cardBg} p-5 md:p-6 border-2 ${config.color} rounded-2xl`}>
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent rounded-2xl pointer-events-none"></div>
+                        
+                        <div className="relative z-10">
+                          {/* Billing Header - Clickable */}
+                          <div
+                            onClick={() => {
+                              const newExpanded = new Set(expandedBillings);
+                              if (isExpanded) {
+                                newExpanded.delete(billing.customer_phno);
+                              } else {
+                                newExpanded.add(billing.customer_phno);
+                              }
+                              setExpandedBillings(newExpanded);
+                            }}
+                            className="w-full text-left hover:bg-white/30 rounded-xl p-3 -m-3 mb-0 transition-all cursor-pointer"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-start gap-3 flex-1 min-w-0">
+                                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl ${config.badge} flex items-center justify-center shadow-soft flex-shrink-0`}>
+                                  <span className="text-2xl md:text-3xl text-white">{config.icon}</span>
+                                </div>
+                                <div className="flex-1 min-w-0 space-y-1">
+                                  <h3 className="text-base md:text-lg font-bold text-gray-800 truncate leading-tight">
+                                    {billing.customer_name}
+                                  </h3>
+                                  <p className="text-xs text-gray-600 font-medium truncate">
+                                    📞 {billing.customer_phno || 'N/A'}
+                                  </p>
+                                  <p className="text-xs text-gray-600 font-medium">
+                                    Total Value: ₹{billing.total_ordered_value_at_socialx.toFixed(2)}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(billing.updated_at).toLocaleString('en-US', { 
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit', 
+                                      minute: '2-digit' 
+                                    })}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right flex-shrink-0 flex flex-col items-end">
+                                <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${config.badge} mb-2`}>
+                                  <span className="text-xs font-bold text-white uppercase">{config.label}</span>
+                                  {billing.latestdate_allorder_status === 'UNPAID' && (
+                                    <span className="text-sm animate-pulse" title="Notification sound active - needs attention">
+                                      🔊
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs font-semibold text-gray-600 mt-2">
+                                  {isExpanded ? '▲ Hide' : '▼ Show'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Expanded Details */}
+                          {isExpanded && (
+                            <div className="mt-4 pt-4 border-t-2 border-gray-300/50">
+                              {/* Order History from order_history_json */}
+                              {billing.order_history_json && billing.order_history_json.length > 0 ? (
+                                <div className="space-y-4 mb-4">
+                                  <h4 className="font-bold text-gray-700 mb-3 flex items-center justify-between text-sm md:text-base">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-lg">📋</span>
+                                      <span>Order History:</span>
+                                    </div>
+                                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${
+                                      billing.latestdate_allorder_status === 'PAID' 
+                                        ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                                        : 'bg-gradient-to-r from-red-500 to-orange-500'
+                                    }`}>
+                                      <span className="text-xs font-bold text-white uppercase">
+                                        {billing.latestdate_allorder_status || 'UNPAID'}
+                                      </span>
+                                    </div>
+                                  </h4>
+                                  {billing.order_history_json.map((orderHistory: any, index: number) => {
+                                    const orderDate = orderHistory.order_date || 'N/A';
+                                    const orderValue = orderHistory.allorder_value || 0;
+                                    const orderStatus = orderHistory.allOrder_Status || 'UNPAID';
+                                    const foodUUIDs = orderHistory.FoodOrderUUID || '';
+                                    const workspaceUUIDs = orderHistory.WorkSpaceOrderUUID || '';
+                                    const snookerUUIDs = orderHistory.SnookerOrderUUID || '';
+                                    
+                                    const orderStatusConfig = {
+                                      PAID: {
+                                        label: 'Paid',
+                                        color: 'border-green-300',
+                                        bg: 'bg-green-50/80',
+                                        textColor: 'text-green-700',
+                                        badge: 'bg-gradient-to-r from-green-500 to-emerald-500',
+                                      },
+                                      UNPAID: {
+                                        label: 'Unpaid',
+                                        color: 'border-red-300',
+                                        bg: 'bg-red-50/80',
+                                        textColor: 'text-red-700',
+                                        badge: 'bg-gradient-to-r from-red-500 to-orange-500',
+                                      },
+                                    };
+                                    const statusConfig = orderStatusConfig[orderStatus as 'PAID' | 'UNPAID'] || orderStatusConfig.UNPAID;
+
+                                    return (
+                                      <div
+                                        key={index}
+                                        className={`relative rounded-xl overflow-hidden ${statusConfig.bg} border-2 ${statusConfig.color} p-4`}
+                                      >
+                                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent rounded-xl pointer-events-none"></div>
+                                        
+                                        <div className="relative z-10">
+                                          {/* Order Date Header */}
+                                          <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-lg">📅</span>
+                                              <h5 className="font-bold text-gray-800 text-sm md:text-base">
+                                                {new Date(orderDate).toLocaleDateString('en-US', { 
+                                                  weekday: 'short',
+                                                  year: 'numeric',
+                                                  month: 'short',
+                                                  day: 'numeric'
+                                                })}
+                                              </h5>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${statusConfig.badge}`}>
+                                                <span className="text-xs font-bold text-white uppercase">{statusConfig.label}</span>
+                                              </div>
+                                              <span className="text-sm font-bold text-gray-900">₹{orderValue.toFixed(2)}</span>
+                                            </div>
+                                          </div>
+
+                                          {/* Sub-cards for individual order types */}
+                                          <div className="space-y-3">
+                                            {/* Food Orders */}
+                                            {orderHistory.foodOrders && orderHistory.foodOrders.length > 0 && (() => {
+                                              const subCardKey = `${billing.customer_phno}-${orderDate}-food`;
+                                              const isSubCardExpanded = expandedSubCards.has(subCardKey);
+                                              const allPaid = orderHistory.foodOrders.every((fo: any) => 
+                                                fo.status === 'paid' || fo.status === 'Paid'
+                                              );
+                                              const statusBadge = allPaid 
+                                                ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                                                : 'bg-gradient-to-r from-red-500 to-orange-500';
+                                              
+                                              return (
+                                                <div className="bg-orange-50/90 rounded-lg p-3 border-2 border-orange-300">
+                                                  <div 
+                                                    className="flex items-center justify-between mb-2 cursor-pointer hover:bg-orange-100/50 rounded p-1 -m-1 transition-all"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      const newExpanded = new Set(expandedSubCards);
+                                                      if (isSubCardExpanded) {
+                                                        newExpanded.delete(subCardKey);
+                                                      } else {
+                                                        newExpanded.add(subCardKey);
+                                                      }
+                                                      setExpandedSubCards(newExpanded);
+                                                    }}
+                                                  >
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="text-lg">🍽️</span>
+                                                      <p className="text-xs font-bold text-orange-700">Food Order(s)</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg ${statusBadge}`}>
+                                                        <span className="text-xs font-bold text-white uppercase">
+                                                          {allPaid ? 'PAID' : 'UNPAID'}
+                                                        </span>
+                                                      </div>
+                                                      <span className="text-xs font-semibold text-gray-600">
+                                                        {isSubCardExpanded ? '▲' : '▼'}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                  {isSubCardExpanded && (
+                                                    <div>
+                                                      {orderHistory.foodOrders.map((foodOrder: any, foodIdx: number) => {
+                                                  const items = Array.isArray(foodOrder.items) ? foodOrder.items : [];
+                                                  const subtotal = foodOrder.total_amount || 0;
+                                                  const isPaid = foodOrder.status === 'paid' || foodOrder.status === 'Paid';
+                                                  return (
+                                                    <div key={foodIdx} className="mb-2 last:mb-0 bg-white/60 rounded-lg p-2 border border-orange-200">
+                                                      <div className="flex items-center justify-between mb-1.5">
+                                                        <div className="text-xs text-gray-600 font-semibold">
+                                                          Order #{foodOrder.id.slice(0, 8)}
+                                                        </div>
+                                                        <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${
+                                                          isPaid 
+                                                            ? 'bg-green-500 text-white' 
+                                                            : 'bg-red-500 text-white'
+                                                        }`}>
+                                                          <span className="text-xs font-bold uppercase">
+                                                            {isPaid ? 'PAID' : 'UNPAID'}
+                                                          </span>
+                                                        </div>
+                                                      </div>
+                                                      {items.length > 0 ? (
+                                                        <div className="space-y-1 mb-2">
+                                                          {items.map((item: any, itemIdx: number) => (
+                                                            <div key={itemIdx} className="flex justify-between items-center text-xs">
+                                                              <span className="text-gray-700 flex-1 truncate">
+                                                                {item.name} × {item.quantity}
+                                                              </span>
+                                                              <span className="text-gray-800 font-bold ml-2">
+                                                                ₹{(item.price || 0) * (item.quantity || 0)}
+                                                              </span>
+                                                            </div>
+                                                          ))}
+                                                        </div>
+                                                      ) : (
+                                                        <div className="text-xs text-gray-500 mb-2">No items found</div>
+                                                      )}
+                                                      <div className="flex justify-between items-center pt-1.5 border-t border-orange-200 mb-2">
+                                                        <span className="text-xs font-bold text-orange-700">Subtotal:</span>
+                                                        <span className="text-sm font-bold text-orange-800">₹{subtotal.toFixed(2)}</span>
+                                                      </div>
+                                                      <div className="flex gap-1.5">
+                                                        <button
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            updateIndividualOrderStatus(billing.customer_phno, 'food', foodOrder.id, 'PAID');
+                                                          }}
+                                                          disabled={isPaid}
+                                                          className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all ${
+                                                            isPaid
+                                                              ? 'bg-green-100 text-green-700 cursor-not-allowed opacity-50'
+                                                              : 'bg-green-500 text-white hover:bg-green-600 active:scale-95'
+                                                          }`}
+                                                        >
+                                                          💰 Paid
+                                                        </button>
+                                                        <button
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            updateIndividualOrderStatus(billing.customer_phno, 'food', foodOrder.id, 'UNPAID');
+                                                          }}
+                                                          disabled={!isPaid}
+                                                          className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all ${
+                                                            !isPaid
+                                                              ? 'bg-red-100 text-red-700 cursor-not-allowed opacity-50'
+                                                              : 'bg-red-500 text-white hover:bg-red-600 active:scale-95'
+                                                          }`}
+                                                        >
+                                                          💳 Unpaid
+                                                        </button>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            );
+                                            })()}
+                                            
+                                            {/* Workspace Bookings */}
+                                            {orderHistory.workspaceBookings && orderHistory.workspaceBookings.length > 0 && (() => {
+                                              const subCardKey = `${billing.customer_phno}-${orderDate}-workspace`;
+                                              const isSubCardExpanded = expandedSubCards.has(subCardKey);
+                                              const allPaid = orderHistory.workspaceBookings.every((wb: any) => 
+                                                wb.order_status === 'Paid' || wb.order_status === 'PAID'
+                                              );
+                                              const statusBadge = allPaid 
+                                                ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                                                : 'bg-gradient-to-r from-red-500 to-orange-500';
+                                              
+                                              return (
+                                                <div className="bg-green-50/90 rounded-lg p-3 border-2 border-green-300">
+                                                  <div 
+                                                    className="flex items-center justify-between mb-2 cursor-pointer hover:bg-green-100/50 rounded p-1 -m-1 transition-all"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      const newExpanded = new Set(expandedSubCards);
+                                                      if (isSubCardExpanded) {
+                                                        newExpanded.delete(subCardKey);
+                                                      } else {
+                                                        newExpanded.add(subCardKey);
+                                                      }
+                                                      setExpandedSubCards(newExpanded);
+                                                    }}
+                                                  >
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="text-lg">💼</span>
+                                                      <p className="text-xs font-bold text-green-700">Workspace Booking(s)</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg ${statusBadge}`}>
+                                                        <span className="text-xs font-bold text-white uppercase">
+                                                          {allPaid ? 'PAID' : 'UNPAID'}
+                                                        </span>
+                                                      </div>
+                                                      <span className="text-xs font-semibold text-gray-600">
+                                                        {isSubCardExpanded ? '▲' : '▼'}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                  {isSubCardExpanded && (
+                                                    <div>
+                                                      {orderHistory.workspaceBookings.map((workspaceBooking: any, wsIdx: number) => {
+                                                  const seatInfo = workspaceBooking.workspace_seat_menu_items;
+                                                  const subtotal = workspaceBooking.total_order_value || 0;
+                                                  const isPaid = workspaceBooking.order_status === 'Paid' || workspaceBooking.order_status === 'PAID';
+                                                  return (
+                                                    <div key={wsIdx} className="mb-2 last:mb-0 bg-white/60 rounded-lg p-2 border border-green-200">
+                                                      <div className="flex items-center justify-between mb-1.5">
+                                                        <div className="text-xs text-gray-600 font-semibold">
+                                                          Booking #{workspaceBooking.workspace_order_id.slice(0, 8)}
+                                                        </div>
+                                                        <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${
+                                                          isPaid 
+                                                            ? 'bg-green-500 text-white' 
+                                                            : 'bg-red-500 text-white'
+                                                        }`}>
+                                                          <span className="text-xs font-bold uppercase">
+                                                            {isPaid ? 'PAID' : 'UNPAID'}
+                                                          </span>
+                                                        </div>
+                                                      </div>
+                                                      <div className="space-y-1 mb-2">
+                                                        <div className="flex justify-between items-center text-xs">
+                                                          <span className="text-gray-700">Seat ID:</span>
+                                                          <span className="text-gray-800 font-semibold">{workspaceBooking.workspace_seat_id}</span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center text-xs">
+                                                          <span className="text-gray-700">Seats Count:</span>
+                                                          <span className="text-gray-800 font-semibold">{workspaceBooking.seats_count}</span>
+                                                        </div>
+                                                        {seatInfo && (
+                                                          <div className="flex justify-between items-center text-xs">
+                                                            <span className="text-gray-700">Seat Value:</span>
+                                                            <span className="text-gray-800 font-semibold">₹{seatInfo.workspace_seat_value}</span>
+                                                          </div>
+                                                        )}
+                                                        <div className="flex justify-between items-center text-xs">
+                                                          <span className="text-gray-700">Total:</span>
+                                                          <span className="text-gray-800 font-semibold">₹{subtotal.toFixed(2)}</span>
+                                                        </div>
+                                                      </div>
+                                                      <div className="flex justify-between items-center pt-1.5 border-t border-green-200 mb-2">
+                                                        <span className="text-xs font-bold text-green-700">Subtotal:</span>
+                                                        <span className="text-sm font-bold text-green-800">₹{subtotal.toFixed(2)}</span>
+                                                      </div>
+                                                      <div className="flex gap-1.5">
+                                                        <button
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            updateIndividualOrderStatus(billing.customer_phno, 'workspace', workspaceBooking.workspace_order_id, 'PAID');
+                                                          }}
+                                                          disabled={isPaid}
+                                                          className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all ${
+                                                            isPaid
+                                                              ? 'bg-green-100 text-green-700 cursor-not-allowed opacity-50'
+                                                              : 'bg-green-500 text-white hover:bg-green-600 active:scale-95'
+                                                          }`}
+                                                        >
+                                                          💰 Paid
+                                                        </button>
+                                                        <button
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            updateIndividualOrderStatus(billing.customer_phno, 'workspace', workspaceBooking.workspace_order_id, 'UNPAID');
+                                                          }}
+                                                          disabled={!isPaid}
+                                                          className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all ${
+                                                            !isPaid
+                                                              ? 'bg-red-100 text-red-700 cursor-not-allowed opacity-50'
+                                                              : 'bg-red-500 text-white hover:bg-red-600 active:scale-95'
+                                                          }`}
+                                                        >
+                                                          💳 Unpaid
+                                                        </button>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            );
+                                            })()}
+                                            
+                                            {/* Snooker Bookings */}
+                                            {orderHistory.snookerBookings && orderHistory.snookerBookings.length > 0 && (() => {
+                                              const subCardKey = `${billing.customer_phno}-${orderDate}-snooker`;
+                                              const isSubCardExpanded = expandedSubCards.has(subCardKey);
+                                              const allPaid = orderHistory.snookerBookings.every((sb: any) => 
+                                                sb.order_status === 'Ended' || sb.order_status === 'ENDED'
+                                              );
+                                              const statusBadge = allPaid 
+                                                ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                                                : 'bg-gradient-to-r from-red-500 to-orange-500';
+                                              
+                                              return (
+                                                <div className="bg-blue-50/90 rounded-lg p-3 border-2 border-blue-300">
+                                                  <div 
+                                                    className="flex items-center justify-between mb-2 cursor-pointer hover:bg-blue-100/50 rounded p-1 -m-1 transition-all"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      const newExpanded = new Set(expandedSubCards);
+                                                      if (isSubCardExpanded) {
+                                                        newExpanded.delete(subCardKey);
+                                                      } else {
+                                                        newExpanded.add(subCardKey);
+                                                      }
+                                                      setExpandedSubCards(newExpanded);
+                                                    }}
+                                                  >
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="text-lg">🎱</span>
+                                                      <p className="text-xs font-bold text-blue-700">Snooker Booking(s)</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg ${statusBadge}`}>
+                                                        <span className="text-xs font-bold text-white uppercase">
+                                                          {allPaid ? 'PAID' : 'UNPAID'}
+                                                        </span>
+                                                      </div>
+                                                      <span className="text-xs font-semibold text-gray-600">
+                                                        {isSubCardExpanded ? '▲' : '▼'}
+                                                        </span>
+                                                    </div>
+                                                  </div>
+                                                  {isSubCardExpanded && (
+                                                    <div>
+                                                      {orderHistory.snookerBookings.map((snookerBooking: any, snookerIdx: number) => {
+                                                  const boardInfo = snookerBooking.snooker_board_menu_items;
+                                                  const subtotal = snookerBooking.total_order_amount || 0;
+                                                  const isPaid = snookerBooking.order_status === 'Ended' || snookerBooking.order_status === 'ENDED';
+                                                  return (
+                                                    <div key={snookerIdx} className="mb-2 last:mb-0 bg-white/60 rounded-lg p-2 border border-blue-200">
+                                                      <div className="flex items-center justify-between mb-1.5">
+                                                        <div className="text-xs text-gray-600 font-semibold">
+                                                          Booking #{snookerBooking.snooker_order_id.slice(0, 8)}
+                                                        </div>
+                                                        <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${
+                                                          isPaid 
+                                                            ? 'bg-green-500 text-white' 
+                                                            : 'bg-red-500 text-white'
+                                                        }`}>
+                                                          <span className="text-xs font-bold uppercase">
+                                                            {isPaid ? 'PAID' : 'UNPAID'}
+                                                          </span>
+                                                        </div>
+                                                      </div>
+                                                      <div className="space-y-1 mb-2">
+                                                        {boardInfo && (
+                                                          <div className="flex justify-between items-center text-xs">
+                                                            <span className="text-gray-700">Board:</span>
+                                                            <span className="text-gray-800 font-semibold">{boardInfo.board_name} ({boardInfo.type})</span>
+                                                          </div>
+                                                        )}
+                                                        <div className="flex justify-between items-center text-xs">
+                                                          <span className="text-gray-700">Players:</span>
+                                                          <span className="text-gray-800 font-semibold">{snookerBooking.players_count || 0}</span>
+                                                        </div>
+                                                        {snookerBooking.total_duration_minutes && (
+                                                          <div className="flex justify-between items-center text-xs">
+                                                            <span className="text-gray-700">Duration:</span>
+                                                            <span className="text-gray-800 font-semibold">{snookerBooking.total_duration_minutes} min</span>
+                                                          </div>
+                                                        )}
+                                                        <div className="flex justify-between items-center text-xs">
+                                                          <span className="text-gray-700">Total:</span>
+                                                          <span className="text-gray-800 font-semibold">₹{subtotal.toFixed(2)}</span>
+                                                        </div>
+                                                      </div>
+                                                      <div className="flex justify-between items-center pt-1.5 border-t border-blue-200 mb-2">
+                                                        <span className="text-xs font-bold text-blue-700">Subtotal:</span>
+                                                        <span className="text-sm font-bold text-blue-800">₹{subtotal.toFixed(2)}</span>
+                                                      </div>
+                                                      <div className="flex gap-1.5">
+                                                        <button
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            updateIndividualOrderStatus(billing.customer_phno, 'snooker', snookerBooking.snooker_order_id, 'PAID');
+                                                          }}
+                                                          disabled={isPaid}
+                                                          className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all ${
+                                                            isPaid
+                                                              ? 'bg-green-100 text-green-700 cursor-not-allowed opacity-50'
+                                                              : 'bg-green-500 text-white hover:bg-green-600 active:scale-95'
+                                                          }`}
+                                                        >
+                                                          💰 Paid
+                                                        </button>
+                                                        <button
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            updateIndividualOrderStatus(billing.customer_phno, 'snooker', snookerBooking.snooker_order_id, 'UNPAID');
+                                                          }}
+                                                          disabled={!isPaid}
+                                                          className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all ${
+                                                            !isPaid
+                                                              ? 'bg-red-100 text-red-700 cursor-not-allowed opacity-50'
+                                                              : 'bg-red-500 text-white hover:bg-red-600 active:scale-95'
+                                                          }`}
+                                                        >
+                                                          💳 Unpaid
+                                                        </button>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            );
+                                            })()}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="mb-4 text-center py-4 bg-white/60 rounded-lg">
+                                  <p className="text-sm text-gray-600 font-medium">No order history available</p>
+                                </div>
+                              )}
+
+                              {/* Status Update Buttons */}
+                              <div className="grid grid-cols-2 gap-3">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateCustomerBillingStatus(billing.customer_phno, 'PAID');
+                                  }}
+                                  className={`py-2 px-3 rounded-xl font-semibold text-sm transition-all shadow-soft active:scale-95 ${
+                                    billing.latestdate_allorder_status === 'PAID'
+                                      ? 'bg-gradient-to-br from-green-500 to-emerald-500 text-white shadow-soft-lg'
+                                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  }`}
+                                >
+                                  💰 Paid
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateCustomerBillingStatus(billing.customer_phno, 'UNPAID');
+                                  }}
+                                  className={`py-2 px-3 rounded-xl font-semibold text-sm transition-all shadow-soft active:scale-95 ${
+                                    billing.latestdate_allorder_status === 'UNPAID'
+                                      ? 'bg-gradient-to-br from-red-500 to-orange-500 text-white shadow-soft-lg'
+                                      : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                  }`}
+                                >
+                                  💳 Unpaid
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateCustomerBillingStatus(billing.customer_phno, 'ACCEPT');
+                                  }}
+                                  className="py-2 px-3 rounded-xl font-semibold text-sm transition-all shadow-soft active:scale-95 bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                >
+                                  ✅ Accept
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateCustomerBillingStatus(billing.customer_phno, 'REJECT');
+                                  }}
+                                  className="py-2 px-3 rounded-xl font-semibold text-sm transition-all shadow-soft active:scale-95 bg-red-100 text-red-700 hover:bg-red-200"
+                                >
+                                  ❌ Reject
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
         </div>
 
       {/* Item-wise Metrics Section - Collapsible Tab */}
@@ -2347,11 +3415,6 @@ Please collect it from the counter.
           </div>
         </div>
       )}
-
-        {/* Customer Billing Tab */}
-        {activeTab === 'billing' && (
-          <CustomerBillingTab />
-        )}
 
         {/* Footer */}
       <footer className="mt-12 py-6 text-center border-t border-gray-200/50">

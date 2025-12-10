@@ -11,6 +11,34 @@ export class OrderService {
     total_amount: number;
     table_number?: string;
   }): Promise<Order> {
+    // First, ensure customer exists in customer_allorders_details table
+    // The trigger will handle updating this record when the order is created
+    const { data: existingCustomer } = await this.supabase
+      .from('customer_allorders_details')
+      .select('customer_phno')
+      .eq('customer_phno', orderData.customer_phNo)
+      .single();
+
+    // Only insert if customer doesn't exist
+    if (!existingCustomer) {
+      const { error: customerError } = await this.supabase
+        .from('customer_allorders_details')
+        .insert({
+          customer_phno: orderData.customer_phNo,
+          customer_name: orderData.customer_name,
+          total_ordered_value_at_socialx: 0,
+          order_history_json: [],
+          latestdate_allorder_json: {},
+          latestdate_allorder_value: 0,
+          latestdate_allorder_status: 'UNPAID',
+        });
+
+      if (customerError) {
+        console.error('❌ Error creating customer:', customerError);
+        // Don't throw - let the trigger handle it, but log the error
+      }
+    }
+
     const { data, error } = await this.supabase
       .from('orders')
       .insert({
