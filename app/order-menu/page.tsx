@@ -335,17 +335,7 @@ export default function SocialXMenuApp() {
     fetchUnpaidOrders();
   }, [currentView, customerPhone]);
 
-  // Show dialog when order is placed (on page load or when order is placed)
-  useEffect(() => {
-    if (currentView === 'orderPlaced' && orderId && dialogShownForOrderRef.current !== orderId) {
-      // Small delay to ensure smooth transition
-      const timer = setTimeout(() => {
-        setShowOrderMessageDialog(true);
-        dialogShownForOrderRef.current = orderId; // Mark as shown for this order
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [currentView, orderId]);
+  // Dialog removed - no longer showing pop-up on order summary page
 
   // Update current time every second when order is placed
   useEffect(() => {
@@ -1582,67 +1572,7 @@ export default function SocialXMenuApp() {
           </div>
         </footer>
 
-        {/* Order Message Dialog Popup */}
-        {showOrderMessageDialog && (
-          <div 
-            className="fixed inset-0 z-[10000] flex items-center justify-center p-4 animate-in fade-in duration-300"
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-            onClick={(e) => {
-              // Close when clicking outside
-              if (e.target === e.currentTarget) {
-                setShowOrderMessageDialog(false);
-              }
-            }}
-          >
-            <div 
-              className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full transform transition-all animate-in zoom-in-95 duration-300"
-            >
-              {/* Close Button - Red X */}
-              <button
-                onClick={() => setShowOrderMessageDialog(false)}
-                className="absolute top-4 right-4 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full p-1.5 transition-all"
-                aria-label="Close"
-              >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-6 w-6" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-
-              {/* Message Content */}
-              <div className="pr-8">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">
-                  🎉 Order Confirmed!
-                </h3>
-                <div className="space-y-2">
-                  <p className="text-base font-bold text-gray-800">
-                    Your order will be ready soon!
-                  </p>
-                  <p className="text-sm font-semibold text-gray-700 leading-relaxed">
-                    Please pay and collect it from the counter when you get a message.
-                  </p>
-                  <p className="text-sm font-semibold text-gray-700">
-                    SocialX is a self-serve space <span className="text-green-600 font-bold">💚</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Close Button at Bottom */}
-              <button
-                onClick={() => setShowOrderMessageDialog(false)}
-                className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Order Message Dialog Popup - Removed */}
 
       </div>
     );
