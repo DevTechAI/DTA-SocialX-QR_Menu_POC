@@ -47,6 +47,14 @@ export default function SocialXMenuApp() {
   const [checkoutName, setCheckoutName] = useState('');
   const [checkoutPhone, setCheckoutPhone] = useState('');
   const [isDiscountEligible, setIsDiscountEligible] = useState(false);
+  const [skipCheckoutDialog, setSkipCheckoutDialog] = useState(false);
+  const [consolidatedOrderIds, setConsolidatedOrderIds] = useState<string[]>([]);
+  
+  // Unpaid orders state
+  const [unpaidOrders, setUnpaidOrders] = useState<any[]>([]);
+  const [unpaidOrdersTotal, setUnpaidOrdersTotal] = useState(0);
+  const [unpaidOrdersLoading, setUnpaidOrdersLoading] = useState(false);
+  const [allUnpaidOrderIds, setAllUnpaidOrderIds] = useState<string[]>([]);
   
   // Ref for selected items scroll container
   const selectedItemsScrollRef = useRef<HTMLDivElement>(null);
@@ -219,6 +227,24 @@ export default function SocialXMenuApp() {
     if (savedOrderId) {
       setOrderId(savedOrderId);
     }
+    // Restore consolidated order IDs if available
+    const savedConsolidatedIds = getSessionData<string>('food_consolidatedOrderIds');
+    if (savedConsolidatedIds) {
+      try {
+        const parsedIds = JSON.parse(savedConsolidatedIds);
+        if (Array.isArray(parsedIds) && parsedIds.length > 0) {
+          setConsolidatedOrderIds(parsedIds);
+        }
+      } catch (error) {
+        console.error('Error parsing consolidated order IDs:', error);
+      }
+    }
+    // Restore skipCheckoutDialog flag if available
+    const savedSkipCheckout = sessionStorage.getItem('skipCheckoutDialog') === 'true';
+    if (savedSkipCheckout) {
+      setSkipCheckoutDialog(true);
+    }
+    
     // Keep categories collapsed by default when menu view loads
       setExpandedCategories([]);
   }, []);
@@ -243,6 +269,71 @@ export default function SocialXMenuApp() {
       localStorage.setItem('orderStatus', orderStatus);
     }
   }, [orderStatus, mounted]);
+
+  // Ensure customer info is loaded into state when menu view is active
+  useEffect(() => {
+    if (mounted && currentView === 'menu') {
+      // Always ensure customer info is in state, even if it's already there (in case it got cleared)
+      const savedName = getSessionData<string>('food_customerName') || 
+                       localStorage.getItem('customerName') ||
+                       sessionStorage.getItem('customerName');
+      const savedPhone = getSessionData<string>('food_customerPhone') || 
+                        localStorage.getItem('customerPhone') ||
+                        sessionStorage.getItem('customerPhone');
+      
+      // Update state if we have saved info and it's different from current state
+      if (savedName && savedName !== 'Guest' && savedName !== customerName) {
+        setCustomerName(savedName);
+      }
+      if (savedPhone) {
+        // Remove +91 prefix if present (for display in input field)
+        const phoneWithoutPrefix = savedPhone.startsWith('+91') ? savedPhone.slice(3) : savedPhone;
+        if (phoneWithoutPrefix !== customerPhone) {
+          setCustomerPhone(phoneWithoutPrefix);
+        }
+      }
+      
+      // Restore skipCheckoutDialog flag if it exists in sessionStorage
+      const savedSkipCheckout = sessionStorage.getItem('skipCheckoutDialog') === 'true';
+      if (savedSkipCheckout && !skipCheckoutDialog) {
+        setSkipCheckoutDialog(true);
+      }
+    }
+  }, [mounted, currentView]);
+
+  // Fetch unpaid orders when order summary page loads
+  useEffect(() => {
+    const fetchUnpaidOrders = async () => {
+      if (currentView === 'orderPlaced' && customerPhone) {
+        setUnpaidOrdersLoading(true);
+        try {
+          // Ensure phone has +91 prefix
+          const phoneWithPrefix = customerPhone.startsWith('+91') ? customerPhone : `+91${customerPhone}`;
+          const response = await fetch(`/api/orders/unpaid-by-phone?phone=${encodeURIComponent(phoneWithPrefix)}`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            setUnpaidOrders(data.orders || []);
+            setUnpaidOrdersTotal(data.totalAmount || 0);
+            setAllUnpaidOrderIds(data.orderIds || []);
+            console.log('✅ Fetched unpaid orders:', {
+              count: data.count,
+              totalAmount: data.totalAmount,
+              orderIds: data.orderIds
+            });
+          } else {
+            console.error('Failed to fetch unpaid orders');
+          }
+        } catch (error) {
+          console.error('Error fetching unpaid orders:', error);
+        } finally {
+          setUnpaidOrdersLoading(false);
+        }
+      }
+    };
+
+    fetchUnpaidOrders();
+  }, [currentView, customerPhone]);
 
   // Show dialog when order is placed (on page load or when order is placed)
   useEffect(() => {
@@ -646,6 +737,24 @@ export default function SocialXMenuApp() {
     setSessionData('food_customerPhone', phoneWithPrefix);
     localStorage.setItem('customerPhone', phoneWithPrefix); // Keep for backward compatibility
 
+    // Check for existing unpaid orders for this phone number on the same business day
+    let existingOrderIds: string[] = [];
+    try {
+      // Use business day query (8 AM to 8 AM)
+      const existingOrdersResponse = await fetch(`/api/orders?business_day=true`);
+      if (existingOrdersResponse.ok) {
+        const existingOrders = await existingOrdersResponse.json();
+        const unpaidOrders = existingOrders.filter((order: any) => 
+          order.customer_phno === phoneWithPrefix && 
+          (order.status === 'received' || order.status === 'unpaid')
+        );
+        existingOrderIds = unpaidOrders.map((order: any) => order.id);
+        console.log(`📋 Found ${existingOrderIds.length} existing unpaid order(s) for consolidation`);
+      }
+    } catch (error) {
+      console.error('Error checking for existing orders:', error);
+    }
+
     const orderData = {
       customer_name: customerName,
       customer_phno: phoneWithPrefix,
@@ -657,6 +766,8 @@ export default function SocialXMenuApp() {
       })),
       total_amount: getTotalAmount(),
       status: 'received',
+      consolidate_with_existing: existingOrderIds.length > 0, // Flag to indicate consolidation needed
+      existing_order_ids: existingOrderIds, // Pass existing order IDs to backend
     };
 
     try {
@@ -691,12 +802,19 @@ export default function SocialXMenuApp() {
         setCheckoutPhone('');
         // Order placed successfully - save to 12-hour session storage
         const orderId = responseData.id || getMockOrderId();
+        const allOrderIds = existingOrderIds.length > 0 
+          ? [...existingOrderIds, orderId] 
+          : [orderId];
+        
         setOrderId(orderId);
+        setConsolidatedOrderIds(allOrderIds); // Set consolidated order IDs
         setSessionData('food_orderId', orderId);
+        setSessionData('food_consolidatedOrderIds', JSON.stringify(allOrderIds));
         setSessionData('food_orderPlaced', true);
         setSessionData('food_orderStatus', 'Received');
         setSessionData('food_orderSummary', {
           orderId,
+          consolidatedOrderIds: allOrderIds,
           customerName,
           customerPhone: phoneWithPrefix,
           items: selectedItems.map(({ item, quantity }) => ({
@@ -779,6 +897,8 @@ export default function SocialXMenuApp() {
     setNavigationHistory([]);
     setShowOrderMessageDialog(false);
     dialogShownForOrderRef.current = null; // Reset dialog tracking
+    setSkipCheckoutDialog(false);
+    setConsolidatedOrderIds([]);
     
     localStorage.removeItem('customerName');
     localStorage.removeItem('customerPhone');
@@ -789,6 +909,55 @@ export default function SocialXMenuApp() {
     localStorage.removeItem('currentView');
     
     setCurrentView('nameEntry');
+  };
+
+  // More Food/Coffee Handler - retains customer info and skips checkout dialog
+  const handleMoreFoodCoffee = () => {
+    // Load customer info from storage to ensure it's in state
+    const savedName = getSessionData<string>('food_customerName') || 
+                     localStorage.getItem('customerName') ||
+                     customerName;
+    const savedPhone = getSessionData<string>('food_customerPhone') || 
+                      localStorage.getItem('customerPhone') ||
+                      customerPhone;
+    
+    // Update state with customer info if available
+    if (savedName && savedName !== 'Guest') {
+      setCustomerName(savedName);
+    }
+    if (savedPhone) {
+      // Remove +91 prefix if present (for display in input field)
+      const phoneWithoutPrefix = savedPhone.startsWith('+91') ? savedPhone.slice(3) : savedPhone;
+      setCustomerPhone(phoneWithoutPrefix);
+    }
+    
+    // Clear only selected items and order status
+    setSelectedItems([]);
+    setExpandedCategories([]);
+    setOrderStatus('Received');
+    setShowOrderMessageDialog(false);
+    dialogShownForOrderRef.current = null;
+    
+    // Set flag to skip checkout dialog and persist it
+    setSkipCheckoutDialog(true);
+    sessionStorage.setItem('skipCheckoutDialog', 'true'); // Persist flag in sessionStorage
+    
+    setConsolidatedOrderIds([]);
+    
+    // Clear selected items from localStorage but keep customer info
+    localStorage.removeItem('selectedItems');
+    localStorage.removeItem('orderPlaced');
+    localStorage.removeItem('orderStatus');
+    localStorage.removeItem('orderId');
+    
+    console.log('✅ More Food/Coffee clicked - customer info loaded:', {
+      name: savedName,
+      phone: savedPhone,
+      skipCheckoutDialog: true
+    });
+    
+    // Navigate to menu view (not nameEntry)
+    setCurrentView('menu');
   };
 
   if (!mounted) return null;
@@ -1041,77 +1210,189 @@ export default function SocialXMenuApp() {
             <div className="relative z-10 flex flex-col">
               {/* Fixed Header Section */}
               <div className="flex-shrink-0 p-4 sm:p-6 pb-0">
-                {/* Header: Tick Mark + Name + Time */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
+                {/* Header: Tick Mark + Name */}
+                <div className="flex items-center gap-2 mb-4">
                     <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-500 shadow-soft-lg flex-shrink-0">
                       <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
-                    <div>
                       <h2 className="text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
                         {customerName}&apos;s Order
                       </h2>
-                      <p className="text-xs font-semibold text-gray-600 mt-0.5">Order ID: {orderId}</p>
                     </div>
+
+                {/* Order IDs, Status, and ETA Row */}
+                <div className="flex items-start justify-between mb-4 gap-2">
+                  {/* Order IDs - 30% width */}
+                  <div className="flex-[0_0_30%]">
+                    <p className="text-xs font-semibold text-gray-500 mb-1">Order IDs</p>
+                    <p className="text-xs font-semibold text-gray-600 break-words">
+                      {allUnpaidOrderIds.length > 0 ? (
+                        allUnpaidOrderIds.map(id => id.slice(-6)).join(', ')
+                      ) : consolidatedOrderIds.length > 0 ? (
+                        consolidatedOrderIds.map(id => id.slice(-6)).join(', ')
+                      ) : orderId ? (
+                        orderId.slice(-6)
+                      ) : (
+                        'N/A'
+                      )}
+                    </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500">ETA Time</p>
+                  
+                  {/* Order Status - Middle */}
+                  <div className="flex-1 text-center">
+                    <p className="text-xs font-semibold text-gray-500 mb-1">Order-Status</p>
+                    <p className="text-sm font-bold text-primary-600">{orderStatus}</p>
+                </div>
+
+                  {/* ETA Time - Right */}
+                  <div className="flex-1 text-right">
+                    <p className="text-xs font-semibold text-gray-500 mb-1">ETA Time</p>
                     <p className="text-sm font-bold text-primary-600">25min</p>
                   </div>
                 </div>
 
-                {/* Status Section */}
-                <div className="mb-4">
-                  <div className="bg-gradient-to-br from-primary-50 via-accent-50 to-orange-50 rounded-2xl p-4 border border-primary-100">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-gray-700">Order Status</span>
-                      <span className="text-lg font-bold text-primary-600">{orderStatus}</span>
+                {/* Order Ready Message */}
+                <div className="mb-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-base font-bold text-gray-800">
+                      Order will be ready soon!
+                    </p>
+                    {/* Follow us on Instagram */}
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-700">Follow us</span>
+                      <a
+                        href="https://www.instagram.com/socialxcafe/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center w-6 h-6 hover:scale-110 transition-transform"
+                        title="Follow us on Instagram"
+                      >
+                        <Image
+                          src="/resources/instagram-logo.svg"
+                          alt="Instagram"
+                          width={24}
+                          height={24}
+                          className="w-6 h-6"
+                        />
+                      </a>
                     </div>
                   </div>
-                </div>
-
-                {/* Order Ready Message */}
-                <div className="mb-4">
-                  <div className="space-y-2">
-                    <p className="text-base font-bold text-gray-800">
-                      Your order will be ready soon!
-                    </p>
                     <p className="text-sm font-semibold text-gray-700 leading-relaxed">
-                      Please pay and collect it from the counter when you get a message.
+                    Please pay and collect it from the counter when you get a message.
                     </p>
                     <p className="text-sm font-semibold text-gray-700">
                       SocialX is a self-serve space <span className="text-green-600 font-bold">💚</span>
                     </p>
+                </div>
+              </div>
+
+              {/* Sticky Total Amount - Fixed at top of scrollable area */}
+              <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm px-4 sm:px-6 pt-2 pb-2 border-b border-primary-100 -mt-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-bold text-gray-700">
+                    {unpaidOrders.length > 1 ? 'Total Amount (All Unpaid Orders)' : 'Total Amount'}
+                  </span>
+                  <div className="text-right">
+                    {unpaidOrders.length > 1 ? (
+                      <span className="text-lg font-bold text-primary-600">₹{unpaidOrdersTotal.toFixed(2)}</span>
+                    ) : isDiscountEligible && getOriginalTotalAmount() !== getTotalAmount() ? (
+                      <>
+                        <span className="text-base line-through text-gray-400 mr-2">₹{getOriginalTotalAmount()}</span>
+                        <span className="text-lg font-bold text-green-600">₹{getTotalAmount()}</span>
+                      </>
+                    ) : (
+                      <span className="text-lg font-bold text-primary-600">₹{getTotalAmount()}</span>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Scrollable Order Items List */}
-              <div className="px-4 sm:px-6 max-h-[35vh] sm:max-h-[40vh] md:max-h-[45vh] overflow-y-auto">
-                {/* Total Amount */}
-                <div className="mb-4 pb-3 border-b border-primary-100">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-bold text-gray-700">Total Amount</span>
-                    <div className="text-right">
-                      {isDiscountEligible && getOriginalTotalAmount() !== getTotalAmount() ? (
-                        <>
-                          <span className="text-base line-through text-gray-400 mr-2">₹{getOriginalTotalAmount()}</span>
-                          <span className="text-lg font-bold text-green-600">₹{getTotalAmount()}</span>
-                        </>
-                      ) : (
-                        <span className="text-lg font-bold text-primary-600">₹{getTotalAmount()}</span>
-                      )}
-                    </div>
+              <div className="px-4 sm:px-6 max-h-[35vh] sm:max-h-[40vh] md:max-h-[45vh] overflow-y-auto -mt-2">
+                {/* Show loading state */}
+                {unpaidOrdersLoading && (
+                  <div className="mb-4 text-center pt-4">
+                    <p className="text-sm text-gray-500">Loading unpaid orders...</p>
                   </div>
-                </div>
-                <h3 className="text-sm font-bold text-gray-700 mb-3">Order Items</h3>
+                )}
+                
+                {/* Order Items Section - Show first */}
+                <h3 className="text-sm font-bold text-gray-700 mb-3 pt-4">Order Items</h3>
                 <div className="space-y-2 pb-4">
-                  {selectedItems.map(({ item, quantity }) => (
+                  {/* If we have unpaid orders, show items from all orders, otherwise show selectedItems */}
+                  {unpaidOrders.length > 1 ? (
+                    // Show consolidated items from all unpaid orders
+                    (() => {
+                      // Merge items from all unpaid orders
+                      const allItemsMap = new Map<string, { item: any; quantity: number }>();
+                      
+                      unpaidOrders.forEach((order) => {
+                        if (order.items && Array.isArray(order.items)) {
+                          order.items.forEach((orderItem: any) => {
+                            const itemId = orderItem.menu_item_id || orderItem.item?.id || orderItem.id || `item-${orderItem.name}`;
+                            const itemName = orderItem.name || orderItem.item?.name || 'Item';
+                            const itemPrice = orderItem.price || orderItem.item?.price || 0;
+                            const itemQuantity = orderItem.quantity || 1;
+                            const itemIcon = orderItem.icon || orderItem.item?.icon || '🍽️';
+                            
+                            const existing = allItemsMap.get(itemId);
+                            if (existing) {
+                              existing.quantity += itemQuantity;
+                            } else {
+                              allItemsMap.set(itemId, {
+                                item: {
+                                  id: itemId,
+                                  name: itemName,
+                                  price: itemPrice,
+                                  icon: itemIcon,
+                                },
+                                quantity: itemQuantity,
+                              });
+                            }
+                          });
+                        }
+                      });
+                      
+                      return Array.from(allItemsMap.values()).map(({ item, quantity }) => (
+                        <div key={item.id} className="relative group/item rounded-2xl overflow-hidden">
+                          <div className="bg-gradient-to-br from-white via-white to-orange-50/60 py-2.5 px-3 border border-primary-100 shadow-sm">
+                            <div className="flex items-center gap-3">
+                              {item.icon && (
+                                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100">
+                                  {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
+                                    <Image 
+                                      src={item.icon} 
+                                      alt={item.name}
+                                      width={32}
+                                      height={32}
+                                      className="object-contain"
+                                    />
+                                  ) : (
+                                    <span className="text-xl">{item.icon}</span>
+                                  )}
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-bold text-gray-800 truncate">{item.name}</h4>
+                                <p className="text-xs text-gray-500">₹{item.price.toFixed(2)} each</p>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <p className="text-lg font-bold text-primary-600">× {quantity}</p>
+                                <p className="text-xs text-gray-600">₹{(item.price * quantity).toFixed(2)}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ));
+                    })()
+                  ) : (
+                    // Show selectedItems as before
+                    selectedItems.map(({ item, quantity }) => (
                     <div key={item.id} className="relative group/item rounded-2xl overflow-hidden">
                       {/* Card background */}
-                      <div className="bg-gradient-to-br from-white via-white to-orange-50/60 p-4 border border-primary-100 shadow-sm">
+                      <div className="bg-gradient-to-br from-white via-white to-orange-50/60 py-2.5 px-3 border border-primary-100 shadow-sm">
                         <div className="flex items-center gap-3">
                           {/* Icon */}
                           {item.icon && (
@@ -1142,12 +1423,36 @@ export default function SocialXMenuApp() {
                         </div>
                       </div>
                     </div>
+                    ))
+                  )}
+                </div>
+                
+                {/* Show all unpaid orders if multiple exist - After Order Items */}
+                {!unpaidOrdersLoading && unpaidOrders.length > 1 && (
+                  <div className="mb-4 space-y-3 pt-4">
+                    <h3 className="text-sm font-bold text-gray-700 mb-3">Individual Orders</h3>
+                    {unpaidOrders.map((order, orderIndex) => (
+                      <div key={order.id} className="bg-gradient-to-br from-orange-50 via-white to-orange-50/40 p-3 rounded-xl border border-primary-100 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-gray-600">Order {orderIndex + 1}</span>
+                          <span className="text-xs font-semibold text-primary-600">₹{order.total_amount?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {order.items && Array.isArray(order.items) && order.items.map((orderItem: any, itemIndex: number) => (
+                            <div key={itemIndex} className="flex items-center justify-between text-xs">
+                              <span className="text-gray-700">{orderItem.name || orderItem.item?.name || 'Item'}</span>
+                              <span className="text-gray-600">× {orderItem.quantity || 1} = ₹{((orderItem.price || orderItem.item?.price || 0) * (orderItem.quantity || 1)).toFixed(2)}</span>
+                    </div>
                   ))}
                 </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Fixed Bottom Section */}
-              <div className="p-4 sm:p-6 pt-3 sm:pt-4 border-t border-primary-100 bg-white/50">
+              <div className="p-4 sm:p-6 pt-2 sm:pt-2 border-t border-primary-100 bg-white/50 -mt-2">
                 {/* Total - Only visible for Bill Generated or Bill Paid */}
                 {(orderStatus === 'Bill Generated' || orderStatus === 'Bill Paid') && (
                   <div className="bg-gradient-to-br from-primary-50 via-accent-50 to-orange-50 rounded-2xl p-4 mb-4">
@@ -1169,40 +1474,69 @@ export default function SocialXMenuApp() {
 
                 {/* Action Buttons */}
                 <div className="flex flex-col gap-3">
-                  {/* Start New Order Button */}
+                  {/* More Food/Coffee Button */}
                 <button
-                  onClick={handleStartNewOrder}
+                  onClick={handleMoreFoodCoffee}
                   className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
                 >
                   <div className="absolute inset-0 gradient-primary"></div>
-                  <span className="relative z-10 text-white">Start New Order</span>
+                  <span className="relative z-10 text-white">More Food/Coffee</span>
                 </button>
 
-                  {/* Book Snooker Button */}
-                  <button
-                    onClick={() => {
-                      // Clear any existing snooker booking data to show empty form
-                      removeSessionData('snooker_bookingDetails');
-                      removeSessionData('snooker_bookingOrderId');
-                      removeSessionData('snooker_showOrderSummary');
-                      // Set flag to indicate we're starting a new booking (not restoring)
-                      sessionStorage.setItem('startNewSnookerBooking', 'true');
-                      
-                      // Store customer info for snooker booking page to pre-fill
-                      if (customerName && customerPhone) {
-                        const phoneWithPrefix = customerPhone.startsWith('+91') ? customerPhone : `+91${customerPhone}`;
-                        sessionStorage.setItem('customerName', customerName);
-                        sessionStorage.setItem('customerPhone', phoneWithPrefix);
-                        setSessionData('snooker_customerName', customerName);
-                        setSessionData('snooker_customerPhone', phoneWithPrefix);
-                      }
-                      router.push('/book-snooker');
-                    }}
-                    className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600"></div>
-                    <span className="relative z-10 text-white">Book Snooker</span>
-                  </button>
+                  {/* Book Snooker and Book WorkSpace Buttons - Side by Side */}
+                  <div className="flex gap-2 w-full">
+                    {/* Book Snooker Button - Left ~45% */}
+                    <button
+                      onClick={() => {
+                        // Clear any existing snooker booking data to show empty form
+                        removeSessionData('snooker_bookingDetails');
+                        removeSessionData('snooker_bookingOrderId');
+                        removeSessionData('snooker_showOrderSummary');
+                        // Set flag to indicate we're starting a new booking (not restoring)
+                        sessionStorage.setItem('startNewSnookerBooking', 'true');
+                        
+                        // Store customer info for snooker booking page to pre-fill
+                        if (customerName && customerPhone) {
+                          const phoneWithPrefix = customerPhone.startsWith('+91') ? customerPhone : `+91${customerPhone}`;
+                          sessionStorage.setItem('customerName', customerName);
+                          sessionStorage.setItem('customerPhone', phoneWithPrefix);
+                          setSessionData('snooker_customerName', customerName);
+                          setSessionData('snooker_customerPhone', phoneWithPrefix);
+                        }
+                        router.push('/book-snooker');
+                      }}
+                      className="relative flex-[0_0_45%] py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl"></div>
+                      <span className="relative z-10 text-white text-sm sm:text-base">Book Snooker</span>
+                    </button>
+
+                    {/* Book WorkSpace Button - Right ~55% */}
+                    <button
+                      onClick={() => {
+                        // Clear any existing workspace booking data to show empty form
+                        removeSessionData('workspace_bookingDetails');
+                        removeSessionData('workspace_bookingOrderId');
+                        removeSessionData('workspace_showOrderSummary');
+                        // Set flag to indicate we're starting a new booking (not restoring)
+                        sessionStorage.setItem('startNewWorkspaceBooking', 'true');
+                        
+                        // Store customer info for workspace booking page to pre-fill
+                        if (customerName && customerPhone) {
+                          const phoneWithPrefix = customerPhone.startsWith('+91') ? customerPhone : `+91${customerPhone}`;
+                          sessionStorage.setItem('customerName', customerName);
+                          sessionStorage.setItem('customerPhone', phoneWithPrefix);
+                          setSessionData('workspace_customerName', customerName);
+                          setSessionData('workspace_customerPhone', phoneWithPrefix);
+                        }
+                        router.push('/book-workspace');
+                      }}
+                      className="relative flex-1 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl"></div>
+                      <span className="relative z-10 text-white text-sm sm:text-base">Book WorkSpace</span>
+                </button>
+                  </div>
 
                   {/* Home Button */}
                   <button
@@ -1688,7 +2022,86 @@ export default function SocialXMenuApp() {
         >
           <button
             onClick={async () => {
-              // Check if customer details are available from sessionStorage (from workspace/snooker booking)
+              // PRIORITY 1: Check skipCheckoutDialog flag from sessionStorage first (persists across navigation)
+              const savedSkipCheckout = sessionStorage.getItem('skipCheckoutDialog') === 'true';
+              const shouldSkipDialog = skipCheckoutDialog || savedSkipCheckout;
+              
+              if (shouldSkipDialog) {
+                // Get customer info from ALL possible sources (state, localStorage, sessionStorage, 12-hour session)
+                const nameToUse = customerName || 
+                                 getSessionData<string>('food_customerName') || 
+                                 localStorage.getItem('customerName') ||
+                                 sessionStorage.getItem('customerName') || 
+                                 '';
+                
+                // Get phone from all sources and normalize it
+                let phoneToUse = customerPhone || 
+                                getSessionData<string>('food_customerPhone') || 
+                                localStorage.getItem('customerPhone') ||
+                                sessionStorage.getItem('customerPhone') || 
+                                '';
+                
+                // If phone doesn't have +91 prefix, add it (handle both with and without prefix)
+                if (phoneToUse && !phoneToUse.startsWith('+91')) {
+                  // Remove any existing prefix and extract digits
+                  const phoneDigits = phoneToUse.replace(/^\+?91?/, '').replace(/\D/g, '').slice(0, 10);
+                  phoneToUse = phoneDigits.length === 10 ? `+91${phoneDigits}` : phoneToUse;
+                }
+                
+                console.log('🔍 skipCheckoutDialog is true, checking customer info:', {
+                  skipCheckoutDialog,
+                  savedSkipCheckout,
+                  customerName,
+                  customerPhone,
+                  nameToUse,
+                  phoneToUse,
+                  hasName: !!nameToUse,
+                  hasPhone: !!phoneToUse,
+                  phoneLength: phoneToUse ? (phoneToUse.startsWith('+91') ? phoneToUse.length - 3 : phoneToUse.length) : 0
+                });
+                
+                if (nameToUse && phoneToUse) {
+                  // Ensure phone has +91 prefix and is valid
+                  let phoneWithPrefix = phoneToUse.startsWith('+91') ? phoneToUse : `+91${phoneToUse.replace(/^\+?91?/, '').replace(/\D/g, '').slice(0, 10)}`;
+                  
+                  // Validate phone number (should be +91 followed by 10 digits = 13 characters total)
+                  const phoneDigits = phoneWithPrefix.startsWith('+91') ? phoneWithPrefix.slice(3) : phoneWithPrefix;
+                  if (phoneDigits.length !== 10) {
+                    // Invalid phone, reset flag and show dialog
+                    console.warn('⚠️ Invalid phone number, showing dialog. Phone:', phoneWithPrefix, 'Digits:', phoneDigits);
+                    setSkipCheckoutDialog(false);
+                    sessionStorage.removeItem('skipCheckoutDialog');
+                    setCheckoutName(nameToUse);
+                    setCheckoutPhone(phoneDigits);
+                    setShowCheckoutDialog(true);
+                    return;
+                  }
+                  
+                  // Update state with customer info
+                  setCustomerName(nameToUse);
+                  setCustomerPhone(phoneDigits);
+                  
+                  console.log('✅ Placing order directly without dialog:', { nameToUse, phoneWithPrefix });
+                  
+                  // Place order directly without showing dialog
+                  await processOrderPlacement(nameToUse, phoneWithPrefix);
+                  setSkipCheckoutDialog(false); // Reset flag after use
+                  sessionStorage.removeItem('skipCheckoutDialog'); // Clear persisted flag
+                  return;
+                } else {
+                  // If no customer info found, reset flag and show dialog
+                  console.warn('⚠️ skipCheckoutDialog is true but no customer info found, showing dialog', {
+                    nameToUse,
+                    phoneToUse
+                  });
+                  setSkipCheckoutDialog(false);
+                  sessionStorage.removeItem('skipCheckoutDialog');
+                  setShowCheckoutDialog(true);
+                  return;
+                }
+              }
+              
+              // PRIORITY 2: Check if customer details are available from sessionStorage (from workspace/snooker booking)
               const sessionName = sessionStorage.getItem('customerName');
               const sessionPhone = sessionStorage.getItem('customerPhone');
               const fromBookingPage = sessionStorage.getItem('fromBookingPage') === 'true';

@@ -146,14 +146,34 @@ export async function POST(request: NextRequest) {
       total_amount,
     });
     
+    // Check if consolidation is requested
+    const consolidateWithExisting = body.consolidate_with_existing === true;
+    const existingOrderIds = body.existing_order_ids || [];
+    
     const orderService = new OrderService();
-    const order = await orderService.createOrder({
-      customer_name,
-      customer_phNo: customer_phno,
-      items,
-      total_amount,
-      table_number,
-    });
+    let order;
+    
+    if (consolidateWithExisting && existingOrderIds.length > 0) {
+      // Consolidate with existing unpaid orders
+      console.log('🔄 Consolidating order with existing orders:', existingOrderIds);
+      order = await orderService.consolidateOrder({
+        customer_name,
+        customer_phNo: customer_phno,
+        items,
+        total_amount,
+        table_number,
+        existingOrderIds,
+      });
+    } else {
+      // Create new order
+      order = await orderService.createOrder({
+        customer_name,
+        customer_phNo: customer_phno,
+        items,
+        total_amount,
+        table_number,
+      });
+    }
 
     console.log('✅ Order created successfully in database:', order.id);
     return NextResponse.json(order, { status: 201 });

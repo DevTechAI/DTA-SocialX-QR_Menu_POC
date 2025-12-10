@@ -113,10 +113,10 @@ export async function POST(request: NextRequest) {
 
       if (customerError) {
         console.error('❌ Error creating customer:', customerError);
-        return NextResponse.json(
+      return NextResponse.json(
           { error: `Failed to create customer record: ${customerError.message}` },
           { status: 500 }
-        );
+      );
       }
     }
 
