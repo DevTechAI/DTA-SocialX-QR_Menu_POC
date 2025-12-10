@@ -1431,23 +1431,33 @@ Please collect it from the counter.
               
               {/* Centered Admin Dashboard */}
               <div className="flex-1 flex flex-col items-center text-center">
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white flex items-center gap-3 drop-shadow-lg">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white flex items-center gap-3 drop-shadow-lg whitespace-nowrap">
                   <span className="text-4xl md:text-5xl">👨‍💼</span>
                   <span>Admin Dashboard</span>
                 </h1>
-                <p className="text-white text-base md:text-lg mt-2 font-bold drop-shadow-lg">SocialX Hub - Order Management</p>
+                <p className="text-white text-base md:text-lg mt-2 font-bold" style={{ 
+                  textShadow: '3px 3px 6px rgba(0, 0, 0, 0.9), -2px -2px 4px rgba(0, 0, 0, 0.9), 2px 2px 4px rgba(0, 0, 0, 0.9), -2px 2px 4px rgba(0, 0, 0, 0.9), 2px -2px 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.8)',
+                  WebkitTextStroke: '1px rgba(0, 0, 0, 0.7)',
+                  paintOrder: 'stroke fill'
+                }}>SocialX Hub - Order Management</p>
               </div>
               
               {/* Right side - Date and Time + Actions */}
               <div className="flex-1 flex flex-col items-end gap-2">
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Link
-                    href="/order-admin/menu-edit"
-                    className="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-lg border border-white/30 hover:bg-white/30 transition-colors font-semibold text-sm"
-                  >
-                    📝 Menu Editor
-                  </Link>
+                    <Link
+                      href="/order-admin/bi-reports"
+                      className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
+                    >
+                      📊 BI Reports
+                    </Link>
+                    <Link
+                      href="/order-admin/menu-edit"
+                      className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
+                    >
+                      📝 Menu Editor
+                    </Link>
                   <button
                     onClick={handleSignOut}
                     className="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-lg border border-white/30 hover:bg-white/30 transition-colors font-semibold text-sm"
@@ -1588,6 +1598,21 @@ Please collect it from the counter.
         <div className="mb-6 md:mb-8 w-full">
           <div className="flex items-center justify-center gap-4 mb-6">
             <button
+              onClick={() => setActiveTab('billing')}
+              className={`px-6 py-3 rounded-xl font-bold text-lg transition-all relative ${
+                activeTab === 'billing'
+                  ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 shadow-soft'
+              }`}
+            >
+              💳 Customer Billing
+              {pendingBillingCount > 0 && (
+                <span className="ml-2 text-xl animate-pulse" title="Notification sound active - pending billings">
+                  🔊
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => setActiveTab('food')}
               className={`px-6 py-3 rounded-xl font-bold text-lg transition-all relative ${
                 activeTab === 'food'
@@ -1638,21 +1663,6 @@ Please collect it from the counter.
               💼 WorkSpace Booking
               {pendingWorkspaceCount > 0 && (
                 <span className="ml-2 text-xl animate-pulse" title="Notification sound active - pending bookings">
-                  🔊
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('billing')}
-              className={`px-6 py-3 rounded-xl font-bold text-lg transition-all relative ${
-                activeTab === 'billing'
-                  ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg'
-                  : 'bg-white text-gray-700 hover:bg-gray-100 shadow-soft'
-              }`}
-            >
-              💳 Customer Billing
-              {pendingBillingCount > 0 && (
-                <span className="ml-2 text-xl animate-pulse" title="Notification sound active - pending billings">
                   🔊
                 </span>
               )}
@@ -1978,6 +1988,23 @@ Please collect it from the counter.
                   <span className="text-3xl md:text-4xl">🎱</span>
                   <span>Snooker Bookings</span>
                 </h2>
+                
+                {/* Sound Notification Toggle */}
+                <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-soft border border-blue-200">
+                  <span className="text-sm font-semibold text-gray-700">🔔</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={soundEnabled}
+                      onChange={toggleSound}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                    <span className="ml-2 text-sm font-medium text-gray-700">
+                      {soundEnabled ? 'On' : 'Off'}
+                    </span>
+                  </label>
+                </div>
               </div>
               <p className="text-gray-600 mt-2 text-sm md:text-base font-medium text-center">
                 Click on a booking to expand and view details
@@ -2354,6 +2381,23 @@ Please collect it from the counter.
                   <span className="text-3xl md:text-4xl">💼</span>
                   <span>Workspace Bookings</span>
                 </h2>
+                
+                {/* Sound Notification Toggle */}
+                <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-soft border border-green-200">
+                  <span className="text-sm font-semibold text-gray-700">🔔</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={soundEnabled}
+                      onChange={toggleSound}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                    <span className="ml-2 text-sm font-medium text-gray-700">
+                      {soundEnabled ? 'On' : 'Off'}
+                    </span>
+                  </label>
+                </div>
               </div>
               <p className="text-gray-600 mt-2 text-sm md:text-base font-medium text-center">
                 Click on a booking to expand and view details
@@ -2654,6 +2698,23 @@ Please collect it from the counter.
                   <span className="text-3xl md:text-4xl">💳</span>
                   <span>Customer Billing</span>
                 </h2>
+                
+                {/* Sound Notification Toggle */}
+                <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-soft border border-purple-200">
+                  <span className="text-sm font-semibold text-gray-700">🔔</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={soundEnabled}
+                      onChange={toggleSound}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                    <span className="ml-2 text-sm font-medium text-gray-700">
+                      {soundEnabled ? 'On' : 'Off'}
+                    </span>
+                  </label>
+                </div>
               </div>
               <p className="text-gray-600 mt-2 text-sm md:text-base font-medium text-center">
                 Click on a customer to expand and view consolidated billing details
@@ -2717,7 +2778,7 @@ Please collect it from the counter.
                       key={billing.customer_phno}
                       className="relative rounded-2xl overflow-hidden transition-all shadow-soft hover:shadow-soft-lg"
                     >
-                      <div className={`relative ${config.cardBg} p-5 md:p-6 border-2 ${config.color} rounded-2xl`}>
+                      <div className={`relative ${config.cardBg} p-3 sm:p-4 md:p-6 border-2 ${config.color} rounded-2xl`}>
                         <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent rounded-2xl pointer-events-none"></div>
                         
                         <div className="relative z-10">
@@ -2732,22 +2793,22 @@ Please collect it from the counter.
                               }
                               setExpandedBillings(newExpanded);
                             }}
-                            className="w-full text-left hover:bg-white/30 rounded-xl p-3 -m-3 mb-0 transition-all cursor-pointer"
+                            className="w-full text-left hover:bg-white/30 rounded-xl p-2 sm:p-3 -m-2 sm:-m-3 mb-0 transition-all cursor-pointer"
                           >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex items-start gap-3 flex-1 min-w-0">
-                                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl ${config.badge} flex items-center justify-center shadow-soft flex-shrink-0`}>
-                                  <span className="text-2xl md:text-3xl text-white">{config.icon}</span>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-2 sm:gap-4">
+                              <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0 w-full sm:w-auto">
+                                <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl ${config.badge} flex items-center justify-center shadow-soft flex-shrink-0`}>
+                                  <span className="text-xl sm:text-2xl md:text-3xl text-white">{config.icon}</span>
                                 </div>
-                                <div className="flex-1 min-w-0 space-y-1">
-                                  <h3 className="text-base md:text-lg font-bold text-gray-800 truncate leading-tight">
+                                <div className="flex-1 min-w-0 space-y-0.5 sm:space-y-1">
+                                  <h3 className="text-sm sm:text-base md:text-lg font-bold text-gray-800 truncate leading-tight">
                                     {billing.customer_name}
                                   </h3>
                                   <p className="text-xs text-gray-600 font-medium truncate">
                                     📞 {billing.customer_phno || 'N/A'}
                                   </p>
                                   <p className="text-xs text-gray-600 font-medium">
-                                    Total Value: ₹{billing.total_ordered_value_at_socialx.toFixed(2)}
+                                    Total: ₹{billing.total_ordered_value_at_socialx.toFixed(2)}
                                   </p>
                                   <p className="text-xs text-gray-500">
                                     {new Date(billing.updated_at).toLocaleString('en-US', { 
@@ -2759,8 +2820,8 @@ Please collect it from the counter.
                                   </p>
                                 </div>
                               </div>
-                              <div className="text-right flex-shrink-0 flex flex-col items-end">
-                                <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${config.badge} mb-2`}>
+                              <div className="text-right sm:text-right flex-shrink-0 flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-0 w-full sm:w-auto justify-between sm:justify-start">
+                                <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${config.badge}`}>
                                   <span className="text-xs font-bold text-white uppercase">{config.label}</span>
                                   {billing.latestdate_allorder_status === 'UNPAID' && (
                                     <span className="text-sm animate-pulse" title="Notification sound active - needs attention">
@@ -2768,7 +2829,7 @@ Please collect it from the counter.
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs font-semibold text-gray-600 mt-2">
+                                <p className="text-xs font-semibold text-gray-600 sm:mt-2">
                                   {isExpanded ? '▲ Hide' : '▼ Show'}
                                 </p>
                               </div>
@@ -2777,13 +2838,13 @@ Please collect it from the counter.
 
                           {/* Expanded Details */}
                           {isExpanded && (
-                            <div className="mt-4 pt-4 border-t-2 border-gray-300/50">
+                            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t-2 border-gray-300/50">
                               {/* Order History from order_history_json */}
                               {billing.order_history_json && billing.order_history_json.length > 0 ? (
-                                <div className="space-y-4 mb-4">
-                                  <h4 className="font-bold text-gray-700 mb-3 flex items-center justify-between text-sm md:text-base">
+                                <div className="space-y-3 sm:space-y-4 mb-3 sm:mb-4">
+                                  <h4 className="font-bold text-gray-700 mb-2 sm:mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs sm:text-sm md:text-base">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-lg">📋</span>
+                                      <span className="text-base sm:text-lg">📋</span>
                                       <span>Order History:</span>
                                     </div>
                                     <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${
@@ -2825,16 +2886,16 @@ Please collect it from the counter.
                                     return (
                                       <div
                                         key={index}
-                                        className={`relative rounded-xl overflow-hidden ${statusConfig.bg} border-2 ${statusConfig.color} p-4`}
+                                        className={`relative rounded-xl overflow-hidden ${statusConfig.bg} border-2 ${statusConfig.color} p-3 sm:p-4`}
                                       >
                                         <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent rounded-xl pointer-events-none"></div>
                                         
                                         <div className="relative z-10">
                                           {/* Order Date Header */}
-                                          <div className="flex items-center justify-between mb-3">
+                                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-2 mb-2 sm:mb-3">
                                             <div className="flex items-center gap-2">
-                                              <span className="text-lg">📅</span>
-                                              <h5 className="font-bold text-gray-800 text-sm md:text-base">
+                                              <span className="text-base sm:text-lg">📅</span>
+                                              <h5 className="font-bold text-gray-800 text-xs sm:text-sm md:text-base">
                                                 {new Date(orderDate).toLocaleDateString('en-US', { 
                                                   weekday: 'short',
                                                   year: 'numeric',
@@ -2843,11 +2904,11 @@ Please collect it from the counter.
                                                 })}
                                               </h5>
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
                                               <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${statusConfig.badge}`}>
                                                 <span className="text-xs font-bold text-white uppercase">{statusConfig.label}</span>
                                               </div>
-                                              <span className="text-sm font-bold text-gray-900">₹{orderValue.toFixed(2)}</span>
+                                              <span className="text-xs sm:text-sm font-bold text-gray-900">₹{orderValue.toFixed(2)}</span>
                                             </div>
                                           </div>
 
@@ -2865,7 +2926,7 @@ Please collect it from the counter.
                                                 : 'bg-gradient-to-r from-red-500 to-orange-500';
                                               
                                               return (
-                                                <div className="bg-orange-50/90 rounded-lg p-3 border-2 border-orange-300">
+                                                <div className="bg-orange-50/90 rounded-lg p-2 sm:p-3 border-2 border-orange-300">
                                                   <div 
                                                     className="flex items-center justify-between mb-2 cursor-pointer hover:bg-orange-100/50 rounded p-1 -m-1 transition-all"
                                                     onClick={(e) => {
@@ -2879,12 +2940,12 @@ Please collect it from the counter.
                                                       setExpandedSubCards(newExpanded);
                                                     }}
                                                   >
-                                                    <div className="flex items-center gap-2">
-                                                      <span className="text-lg">🍽️</span>
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                                      <span className="text-base sm:text-lg">🍽️</span>
                                                       <p className="text-xs font-bold text-orange-700">Food Order(s)</p>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg ${statusBadge}`}>
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                                      <div className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-lg ${statusBadge}`}>
                                                         <span className="text-xs font-bold text-white uppercase">
                                                           {allPaid ? 'PAID' : 'UNPAID'}
                                                         </span>
@@ -2901,8 +2962,8 @@ Please collect it from the counter.
                                                   const subtotal = foodOrder.total_amount || 0;
                                                   const isPaid = foodOrder.status === 'paid' || foodOrder.status === 'Paid';
                                                   return (
-                                                    <div key={foodIdx} className="mb-2 last:mb-0 bg-white/60 rounded-lg p-2 border border-orange-200">
-                                                      <div className="flex items-center justify-between mb-1.5">
+                                                    <div key={foodIdx} className="mb-2 last:mb-0 bg-white/60 rounded-lg p-2 sm:p-2.5 border border-orange-200">
+                                                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-1.5">
                                                         <div className="text-xs text-gray-600 font-semibold">
                                                           Order #{foodOrder.id.slice(0, 8)}
                                                         </div>
@@ -2936,14 +2997,14 @@ Please collect it from the counter.
                                                         <span className="text-xs font-bold text-orange-700">Subtotal:</span>
                                                         <span className="text-sm font-bold text-orange-800">₹{subtotal.toFixed(2)}</span>
                                                       </div>
-                                                      <div className="flex gap-1.5">
+                                                      <div className="flex gap-1.5 sm:gap-2">
                                                         <button
                                                           onClick={(e) => {
                                                             e.stopPropagation();
                                                             updateIndividualOrderStatus(billing.customer_phno, 'food', foodOrder.id, 'PAID');
                                                           }}
                                                           disabled={isPaid}
-                                                          className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all ${
+                                                          className={`flex-1 py-2 sm:py-1.5 px-2 sm:px-3 rounded text-xs font-semibold transition-all touch-manipulation ${
                                                             isPaid
                                                               ? 'bg-green-100 text-green-700 cursor-not-allowed opacity-50'
                                                               : 'bg-green-500 text-white hover:bg-green-600 active:scale-95'
@@ -2957,7 +3018,7 @@ Please collect it from the counter.
                                                             updateIndividualOrderStatus(billing.customer_phno, 'food', foodOrder.id, 'UNPAID');
                                                           }}
                                                           disabled={!isPaid}
-                                                          className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all ${
+                                                          className={`flex-1 py-2 sm:py-1.5 px-2 sm:px-3 rounded text-xs font-semibold transition-all touch-manipulation ${
                                                             !isPaid
                                                               ? 'bg-red-100 text-red-700 cursor-not-allowed opacity-50'
                                                               : 'bg-red-500 text-white hover:bg-red-600 active:scale-95'
@@ -2987,7 +3048,7 @@ Please collect it from the counter.
                                                 : 'bg-gradient-to-r from-red-500 to-orange-500';
                                               
                                               return (
-                                                <div className="bg-green-50/90 rounded-lg p-3 border-2 border-green-300">
+                                                <div className="bg-green-50/90 rounded-lg p-2 sm:p-3 border-2 border-green-300">
                                                   <div 
                                                     className="flex items-center justify-between mb-2 cursor-pointer hover:bg-green-100/50 rounded p-1 -m-1 transition-all"
                                                     onClick={(e) => {
@@ -3001,12 +3062,12 @@ Please collect it from the counter.
                                                       setExpandedSubCards(newExpanded);
                                                     }}
                                                   >
-                                                    <div className="flex items-center gap-2">
-                                                      <span className="text-lg">💼</span>
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                                      <span className="text-base sm:text-lg">💼</span>
                                                       <p className="text-xs font-bold text-green-700">Workspace Booking(s)</p>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg ${statusBadge}`}>
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                                      <div className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-lg ${statusBadge}`}>
                                                         <span className="text-xs font-bold text-white uppercase">
                                                           {allPaid ? 'PAID' : 'UNPAID'}
                                                         </span>
@@ -3023,8 +3084,8 @@ Please collect it from the counter.
                                                   const subtotal = workspaceBooking.total_order_value || 0;
                                                   const isPaid = workspaceBooking.order_status === 'Paid' || workspaceBooking.order_status === 'PAID';
                                                   return (
-                                                    <div key={wsIdx} className="mb-2 last:mb-0 bg-white/60 rounded-lg p-2 border border-green-200">
-                                                      <div className="flex items-center justify-between mb-1.5">
+                                                    <div key={wsIdx} className="mb-2 last:mb-0 bg-white/60 rounded-lg p-2 sm:p-2.5 border border-green-200">
+                                                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-1.5">
                                                         <div className="text-xs text-gray-600 font-semibold">
                                                           Booking #{workspaceBooking.workspace_order_id.slice(0, 8)}
                                                         </div>
@@ -3062,14 +3123,14 @@ Please collect it from the counter.
                                                         <span className="text-xs font-bold text-green-700">Subtotal:</span>
                                                         <span className="text-sm font-bold text-green-800">₹{subtotal.toFixed(2)}</span>
                                                       </div>
-                                                      <div className="flex gap-1.5">
+                                                      <div className="flex gap-1.5 sm:gap-2">
                                                         <button
                                                           onClick={(e) => {
                                                             e.stopPropagation();
                                                             updateIndividualOrderStatus(billing.customer_phno, 'workspace', workspaceBooking.workspace_order_id, 'PAID');
                                                           }}
                                                           disabled={isPaid}
-                                                          className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all ${
+                                                          className={`flex-1 py-2 sm:py-1.5 px-2 sm:px-3 rounded text-xs font-semibold transition-all touch-manipulation ${
                                                             isPaid
                                                               ? 'bg-green-100 text-green-700 cursor-not-allowed opacity-50'
                                                               : 'bg-green-500 text-white hover:bg-green-600 active:scale-95'
@@ -3083,7 +3144,7 @@ Please collect it from the counter.
                                                             updateIndividualOrderStatus(billing.customer_phno, 'workspace', workspaceBooking.workspace_order_id, 'UNPAID');
                                                           }}
                                                           disabled={!isPaid}
-                                                          className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all ${
+                                                          className={`flex-1 py-2 sm:py-1.5 px-2 sm:px-3 rounded text-xs font-semibold transition-all touch-manipulation ${
                                                             !isPaid
                                                               ? 'bg-red-100 text-red-700 cursor-not-allowed opacity-50'
                                                               : 'bg-red-500 text-white hover:bg-red-600 active:scale-95'
@@ -3113,7 +3174,7 @@ Please collect it from the counter.
                                                 : 'bg-gradient-to-r from-red-500 to-orange-500';
                                               
                                               return (
-                                                <div className="bg-blue-50/90 rounded-lg p-3 border-2 border-blue-300">
+                                                <div className="bg-blue-50/90 rounded-lg p-2 sm:p-3 border-2 border-blue-300">
                                                   <div 
                                                     className="flex items-center justify-between mb-2 cursor-pointer hover:bg-blue-100/50 rounded p-1 -m-1 transition-all"
                                                     onClick={(e) => {
@@ -3127,12 +3188,12 @@ Please collect it from the counter.
                                                       setExpandedSubCards(newExpanded);
                                                     }}
                                                   >
-                                                    <div className="flex items-center gap-2">
-                                                      <span className="text-lg">🎱</span>
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                                      <span className="text-base sm:text-lg">🎱</span>
                                                       <p className="text-xs font-bold text-blue-700">Snooker Booking(s)</p>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg ${statusBadge}`}>
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                                      <div className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-lg ${statusBadge}`}>
                                                         <span className="text-xs font-bold text-white uppercase">
                                                           {allPaid ? 'PAID' : 'UNPAID'}
                                                         </span>
@@ -3149,8 +3210,8 @@ Please collect it from the counter.
                                                   const subtotal = snookerBooking.total_order_amount || 0;
                                                   const isPaid = snookerBooking.order_status === 'Ended' || snookerBooking.order_status === 'ENDED';
                                                   return (
-                                                    <div key={snookerIdx} className="mb-2 last:mb-0 bg-white/60 rounded-lg p-2 border border-blue-200">
-                                                      <div className="flex items-center justify-between mb-1.5">
+                                                    <div key={snookerIdx} className="mb-2 last:mb-0 bg-white/60 rounded-lg p-2 sm:p-2.5 border border-blue-200">
+                                                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-1.5">
                                                         <div className="text-xs text-gray-600 font-semibold">
                                                           Booking #{snookerBooking.snooker_order_id.slice(0, 8)}
                                                         </div>
@@ -3190,14 +3251,14 @@ Please collect it from the counter.
                                                         <span className="text-xs font-bold text-blue-700">Subtotal:</span>
                                                         <span className="text-sm font-bold text-blue-800">₹{subtotal.toFixed(2)}</span>
                                                       </div>
-                                                      <div className="flex gap-1.5">
+                                                      <div className="flex gap-1.5 sm:gap-2">
                                                         <button
                                                           onClick={(e) => {
                                                             e.stopPropagation();
                                                             updateIndividualOrderStatus(billing.customer_phno, 'snooker', snookerBooking.snooker_order_id, 'PAID');
                                                           }}
                                                           disabled={isPaid}
-                                                          className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all ${
+                                                          className={`flex-1 py-2 sm:py-1.5 px-2 sm:px-3 rounded text-xs font-semibold transition-all touch-manipulation ${
                                                             isPaid
                                                               ? 'bg-green-100 text-green-700 cursor-not-allowed opacity-50'
                                                               : 'bg-green-500 text-white hover:bg-green-600 active:scale-95'
@@ -3211,7 +3272,7 @@ Please collect it from the counter.
                                                             updateIndividualOrderStatus(billing.customer_phno, 'snooker', snookerBooking.snooker_order_id, 'UNPAID');
                                                           }}
                                                           disabled={!isPaid}
-                                                          className={`flex-1 py-1 px-2 rounded text-xs font-semibold transition-all ${
+                                                          className={`flex-1 py-2 sm:py-1.5 px-2 sm:px-3 rounded text-xs font-semibold transition-all touch-manipulation ${
                                                             !isPaid
                                                               ? 'bg-red-100 text-red-700 cursor-not-allowed opacity-50'
                                                               : 'bg-red-500 text-white hover:bg-red-600 active:scale-95'
@@ -3241,13 +3302,13 @@ Please collect it from the counter.
                               )}
 
                               {/* Status Update Buttons */}
-                              <div className="grid grid-cols-2 gap-3">
+                              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     updateCustomerBillingStatus(billing.customer_phno, 'PAID');
                                   }}
-                                  className={`py-2 px-3 rounded-xl font-semibold text-sm transition-all shadow-soft active:scale-95 ${
+                                  className={`py-2.5 sm:py-2 px-2 sm:px-3 rounded-xl font-semibold text-xs sm:text-sm transition-all shadow-soft active:scale-95 touch-manipulation ${
                                     billing.latestdate_allorder_status === 'PAID'
                                       ? 'bg-gradient-to-br from-green-500 to-emerald-500 text-white shadow-soft-lg'
                                       : 'bg-green-100 text-green-700 hover:bg-green-200'
@@ -3260,7 +3321,7 @@ Please collect it from the counter.
                                     e.stopPropagation();
                                     updateCustomerBillingStatus(billing.customer_phno, 'UNPAID');
                                   }}
-                                  className={`py-2 px-3 rounded-xl font-semibold text-sm transition-all shadow-soft active:scale-95 ${
+                                  className={`py-2.5 sm:py-2 px-2 sm:px-3 rounded-xl font-semibold text-xs sm:text-sm transition-all shadow-soft active:scale-95 touch-manipulation ${
                                     billing.latestdate_allorder_status === 'UNPAID'
                                       ? 'bg-gradient-to-br from-red-500 to-orange-500 text-white shadow-soft-lg'
                                       : 'bg-red-100 text-red-700 hover:bg-red-200'
@@ -3273,7 +3334,7 @@ Please collect it from the counter.
                                     e.stopPropagation();
                                     updateCustomerBillingStatus(billing.customer_phno, 'ACCEPT');
                                   }}
-                                  className="py-2 px-3 rounded-xl font-semibold text-sm transition-all shadow-soft active:scale-95 bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                  className="py-2.5 sm:py-2 px-2 sm:px-3 rounded-xl font-semibold text-xs sm:text-sm transition-all shadow-soft active:scale-95 touch-manipulation bg-blue-100 text-blue-700 hover:bg-blue-200"
                                 >
                                   ✅ Accept
                                 </button>
@@ -3282,7 +3343,7 @@ Please collect it from the counter.
                                     e.stopPropagation();
                                     updateCustomerBillingStatus(billing.customer_phno, 'REJECT');
                                   }}
-                                  className="py-2 px-3 rounded-xl font-semibold text-sm transition-all shadow-soft active:scale-95 bg-red-100 text-red-700 hover:bg-red-200"
+                                  className="py-2.5 sm:py-2 px-2 sm:px-3 rounded-xl font-semibold text-xs sm:text-sm transition-all shadow-soft active:scale-95 touch-manipulation bg-red-100 text-red-700 hover:bg-red-200"
                                 >
                                   ❌ Reject
                                 </button>

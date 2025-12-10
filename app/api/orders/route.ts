@@ -97,8 +97,8 @@ export async function POST(request: NextRequest) {
     console.log('🔍 Checking item availability...', { itemIds: items.map((item: any) => item.menu_item_id) });
     let availabilityMap: Record<string, boolean> = {};
     try {
-      const menuService = new MenuService();
-      const itemIds = items.map((item: any) => item.menu_item_id);
+    const menuService = new MenuService();
+    const itemIds = items.map((item: any) => item.menu_item_id);
       availabilityMap = await menuService.checkItemsAvailability(itemIds);
       console.log('✅ Item availability checked:', availabilityMap);
     } catch (availabilityError: any) {
@@ -167,12 +167,12 @@ export async function POST(request: NextRequest) {
     } else {
       // Create new order
       order = await orderService.createOrder({
-        customer_name,
-        customer_phNo: customer_phno,
-        items,
-        total_amount,
-        table_number,
-      });
+      customer_name,
+      customer_phNo: customer_phno,
+      items,
+      total_amount,
+      table_number,
+    });
     }
 
     console.log('✅ Order created successfully in database:', order.id);

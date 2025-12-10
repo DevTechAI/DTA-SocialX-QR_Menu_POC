@@ -56,6 +56,9 @@ export default function SocialXMenuApp() {
   const [unpaidOrdersLoading, setUnpaidOrdersLoading] = useState(false);
   const [allUnpaidOrderIds, setAllUnpaidOrderIds] = useState<string[]>([]);
   
+  // Image popup state
+  const [selectedImagePopup, setSelectedImagePopup] = useState<{ url: string; name: string } | null>(null);
+  
   // Ref for selected items scroll container
   const selectedItemsScrollRef = useRef<HTMLDivElement>(null);
   // Ref to track if dialog has been shown for current order
@@ -78,6 +81,24 @@ export default function SocialXMenuApp() {
             const unavailableCount = data.filter((item: MenuItem) => item.available === false).length;
             if (unavailableCount > 0) {
               console.log(`⚠️ Found ${unavailableCount} unavailable items (available=false)`);
+            }
+            // Log items with images for debugging
+            const itemsWithImages = data.filter((item: MenuItem) => item.image_url);
+            if (itemsWithImages.length > 0) {
+              console.log(`🖼️ Found ${itemsWithImages.length} items with images:`, itemsWithImages.map((i: MenuItem) => ({ id: i.id, name: i.name, image_url: i.image_url, icon: i.icon })));
+            }
+            // Log specific item for debugging
+            const testItem = data.find((i: MenuItem) => i.id === 'HOT-caremal');
+            if (testItem) {
+              console.log('🔍 Test item (HOT-caremal):', {
+                id: testItem.id,
+                name: testItem.name,
+                image_url: testItem.image_url,
+                icon: testItem.icon,
+                hasIcon: !!testItem.icon,
+                hasImageUrl: !!testItem.image_url,
+                show_image: testItem.show_image
+              });
             }
           }
         } else {
@@ -1326,6 +1347,9 @@ export default function SocialXMenuApp() {
                             const itemPrice = orderItem.price || orderItem.item?.price || 0;
                             const itemQuantity = orderItem.quantity || 1;
                             const itemIcon = orderItem.icon || orderItem.item?.icon || '🍽️';
+                            // Get image_url from menuItems if available
+                            const menuItem = menuItems.find(mi => mi.id === itemId);
+                            const itemImageUrl = menuItem?.image_url || orderItem.image_url || orderItem.item?.image_url;
                             
                             const existing = allItemsMap.get(itemId);
                             if (existing) {
@@ -1337,6 +1361,7 @@ export default function SocialXMenuApp() {
                                   name: itemName,
                                   price: itemPrice,
                                   icon: itemIcon,
+                                  image_url: itemImageUrl,
                                 },
                                 quantity: itemQuantity,
                               });
@@ -1349,9 +1374,18 @@ export default function SocialXMenuApp() {
                         <div key={item.id} className="relative group/item rounded-2xl overflow-hidden">
                           <div className="bg-gradient-to-br from-white via-white to-orange-50/60 py-2.5 px-3 border border-primary-100 shadow-sm">
                             <div className="flex items-center gap-3">
-                              {item.icon && (
-                                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100">
-                                  {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
+                              {(item.icon || item.image_url) && (
+                                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100 overflow-hidden">
+                                  {item.show_image && item.image_url ? (
+                                    <Image 
+                                      src={item.image_url} 
+                                      alt={item.name}
+                                      width={40}
+                                      height={40}
+                                      className="object-cover w-full h-full cursor-pointer hover:opacity-80 transition-opacity"
+                                      onClick={() => setSelectedImagePopup({ url: item.image_url!, name: item.name })}
+                                    />
+                                  ) : item.icon && (item.icon.startsWith('/') || item.icon.startsWith('http')) ? (
                                     <Image 
                                       src={item.icon} 
                                       alt={item.name}
@@ -1359,9 +1393,9 @@ export default function SocialXMenuApp() {
                                       height={32}
                                       className="object-contain"
                                     />
-                                  ) : (
+                                  ) : item.icon ? (
                                     <span className="text-xl">{item.icon}</span>
-                                  )}
+                                  ) : null}
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">
@@ -1385,9 +1419,18 @@ export default function SocialXMenuApp() {
                       <div className="bg-gradient-to-br from-white via-white to-orange-50/60 py-2.5 px-3 border border-primary-100 shadow-sm">
                         <div className="flex items-center gap-3">
                           {/* Icon */}
-                          {item.icon && (
-                            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100">
-                              {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
+                          {(item.icon || item.image_url) && (
+                            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100 overflow-hidden">
+                              {item.show_image && item.image_url ? (
+                                <Image 
+                                  src={item.image_url} 
+                                  alt={item.name}
+                                  width={40}
+                                  height={40}
+                                  className="object-cover w-full h-full cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={() => setSelectedImagePopup({ url: item.image_url!, name: item.name })}
+                                />
+                              ) : item.icon && (item.icon.startsWith('/') || item.icon.startsWith('http')) ? (
                                 <Image 
                                   src={item.icon} 
                                   alt={item.name}
@@ -1395,9 +1438,9 @@ export default function SocialXMenuApp() {
                                   height={32}
                                   className="object-contain"
                                 />
-                              ) : (
+                              ) : item.icon ? (
                                 <span className="text-xl">{item.icon}</span>
-                              )}
+                              ) : null}
                             </div>
                           )}
                           
@@ -1731,7 +1774,7 @@ export default function SocialXMenuApp() {
             {!isEditingName ? (
               <>
                 <h1 className="text-lg md:text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <span>Hi, {customerName}!</span>
+                  <span>Hi, {customerName}!</span>
                   <button
                     onClick={handleEditName}
                     className="inline-flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full bg-primary-100 hover:bg-primary-200 active:bg-primary-300 transition-all active:scale-95 p-1"
@@ -1751,8 +1794,8 @@ export default function SocialXMenuApp() {
                       />
                     </svg>
                   </button>
-              <span className="text-xl md:text-3xl">👋</span>
-            </h1>
+                  <span className="text-xl md:text-3xl">👋</span>
+                </h1>
                 <p className="text-gray-600 text-xs md:text-sm font-semibold mt-0.5 md:mt-1">Choose from menu</p>
               </>
             ) : (
@@ -1851,9 +1894,18 @@ export default function SocialXMenuApp() {
               {selectedItems.map(({ item, quantity }) => (
                 <div key={item.id} className="flex items-center gap-1.5 bg-gradient-to-br from-white via-white to-orange-50/60 p-1.5 rounded-lg border border-primary-100 shadow-sm">
                   {/* Icon - Smaller */}
-                  {item.icon && (
-                    <div className="flex-shrink-0 w-5 h-5 rounded-md bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100">
-                      {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
+                  {(item.icon || item.image_url) && (
+                    <div className="flex-shrink-0 w-5 h-5 rounded-md bg-gradient-to-br from-primary-50 to-accent-50 flex items-center justify-center shadow-sm border border-primary-100 overflow-hidden">
+                      {item.show_image && item.image_url ? (
+                        <Image 
+                          src={item.image_url} 
+                          alt={item.name}
+                          width={20}
+                          height={20}
+                          className="object-cover w-full h-full cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => setSelectedImagePopup({ url: item.image_url!, name: item.name })}
+                        />
+                      ) : item.icon && (item.icon.startsWith('/') || item.icon.startsWith('http')) ? (
                         <Image 
                           src={item.icon} 
                           alt={item.name}
@@ -1861,9 +1913,9 @@ export default function SocialXMenuApp() {
                           height={14}
                           className="object-contain"
                         />
-                      ) : (
+                      ) : item.icon ? (
                         <span className="text-[10px]">{item.icon}</span>
-                      )}
+                      ) : null}
                     </div>
                   )}
                   
@@ -2279,14 +2331,23 @@ export default function SocialXMenuApp() {
                           {/* Content */}
                           <div className="relative z-10 p-3">
                             <div className="flex items-center gap-3">
-                              {/* Icon */}
-                              {item.icon && (
-                                <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm border ${
+                              {/* Icon or Image */}
+                              {(item.icon || item.image_url) && (
+                                <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm border overflow-hidden ${
                                   isUnavailable 
                                     ? 'bg-gradient-to-br from-gray-100 to-gray-200 border-gray-300' 
                                     : 'bg-gradient-to-br from-primary-50 to-accent-50 border-primary-100'
                                 }`}>
-                                  {item.icon.startsWith('/') || item.icon.startsWith('http') ? (
+                                  {item.show_image && item.image_url ? (
+                                    <Image 
+                                      src={item.image_url} 
+                                      alt={item.name}
+                                      width={32}
+                                      height={32}
+                                      className="object-cover w-full h-full cursor-pointer hover:opacity-80 transition-opacity"
+                                      onClick={() => setSelectedImagePopup({ url: item.image_url!, name: item.name })}
+                                    />
+                                  ) : item.icon && (item.icon.startsWith('/') || item.icon.startsWith('http')) ? (
                                     <Image 
                                       src={item.icon} 
                                       alt={item.name}
@@ -2294,9 +2355,9 @@ export default function SocialXMenuApp() {
                                       height={24}
                                       className="object-contain"
                                     />
-                                  ) : (
+                                  ) : item.icon ? (
                                     <span className="text-lg">{item.icon}</span>
-                                  )}
+                                  ) : null}
                                 </div>
                               )}
                               
@@ -2609,6 +2670,54 @@ export default function SocialXMenuApp() {
               >
                 View Menu
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Popup Modal */}
+      {selectedImagePopup && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={() => setSelectedImagePopup(null)}
+        >
+          {/* Close Button */}
+          <button
+            onClick={() => setSelectedImagePopup(null)}
+            className="absolute top-4 right-4 z-[101] bg-white/90 hover:bg-white text-gray-800 rounded-full w-10 h-10 flex items-center justify-center shadow-lg transition-all hover:scale-110"
+            aria-label="Close"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Image Container */}
+          <div
+            className="relative max-w-4xl max-h-[90vh] w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-white/10 backdrop-blur-md p-2">
+              <Image
+                src={selectedImagePopup.url}
+                alt={selectedImagePopup.name}
+                width={800}
+                height={600}
+                className="w-full h-auto object-contain rounded-xl"
+                unoptimized
+              />
+              {/* Item Name Overlay */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/50 to-transparent p-4 rounded-b-xl">
+                <p className="text-white font-bold text-lg md:text-xl text-center">
+                  {selectedImagePopup.name}
+                </p>
+              </div>
             </div>
           </div>
         </div>
