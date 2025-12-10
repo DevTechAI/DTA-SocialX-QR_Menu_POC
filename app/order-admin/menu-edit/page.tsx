@@ -219,12 +219,12 @@ export default function MenuEditorPage() {
                   {groupedItems[category]?.map((item) => {
                     const isEditing = editingItem?.id === item.id;
                     return (
-                      <div
-                        key={item.id}
+                    <div
+                      key={item.id}
                         className={`bg-white rounded-lg shadow-md border-2 transition-all ${
-                          item.available ? 'border-orange-200' : 'border-gray-300 opacity-60'
+                        item.available ? 'border-orange-200' : 'border-gray-300 opacity-60'
                         } ${isEditing ? 'md:col-span-2 lg:col-span-3' : ''}`}
-                      >
+                    >
                         {!isEditing ? (
                           <>
                             {/* Card Content - Normal View */}
@@ -251,47 +251,47 @@ export default function MenuEditorPage() {
                                 </span>
                               </div>
                               
-                              {/* First Line: Icon, Name, and Toggle */}
-                              <div className="flex items-center gap-2 mb-2">
-                                {/* Icon - Left Top Corner */}
-                                {item.icon && (
-                                  <span className="text-2xl flex-shrink-0">{item.icon}</span>
-                                )}
-                                
-                                {/* Item Name - Beside Icon */}
-                                <h4 className="font-bold text-lg text-orange-900 flex-1 min-w-0 truncate">
-                                  {item.name}
-                                </h4>
-                                
-                                {/* Toggle - Right side of first line */}
-                                <div className="flex-shrink-0">
-                                  <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={item.available}
-                                      onChange={() => handleToggleAvailability(item.id, item.name, item.available)}
-                                      className="sr-only peer"
-                                    />
-                                    <div className="relative w-[51px] h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-500 rounded-full peer peer-checked:after:translate-x-[33px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
-                                      {/* Ready label - Left side */}
-                                      <span className={`absolute left-1 top-1/2 -translate-y-1/2 text-[9px] font-bold transition-all ${
-                                        item.available ? 'text-white opacity-100' : 'text-gray-500 opacity-50'
-                                      }`}>
-                                        Ready
-                                      </span>
-                                      {/* NA label - Right side */}
-                                      <span className={`absolute right-1 top-1/2 -translate-y-1/2 text-[9px] font-bold transition-all ${
-                                        !item.available ? 'text-gray-800 opacity-100' : 'text-gray-500 opacity-50'
-                                      }`}>
-                                        NA
-                                      </span>
-                                    </div>
-                                  </label>
-                                </div>
-                              </div>
-                              
-                              {/* Description */}
-                              <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.description}</p>
+                      {/* First Line: Icon, Name, and Toggle */}
+                      <div className="flex items-center gap-2 mb-2">
+                        {/* Icon - Left Top Corner */}
+                        {item.icon && (
+                          <span className="text-2xl flex-shrink-0">{item.icon}</span>
+                        )}
+                        
+                        {/* Item Name - Beside Icon */}
+                        <h4 className="font-bold text-lg text-orange-900 flex-1 min-w-0 truncate">
+                          {item.name}
+                        </h4>
+                        
+                        {/* Toggle - Right side of first line */}
+                        <div className="flex-shrink-0">
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={item.available}
+                              onChange={() => handleToggleAvailability(item.id, item.name, item.available)}
+                              className="sr-only peer"
+                            />
+                            <div className="relative w-[51px] h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-500 rounded-full peer peer-checked:after:translate-x-[33px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500">
+                              {/* Ready label - Left side */}
+                              <span className={`absolute left-1 top-1/2 -translate-y-1/2 text-[9px] font-bold transition-all ${
+                                item.available ? 'text-white opacity-100' : 'text-gray-500 opacity-50'
+                              }`}>
+                                Ready
+                              </span>
+                              {/* NA label - Right side */}
+                              <span className={`absolute right-1 top-1/2 -translate-y-1/2 text-[9px] font-bold transition-all ${
+                                !item.available ? 'text-gray-800 opacity-100' : 'text-gray-500 opacity-50'
+                              }`}>
+                                NA
+                              </span>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                      
+                      {/* Description */}
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.description}</p>
                               
                               {/* Show Image Toggle - Only show if image_url exists */}
                               {item.image_url && (
@@ -313,30 +313,30 @@ export default function MenuEditorPage() {
                                   </div>
                                 </div>
                               )}
-                              
-                              {/* Bottom Section: Price and Action Buttons */}
-                              <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
-                                <span className="text-xl font-bold text-orange-600">₹{item.price}</span>
-                                <div className="flex gap-2">
-                                  <button
+                      
+                      {/* Bottom Section: Price and Action Buttons */}
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
+                        <span className="text-xl font-bold text-orange-600">₹{item.price}</span>
+                        <div className="flex gap-2">
+                          <button
                                     onClick={() => {
                                       setEditingItem(item);
                                       setShowAddForm(false);
                                     }}
                                     className="px-3 py-1 bg-orange-500 text-white rounded text-xs font-semibold hover:bg-orange-600 transition-colors"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
+                          >
+                            Edit
+                          </button>
+                          <button
                                     onClick={() => handleDelete(item.id)}
-                                    disabled
+                            disabled
                                     className="px-3 py-1 bg-gray-400 text-white rounded text-xs font-semibold cursor-not-allowed opacity-60 transition-colors"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                           </>
                         ) : (
                           <>
@@ -832,17 +832,17 @@ function MenuItemForm({
         </div>
       </div>
       <div className="space-y-3">
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="available"
-            checked={formData.available}
-            onChange={(e) => setFormData({ ...formData, available: e.target.checked })}
-            className="w-4 h-4 text-orange-600 border-orange-300 rounded focus:ring-orange-500"
-          />
-          <label htmlFor="available" className="ml-2 text-sm font-semibold text-orange-900">
-            Available (In Stock)
-          </label>
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          id="available"
+          checked={formData.available}
+          onChange={(e) => setFormData({ ...formData, available: e.target.checked })}
+          className="w-4 h-4 text-orange-600 border-orange-300 rounded focus:ring-orange-500"
+        />
+        <label htmlFor="available" className="ml-2 text-sm font-semibold text-orange-900">
+          Available (In Stock)
+        </label>
         </div>
         {formData.image_url && (
           <div className="flex items-center">
@@ -866,17 +866,17 @@ function MenuItemForm({
         >
           {item ? 'Update' : 'Create'}
         </button>
-              <button
-                type="button"
+        <button
+          type="button"
                 onClick={() => {
                   setSelectedImageFile(null);
                   setImagePreview(item?.image_url || null);
                   onCancel();
                 }}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
-              >
-                Cancel
-              </button>
+          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+        >
+          Cancel
+        </button>
       </div>
     </form>
   );

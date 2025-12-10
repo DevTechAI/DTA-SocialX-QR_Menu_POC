@@ -1452,12 +1452,12 @@ Please collect it from the counter.
                     >
                       📊 BI Reports
                     </Link>
-                    <Link
-                      href="/order-admin/menu-edit"
+                  <Link
+                    href="/order-admin/menu-edit"
                       className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
-                    >
-                      📝 Menu Editor
-                    </Link>
+                  >
+                    📝 Menu Editor
+                  </Link>
                   <button
                     onClick={handleSignOut}
                     className="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-lg border border-white/30 hover:bg-white/30 transition-colors font-semibold text-sm"
