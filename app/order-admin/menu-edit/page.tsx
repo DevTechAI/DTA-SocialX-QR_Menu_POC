@@ -329,7 +329,8 @@ export default function MenuEditorPage() {
                                   </button>
                                   <button
                                     onClick={() => handleDelete(item.id)}
-                                    className="px-3 py-1 bg-red-500 text-white rounded text-xs font-semibold hover:bg-red-600 transition-colors"
+                                    disabled
+                                    className="px-3 py-1 bg-gray-400 text-white rounded text-xs font-semibold cursor-not-allowed opacity-60 transition-colors"
                                   >
                                     Delete
                                   </button>
