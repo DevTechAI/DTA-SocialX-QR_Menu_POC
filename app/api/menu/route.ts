@@ -3,6 +3,9 @@ import { MenuService } from '@/services/MenuService';
 import { AuthService } from '@/services/AuthService';
 import { menuItems } from '@/lib/data/menu-items';
 
+// Force dynamic rendering since we use cookies for authentication
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Check if Supabase is configured
