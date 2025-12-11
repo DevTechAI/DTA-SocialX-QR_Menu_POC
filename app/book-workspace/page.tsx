@@ -36,6 +36,33 @@ export default function BookWorkspacePage() {
   // Restore booking data from 12-hour session storage or server on page load
   useEffect(() => {
     const restoreBookingData = async () => {
+      // Check if we're starting a new booking (from Food Order Summary)
+      const startNewBooking = sessionStorage.getItem('startNewWorkspaceBooking') === 'true';
+      
+      if (startNewBooking) {
+        // Clear the flag
+        sessionStorage.removeItem('startNewWorkspaceBooking');
+        // Don't restore booking data - show empty form instead
+        setShowOrderSummary(false);
+        // Pre-fill customer info from storage
+        const savedName = sessionStorage.getItem('customerName') || 
+                         getSessionData<string>('workspace_customerName') ||
+                         getSessionData<string>('food_customerName');
+        const savedPhone = sessionStorage.getItem('customerPhone') || 
+                          getSessionData<string>('workspace_customerPhone') ||
+                          getSessionData<string>('food_customerPhone');
+        
+        if (savedName && savedName !== 'Guest') {
+          setCustomerName(savedName);
+        }
+        if (savedPhone) {
+          const phoneWithoutPrefix = savedPhone.startsWith('+91') ? savedPhone.slice(3) : savedPhone;
+          setCustomerPhone(phoneWithoutPrefix);
+        }
+        setLoading(false);
+        return;
+      }
+      
       // First, try to restore from client-side 12-hour session storage
       const savedBookingDetails = getSessionData<{
         customerName: string;

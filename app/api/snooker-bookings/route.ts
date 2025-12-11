@@ -88,24 +88,36 @@ export async function POST(request: NextRequest) {
     const supabase = createClient();
     const currentTimestamp = new Date().toISOString();
 
-    // First, ensure customer exists in customer_details table (required by foreign key)
-    const { error: customerError } = await supabase
-      .from('customer_details')
-      .upsert({
-        customer_phno,
-        customer_name,
-        max_order_value: 0,
-        total_ordered_value_at_socialx: 0,
-      }, {
-        onConflict: 'customer_phno',
-      });
+    // First, ensure customer exists in customer_allorders_details table (required by foreign key)
+    // The trigger will handle updating this record when the booking is created
+    // Check if customer exists first
+    const { data: existingCustomer } = await supabase
+      .from('customer_allorders_details')
+      .select('customer_phno')
+      .eq('customer_phno', customer_phno)
+      .single();
 
-    if (customerError) {
-      console.error('❌ Error creating/updating customer:', customerError);
+    // Only insert if customer doesn't exist
+    if (!existingCustomer) {
+      const { error: customerError } = await supabase
+        .from('customer_allorders_details')
+        .insert({
+          customer_phno,
+          customer_name,
+          total_ordered_value_at_socialx: 0,
+          order_history_json: [],
+          latestdate_allorder_json: {},
+          latestdate_allorder_value: 0,
+          latestdate_allorder_status: 'UNPAID',
+        });
+
+      if (customerError) {
+        console.error('❌ Error creating customer:', customerError);
       return NextResponse.json(
-        { error: `Failed to create customer record: ${customerError.message}` },
-        { status: 500 }
+          { error: `Failed to create customer record: ${customerError.message}` },
+          { status: 500 }
       );
+      }
     }
 
     // Create the booking order - set status to 'Received' (admin will start play manually)

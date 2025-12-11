@@ -3,6 +3,7 @@ import { OrderService } from '@/services/OrderService';
 import { AuthService } from '@/services/AuthService';
 import { MenuService } from '@/services/MenuService';
 import { getMockOrders, addMockOrder, clearMockOrders } from '@/lib/mock/orders';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,11 +21,27 @@ export async function GET(request: NextRequest) {
     const date = searchParams.get('date');
     const customerName = searchParams.get('customer_name');
     const businessDay = searchParams.get('business_day'); // New parameter for 8 AM to 8 AM window
+    const ids = searchParams.get('ids'); // Comma-separated list of order IDs
 
     const orderService = new OrderService();
     
     let orders;
-    if (businessDay === 'true') {
+    if (ids) {
+      // Fetch orders by IDs
+      const orderIds = ids.split(',').filter(id => id.trim());
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .in('id', orderIds);
+      
+      if (error) {
+        console.error('Error fetching orders by IDs:', error);
+        orders = [];
+      } else {
+        orders = data || [];
+      }
+    } else if (businessDay === 'true') {
       // Use business day window (8 AM to 8 AM)
       orders = await orderService.getOrdersByBusinessDay();
     } else if (date) {
@@ -70,6 +87,13 @@ export async function POST(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     
+    console.log('🔍 Order Creation Debug:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      urlContainsPlaceholder: supabaseUrl?.includes('placeholder'),
+      urlPreview: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'MISSING',
+    });
+    
     // Use mock data if Supabase not configured
     if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
       console.log('📝 Adding order to mock data (Supabase not configured)');
@@ -84,10 +108,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(newOrder, { status: 201 });
     }
 
+    console.log('✅ Supabase configured, proceeding with real database...');
+
     // Check availability of all items in the order
+    console.log('🔍 Checking item availability...', { itemIds: items.map((item: any) => item.menu_item_id) });
+    let availabilityMap: Record<string, boolean> = {};
+    try {
     const menuService = new MenuService();
     const itemIds = items.map((item: any) => item.menu_item_id);
-    const availabilityMap = await menuService.checkItemsAvailability(itemIds);
+      availabilityMap = await menuService.checkItemsAvailability(itemIds);
+      console.log('✅ Item availability checked:', availabilityMap);
+    } catch (availabilityError: any) {
+      console.error('⚠️ Error checking availability, assuming all items available:', availabilityError);
+      // If availability check fails, assume all items are available and proceed
+      // This prevents blocking order creation if menu_items table doesn't exist or has issues
+      items.forEach((item: any) => {
+        availabilityMap[item.menu_item_id] = true;
+      });
+    }
 
     // Add Available flag to each item in the order
     const itemsWithAvailability = items.map((item: any) => {
@@ -118,18 +156,51 @@ export async function POST(request: NextRequest) {
     }
 
     // All items are available, proceed with order creation
+    console.log('📦 Creating order in database...', {
+      customer_name,
+      customer_phno,
+      itemsCount: items.length,
+      total_amount,
+    });
+    
+    // Check if consolidation is requested
+    const consolidateWithExisting = body.consolidate_with_existing === true;
+    const existingOrderIds = body.existing_order_ids || [];
+    
     const orderService = new OrderService();
-    const order = await orderService.createOrder({
+    let order;
+    
+    if (consolidateWithExisting && existingOrderIds.length > 0) {
+      // Consolidate with existing unpaid orders
+      console.log('🔄 Consolidating order with existing orders:', existingOrderIds);
+      order = await orderService.consolidateOrder({
+        customer_name,
+        customer_phNo: customer_phno,
+        items,
+        total_amount,
+        table_number,
+        existingOrderIds,
+      });
+    } else {
+      // Create new order
+      order = await orderService.createOrder({
       customer_name,
       customer_phNo: customer_phno,
       items,
       total_amount,
       table_number,
     });
+    }
 
+    console.log('✅ Order created successfully in database:', order.id);
     return NextResponse.json(order, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating order:', error);
+    console.error('❌ Error creating order:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
     // Fallback to mock data only if we have the required fields
     if (customer_name && customer_phno && items && total_amount) {
       try {

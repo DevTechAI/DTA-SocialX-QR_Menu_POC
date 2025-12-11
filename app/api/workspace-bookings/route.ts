@@ -60,6 +60,38 @@ export async function POST(request: NextRequest) {
     // Get current date in UTC
     const order_date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 
+    // First, ensure customer exists in customer_allorders_details table (required by foreign key)
+    // The trigger will handle updating this record when the booking is created
+    // Check if customer exists first
+    const { data: existingCustomer } = await supabase
+      .from('customer_allorders_details')
+      .select('customer_phno')
+      .eq('customer_phno', customer_phno)
+      .single();
+
+    // Only insert if customer doesn't exist
+    if (!existingCustomer) {
+      const { error: customerError } = await supabase
+        .from('customer_allorders_details')
+        .insert({
+          customer_phno,
+          customer_name: customer_name.trim(),
+          total_ordered_value_at_socialx: 0,
+          order_history_json: [],
+          latestdate_allorder_json: {},
+          latestdate_allorder_value: 0,
+          latestdate_allorder_status: 'UNPAID',
+        });
+
+      if (customerError) {
+        console.error('❌ Error creating customer:', customerError);
+        return NextResponse.json(
+          { error: `Failed to create customer record: ${customerError.message}` },
+          { status: 500 }
+        );
+      }
+    }
+
     // Insert booking
     const { data, error } = await supabase
       .from('workspace_seat_booking_orders')
