@@ -2583,7 +2583,7 @@ export default function SocialXMenuApp() {
       {/* CheckOut Dialog Popup */}
       {showCheckoutDialog && (
         <div 
-          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 animate-in fade-in duration-300"
+          className="fixed inset-0 z-[10000] flex items-start justify-center p-4 pt-[10%] sm:pt-[8%] md:pt-[5%] animate-in fade-in duration-300"
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
           onClick={(e) => {
             // Close when clicking outside
