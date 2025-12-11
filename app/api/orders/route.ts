@@ -5,6 +5,9 @@ import { MenuService } from '@/services/MenuService';
 import { getMockOrders, addMockOrder, clearMockOrders } from '@/lib/mock/orders';
 import { createClient } from '@/lib/supabase/server';
 
+// Force dynamic rendering since we use cookies for authentication
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Check if Supabase is configured
