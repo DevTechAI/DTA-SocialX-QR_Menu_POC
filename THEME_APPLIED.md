@@ -190,3 +190,6 @@ The entire application now has a cohesive, modern purple-blue gradient theme tha
 
 Every pixel now matches the purple-blue gradient aesthetic from the theme UI design!
 
+
+
+
