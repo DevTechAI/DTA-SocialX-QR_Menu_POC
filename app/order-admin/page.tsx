@@ -1366,11 +1366,11 @@ Please collect it from the counter.
     .filter(order => order.status === 'paid')
     .reduce((sum, order) => sum + order.total_amount, 0);
 
-  // Display orders: sort by created_at (oldest first) - show all orders
+  // Display orders: sort by created_at (newest first) - show all orders
   const todayOrders = allTodayOrders
     .sort((a, b) => {
-      // Sort by created_at ascending (oldest first)
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      // Sort by created_at descending (newest first)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
   // Calculate item-wise metrics
@@ -1743,7 +1743,7 @@ Please collect it from the counter.
             Click on an order to expand and view details
             {allTodayOrders.length > 0 && (
               <span className="ml-2 text-orange-600 font-semibold">
-                (sorted by time - oldest first)
+                (sorted by time - latest first)
               </span>
             )}
           </p>
@@ -3518,20 +3518,20 @@ Please collect it from the counter.
         </div>
       )}
 
-      {/* Footer */}
+        {/* Footer */}
       <footer className="mt-12 py-6 text-center border-t border-gray-200/50 bg-white/60 backdrop-blur-sm">
-        <p className="text-sm text-gray-600">
-          Tech Powered by{' '}
-          <a
-            href="https://www.devtechai.org"
-            target="_blank"
-            rel="noopener noreferrer"
+          <p className="text-sm text-gray-600">
+            Tech Powered by{' '}
+            <a
+              href="https://www.devtechai.org"
+              target="_blank"
+              rel="noopener noreferrer"
             className="text-primary-600 hover:text-primary-700 font-semibold underline transition-colors"
-          >
-            DevTechAi.Org
-          </a>
-        </p>
-      </footer>
+            >
+              DevTechAi.Org
+            </a>
+          </p>
+        </footer>
       </div>
   );
 }

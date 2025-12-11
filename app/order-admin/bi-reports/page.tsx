@@ -46,6 +46,7 @@ export default function BIReportsPage() {
   } | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
 
   // Update time every second
   useEffect(() => {
@@ -150,19 +151,63 @@ export default function BIReportsPage() {
     setLoading(true);
     setError(null);
     try {
-      // Placeholder for analytics functionality
-      // Will be implemented shortly
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`/api/analytics/report?date=${today}`);
+      
+      // Always get data, even if empty
+      const data = await response.json();
+      
+      // If there's an error field but we still got data, use it
+      if (data.error && !data.stats) {
+        throw new Error(data.error);
+      }
+      
+      setAnalyticsData(data);
       setActiveReport('analytics');
     } catch (err: any) {
-      setError(err.message || 'Failed to load user click analytics');
-      console.error('Error fetching analytics:', err);
+      // On error, show empty state with message
+      setAnalyticsData({
+        analytics: [],
+        events: [],
+        stats: {
+          totalSessions: 0,
+          completedOrders: 0,
+          conversionRate: '0.00',
+          totalPageViews: 0,
+          totalButtonClicks: 0,
+          totalItemsAdded: 0,
+          totalItemsRemoved: 0,
+          totalCategoriesExpanded: 0,
+          totalImagesClicked: 0,
+          totalCheckoutAttempts: 0,
+          averageTimeInMenu: 0,
+          averageTimeInCheckout: 0,
+          avgItemsPerSession: '0.00',
+          avgSessionDuration: 0,
+          avgEventsPerSession: '0.0',
+          cartAbandonmentRate: '0.00',
+          bounceRate: '0.00',
+          menuToCheckoutRate: '0.00',
+          checkoutToOrderRate: '0.00',
+          engagementScore: 0,
+          dropoffPoints: { menu: 0, nameEntry: 0, orderPlaced: 0 },
+          deviceBreakdown: { mobile: 0, tablet: 0, desktop: 0 },
+          entryPoints: {},
+        },
+        mostClickedItems: [],
+        mostClickedButtons: [],
+        mostExpandedCategories: [],
+      });
+      setActiveReport('analytics');
+      // Don't set error - just show empty state
     } finally {
       setLoading(false);
     }
   };
 
   const handleDownloadPDF = async () => {
-    if (!reportRef.current || !reportData) {
+    // For analytics, check analyticsData; for other reports, check reportData
+    if (!reportRef.current || (activeReport !== 'analytics' && !reportData) || (activeReport === 'analytics' && !analyticsData)) {
       return;
     }
 
@@ -367,11 +412,17 @@ export default function BIReportsPage() {
       }
       
       // Generate filename
-      const reportType = activeReport === 'daily' ? 'Daily' : 'Weekly';
-      const dateStr = activeReport === 'daily' 
-        ? (reportData.date || new Date().toISOString().split('T')[0])
-        : (reportData.weekStart || new Date().toISOString().split('T')[0]);
-      const filename = `${reportType}_Settlement_Report_${dateStr}.pdf`;
+      let filename = '';
+      if (activeReport === 'analytics') {
+        const dateStr = new Date().toISOString().split('T')[0];
+        filename = `User_Click_Analytics_Report_${dateStr}.pdf`;
+      } else {
+        const reportType = activeReport === 'daily' ? 'Daily' : 'Weekly';
+        const dateStr = activeReport === 'daily' 
+          ? (reportData?.date || new Date().toISOString().split('T')[0])
+          : (reportData?.weekStart || new Date().toISOString().split('T')[0]);
+        filename = `${reportType}_Settlement_Report_${dateStr}.pdf`;
+      }
       
       // Save PDF
       pdf.save(filename);
@@ -658,7 +709,7 @@ export default function BIReportsPage() {
               )}
 
               {/* Report Display */}
-              {!loading && activeReport === 'analytics' && (
+              {!loading && activeReport === 'analytics' && analyticsData && (
                 <div ref={reportRef} className="print-content bg-white rounded-2xl shadow-soft-lg border-2 border-primary-200 p-6 md:p-8">
                   {/* Report Header */}
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 pb-4 border-b-2 border-gray-200">
@@ -667,10 +718,30 @@ export default function BIReportsPage() {
                         👆 User Click Analytics
                       </h2>
                       <p className="text-gray-600">
-                        User interaction and click tracking analytics
+                        Date: {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                       </p>
+                      {analyticsData.stats && analyticsData.stats.totalSessions === 0 && (
+                        <p className="text-sm text-orange-600 mt-2 italic">
+                          📊 Analytics data will appear here once users start interacting with the menu. Track clicks, views, and conversions in real-time.
+                        </p>
+                      )}
                     </div>
                     <div className="flex gap-3 mt-4 md:mt-0 no-print">
+                      <button
+                        onClick={handleDownloadPDF}
+                        disabled={isGeneratingPDF}
+                        className="no-print px-5 py-2.5 bg-gradient-to-r from-primary-500 to-accent-500 text-white rounded-lg font-bold text-base shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isGeneratingPDF ? (
+                          <>
+                            <span className="animate-spin">⏳</span> Generating PDF...
+                          </>
+                        ) : (
+                          <>
+                            <span>📄</span> Download PDF
+                          </>
+                        )}
+                      </button>
                       <button
                         onClick={handleBackToReports}
                         className="no-print px-4 py-2 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-semibold text-base shadow-lg hover:shadow-xl active:scale-95"
@@ -680,41 +751,373 @@ export default function BIReportsPage() {
                     </div>
                   </div>
 
-                  {/* Placeholder Content */}
-                  <div className="text-center py-12">
-                    <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl gradient-primary mb-6 shadow-soft-lg">
-                      <span className="text-5xl">👆</span>
+                  {/* Primary KPI Cards */}
+                  {analyticsData.stats && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                      <div className="bg-gradient-to-br from-blue-50 via-blue-100/70 to-blue-50/80 rounded-xl p-5 border-2 border-blue-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-blue-700">Total Sessions</span>
+                          <span className="text-2xl">👥</span>
+                        </div>
+                        <p className="text-2xl font-bold text-blue-800">{analyticsData.stats.totalSessions}</p>
+                        <p className="text-xs text-blue-600 mt-1">Bounce Rate: {analyticsData.stats.bounceRate}%</p>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-green-50 via-green-100/70 to-green-50/80 rounded-xl p-5 border-2 border-green-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-green-700">Completed Orders</span>
+                          <span className="text-2xl">✅</span>
+                        </div>
+                        <p className="text-2xl font-bold text-green-800">{analyticsData.stats.completedOrders}</p>
+                        <p className="text-xs text-green-600 mt-1">Conversion: {analyticsData.stats.conversionRate}%</p>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-orange-50 via-orange-100/70 to-orange-50/80 rounded-xl p-5 border-2 border-orange-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-orange-700">Engagement Score</span>
+                          <span className="text-2xl">📊</span>
+                        </div>
+                        <p className="text-2xl font-bold text-orange-800">{analyticsData.stats.engagementScore}</p>
+                        <p className="text-xs text-orange-600 mt-1">Avg Events/Session: {analyticsData.stats.avgEventsPerSession}</p>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-purple-50 via-purple-100/70 to-purple-50/80 rounded-xl p-5 border-2 border-purple-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-purple-700">Items Added</span>
+                          <span className="text-2xl">🛒</span>
+                        </div>
+                        <p className="text-2xl font-bold text-purple-800">{analyticsData.stats.totalItemsAdded}</p>
+                        <p className="text-xs text-purple-600 mt-1">Avg Items/Session: {analyticsData.stats.avgItemsPerSession}</p>
+                      </div>
                     </div>
-                    <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">
-                      User Click Analytics
-                    </h3>
-                    <p className="text-gray-600 text-lg mb-8">
-                      Analytics functionality will be implemented shortly
-                    </p>
-                    <div className="bg-gradient-to-br from-orange-50 via-white to-orange-50/60 rounded-xl p-6 border-2 border-orange-200">
-                      <p className="text-gray-700 font-semibold mb-2">
-                        Expected features:
-                      </p>
-                      <ul className="text-left mt-4 space-y-2 text-gray-600">
-                        <li className="flex items-center gap-2">
-                          <span className="text-orange-500">•</span>
-                          User click tracking
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="text-orange-500">•</span>
-                          Page interaction analytics
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="text-orange-500">•</span>
-                          Engagement metrics
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span className="text-orange-500">•</span>
-                          User behavior insights
-                        </li>
-                      </ul>
+                  )}
+
+                  {/* Secondary KPI Cards */}
+                  {analyticsData.stats && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                      <div className="bg-gradient-to-br from-red-50 via-red-100/70 to-red-50/80 rounded-xl p-5 border-2 border-red-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-red-700">Cart Abandonment</span>
+                          <span className="text-2xl">🛑</span>
+                        </div>
+                        <p className="text-2xl font-bold text-red-800">{analyticsData.stats.cartAbandonmentRate}%</p>
+                        <p className="text-xs text-red-600 mt-1">Items Removed: {analyticsData.stats.totalItemsRemoved}</p>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-cyan-50 via-cyan-100/70 to-cyan-50/80 rounded-xl p-5 border-2 border-cyan-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-cyan-700">Avg Session Duration</span>
+                          <span className="text-2xl">⏱️</span>
+                        </div>
+                        <p className="text-2xl font-bold text-cyan-800">
+                          {Math.floor((analyticsData.stats.avgSessionDuration || 0) / 60)}m {analyticsData.stats.avgSessionDuration % 60}s
+                        </p>
+                        <p className="text-xs text-cyan-600 mt-1">Total Clicks: {analyticsData.stats.totalButtonClicks}</p>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-teal-50 via-teal-100/70 to-teal-50/80 rounded-xl p-5 border-2 border-teal-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-teal-700">Category Engagement</span>
+                          <span className="text-2xl">📂</span>
+                        </div>
+                        <p className="text-2xl font-bold text-teal-800">{analyticsData.stats.totalCategoriesExpanded}</p>
+                        <p className="text-xs text-teal-600 mt-1">Images Clicked: {analyticsData.stats.totalImagesClicked}</p>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-amber-50 via-amber-100/70 to-amber-50/80 rounded-xl p-5 border-2 border-amber-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-amber-700">Checkout Attempts</span>
+                          <span className="text-2xl">💳</span>
+                        </div>
+                        <p className="text-2xl font-bold text-amber-800">{analyticsData.stats.totalCheckoutAttempts}</p>
+                        <p className="text-xs text-amber-600 mt-1">Menu→Checkout: {analyticsData.stats.menuToCheckoutRate}%</p>
+                      </div>
                     </div>
+                  )}
+
+                  {/* Conversion Funnel with Rates */}
+                  {analyticsData.stats && (
+                    <div className="mb-6">
+                      <h3 className="text-xl font-bold text-gray-800 mb-4">Conversion Funnel & Flow Rates</h3>
+                      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50/60 rounded-xl p-6 border-2 border-gray-200">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                            <div>
+                              <span className="font-semibold text-gray-700">Menu Viewed</span>
+                              <p className="text-xs text-gray-500">Starting point</p>
+                            </div>
+                            <span className="text-lg font-bold text-gray-800">{analyticsData.stats.totalSessions}</span>
+                          </div>
+                          <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-200">
+                            <div>
+                              <span className="font-semibold text-gray-700">Items Added to Cart</span>
+                              <p className="text-xs text-gray-500">Engagement step</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-lg font-bold text-orange-600">{analyticsData.stats.totalItemsAdded}</span>
+                              <p className="text-xs text-orange-600">
+                                {analyticsData.stats.totalSessions > 0 
+                                  ? ((analyticsData.stats.totalItemsAdded / analyticsData.stats.totalSessions) * 100).toFixed(1)
+                                  : '0.0'}% of sessions
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
+                            <div>
+                              <span className="font-semibold text-gray-700">Checkout Started</span>
+                              <p className="text-xs text-gray-500">Intent to purchase</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-lg font-bold text-blue-600">{analyticsData.stats.totalCheckoutAttempts}</span>
+                              <p className="text-xs text-blue-600">Menu→Checkout: {analyticsData.stats.menuToCheckoutRate}%</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200">
+                            <div>
+                              <span className="font-semibold text-gray-700">Order Completed</span>
+                              <p className="text-xs text-gray-500">Success</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-lg font-bold text-green-600">{analyticsData.stats.completedOrders}</span>
+                              <p className="text-xs text-green-600">Checkout→Order: {analyticsData.stats.checkoutToOrderRate}%</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-gray-800">Overall Conversion Rate</span>
+                            <span className="text-2xl font-bold text-primary-600">{analyticsData.stats.conversionRate}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Drop-off Points */}
+                  {analyticsData.stats?.dropoffPoints && (
+                    <div className="mb-6">
+                      <h3 className="text-xl font-bold text-gray-800 mb-4">Drop-off Points</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-gradient-to-br from-red-50 via-red-100/70 to-red-50/80 rounded-xl p-4 border-2 border-red-200">
+                          <p className="text-sm font-semibold text-red-700 mb-1">Menu View</p>
+                          <p className="text-2xl font-bold text-red-800">{analyticsData.stats.dropoffPoints.menu}</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-yellow-50 via-yellow-100/70 to-yellow-50/80 rounded-xl p-4 border-2 border-yellow-200">
+                          <p className="text-sm font-semibold text-yellow-700 mb-1">Name Entry</p>
+                          <p className="text-2xl font-bold text-yellow-800">{analyticsData.stats.dropoffPoints.nameEntry}</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-orange-50 via-orange-100/70 to-orange-50/80 rounded-xl p-4 border-2 border-orange-200">
+                          <p className="text-sm font-semibold text-orange-700 mb-1">Order Placed</p>
+                          <p className="text-2xl font-bold text-orange-800">{analyticsData.stats.dropoffPoints.orderPlaced}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Device & Entry Point Breakdown */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    {/* Device Breakdown */}
+                    {analyticsData.stats?.deviceBreakdown && (
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">Device Breakdown</h3>
+                        <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50/60 rounded-xl p-6 border-2 border-gray-200">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
+                              <div className="flex items-center gap-3">
+                                <span className="text-2xl">📱</span>
+                                <span className="font-semibold text-gray-700">Mobile</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xl font-bold text-blue-800">{analyticsData.stats.deviceBreakdown.mobile}</span>
+                                <p className="text-xs text-blue-600">
+                                  {analyticsData.stats.totalSessions > 0 
+                                    ? ((analyticsData.stats.deviceBreakdown.mobile / analyticsData.stats.totalSessions) * 100).toFixed(1)
+                                    : '0.0'}%
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-purple-200">
+                              <div className="flex items-center gap-3">
+                                <span className="text-2xl">📱</span>
+                                <span className="font-semibold text-gray-700">Tablet</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xl font-bold text-purple-800">{analyticsData.stats.deviceBreakdown.tablet}</span>
+                                <p className="text-xs text-purple-600">
+                                  {analyticsData.stats.totalSessions > 0 
+                                    ? ((analyticsData.stats.deviceBreakdown.tablet / analyticsData.stats.totalSessions) * 100).toFixed(1)
+                                    : '0.0'}%
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200">
+                              <div className="flex items-center gap-3">
+                                <span className="text-2xl">💻</span>
+                                <span className="font-semibold text-gray-700">Desktop</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xl font-bold text-green-800">{analyticsData.stats.deviceBreakdown.desktop}</span>
+                                <p className="text-xs text-green-600">
+                                  {analyticsData.stats.totalSessions > 0 
+                                    ? ((analyticsData.stats.deviceBreakdown.desktop / analyticsData.stats.totalSessions) * 100).toFixed(1)
+                                    : '0.0'}%
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Entry Point Breakdown */}
+                    {analyticsData.stats?.entryPoints && Object.keys(analyticsData.stats.entryPoints).length > 0 && (
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">Traffic Sources</h3>
+                        <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50/60 rounded-xl p-6 border-2 border-gray-200">
+                          <div className="space-y-3">
+                            {Object.entries(analyticsData.stats.entryPoints).map(([entry, count]: [string, any]) => (
+                              <div key={entry} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-xl">
+                                    {entry === 'direct' ? '🔗' : entry === 'qr_code' ? '📱' : '🔗'}
+                                  </span>
+                                  <span className="font-semibold text-gray-700 capitalize">{entry.replace('_', ' ')}</span>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-lg font-bold text-gray-800">{count}</span>
+                                  <p className="text-xs text-gray-600">
+                                    {analyticsData.stats.totalSessions > 0 
+                                      ? ((count / analyticsData.stats.totalSessions) * 100).toFixed(1)
+                                      : '0.0'}%
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Top Items & Categories */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    {/* Most Clicked Items */}
+                    {analyticsData.mostClickedItems && analyticsData.mostClickedItems.length > 0 && (
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">Top Items Added to Cart</h3>
+                        <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50/60 rounded-xl p-6 border-2 border-gray-200">
+                          <div className="space-y-2">
+                            {analyticsData.mostClickedItems.map((item: any, index: number) => (
+                              <div key={item.itemId} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-lg font-bold text-primary-600">#{index + 1}</span>
+                                  <span className="font-semibold text-gray-700">{item.itemId}</span>
+                                </div>
+                                <span className="text-lg font-bold text-orange-600">{item.count} adds</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Most Expanded Categories */}
+                    {analyticsData.mostExpandedCategories && analyticsData.mostExpandedCategories.length > 0 && (
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">Most Explored Categories</h3>
+                        <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50/60 rounded-xl p-6 border-2 border-gray-200">
+                          <div className="space-y-2">
+                            {analyticsData.mostExpandedCategories.map((cat: any, index: number) => (
+                              <div key={cat.categoryName} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-lg font-bold text-purple-600">#{index + 1}</span>
+                                  <span className="font-semibold text-gray-700">{cat.categoryName}</span>
+                                </div>
+                                <span className="text-lg font-bold text-purple-600">{cat.count} expands</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Most Clicked Buttons */}
+                  {analyticsData.mostClickedButtons && analyticsData.mostClickedButtons.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-xl font-bold text-gray-800 mb-4">Most Clicked Buttons</h3>
+                      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-50/60 rounded-xl p-6 border-2 border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {analyticsData.mostClickedButtons.map((btn: any, index: number) => (
+                            <div key={btn.buttonName} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-blue-600">#{index + 1}</span>
+                                <span className="font-semibold text-gray-700 text-sm">{btn.buttonName}</span>
+                              </div>
+                              <span className="text-sm font-bold text-blue-600">{btn.count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Average Time Metrics */}
+                  {analyticsData.stats && (
+                    <div className="mb-6">
+                      <h3 className="text-xl font-bold text-gray-800 mb-4">Average Time Spent</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-gradient-to-br from-indigo-50 via-indigo-100/70 to-indigo-50/80 rounded-xl p-4 border-2 border-indigo-200">
+                          <p className="text-sm font-semibold text-indigo-700 mb-1">In Menu</p>
+                          <p className="text-xl font-bold text-indigo-800">
+                            {Math.floor((analyticsData.stats.averageTimeInMenu || 0) / 60)}m {analyticsData.stats.averageTimeInMenu % 60}s
+                          </p>
+                        </div>
+                        <div className="bg-gradient-to-br from-pink-50 via-pink-100/70 to-pink-50/80 rounded-xl p-4 border-2 border-pink-200">
+                          <p className="text-sm font-semibold text-pink-700 mb-1">In Checkout</p>
+                          <p className="text-xl font-bold text-pink-800">
+                            {Math.floor((analyticsData.stats.averageTimeInCheckout || 0) / 60)}m {analyticsData.stats.averageTimeInCheckout % 60}s
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Footer - Included in PDF */}
+                  <footer className="mt-8 pt-6 text-center border-t border-gray-200/50 bg-white/60 backdrop-blur-sm">
+                    <p className="text-sm text-gray-600">
+                      Tech Powered by{' '}
+                      <a
+                        href="https://www.devtechai.org"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary-600 hover:text-primary-700 font-semibold underline transition-colors"
+                      >
+                        DevTechAi.Org
+                      </a>
+                    </p>
+                  </footer>
+                </div>
+              )}
+
+              {/* Loading State for Analytics */}
+              {loading && activeReport === 'analytics' && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl gradient-primary mb-4 shadow-soft-lg">
+                      <div className="animate-spin">
+                        <span className="text-5xl text-white">⏳</span>
+                      </div>
+                    </div>
+                    <p className="text-gray-700 font-bold text-lg">Loading analytics...</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Error State for Analytics */}
+              {error && activeReport === 'analytics' && (
+                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6 mb-6">
+                  <p className="text-red-800 font-semibold">Error: {error}</p>
                 </div>
               )}
 

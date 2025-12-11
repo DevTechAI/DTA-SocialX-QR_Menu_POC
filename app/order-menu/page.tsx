@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { type MenuItem } from '@/lib/data/menu-items';
 import { useDeviceDetection, getDevicePadding } from '@/hooks/useDeviceDetection';
 import { setSessionData, getSessionData, removeSessionData } from '@/lib/utils/sessionStorage';
+import { analytics } from '@/lib/utils/analytics';
 
 type ViewState = 'nameEntry' | 'menu' | 'orderPlaced';
 
@@ -199,6 +200,10 @@ export default function SocialXMenuApp() {
   useEffect(() => {
     setMounted(true);
     
+    // Track page view when /order-menu loads
+    analytics.trackPageView('/order-menu', 'menu');
+    console.log('📊 Analytics: Tracked page view for /order-menu');
+    
     // Restore state from 12-hour session storage (takes priority) or regular storage
     const savedName = getSessionData<string>('food_customerName') || 
                      sessionStorage.getItem('customerName') || 
@@ -270,10 +275,17 @@ export default function SocialXMenuApp() {
       setExpandedCategories([]);
   }, []);
 
-  // Save view state
+  // Track view changes and save view state
+  const previousViewRef = useRef<ViewState>('menu');
   useEffect(() => {
     if (mounted) {
       localStorage.setItem('currentView', currentView);
+      
+      // Track view change
+      if (previousViewRef.current !== currentView) {
+        analytics.trackViewChange(previousViewRef.current, currentView);
+        previousViewRef.current = currentView;
+      }
     }
   }, [currentView, mounted]);
 
@@ -378,6 +390,35 @@ export default function SocialXMenuApp() {
       });
     }
   }, [selectedItems]);
+
+  // Track page view when /order-menu loads and flush analytics periodically
+  useEffect(() => {
+    // Track page view when component mounts
+    if (mounted) {
+      analytics.trackPageView('/order-menu', currentView);
+      console.log('📊 Analytics: Tracked page view for /order-menu with view:', currentView);
+    }
+
+    // Flush events every 30 seconds if user is on the page (even if checkout not clicked)
+    const flushInterval = setInterval(async () => {
+      try {
+        await analytics.flushOnCheckout();
+        console.log('📊 Analytics: Periodic flush completed');
+      } catch (error) {
+        console.error('⚠️ Failed to flush analytics periodically:', error);
+      }
+    }, 30000); // Every 30 seconds
+
+    // Flush on component unmount (user leaves page)
+    return () => {
+      clearInterval(flushInterval);
+      // Flush events when user leaves the page
+      analytics.flushOnCheckout().catch((error) => {
+        console.error('⚠️ Failed to flush analytics on unmount:', error);
+      });
+      console.log('📊 Analytics: Flushing events on page unmount');
+    };
+  }, [mounted, currentView]);
 
   // Auto-refresh once every time menu page is reached for better header fit
   useEffect(() => {
@@ -560,6 +601,12 @@ export default function SocialXMenuApp() {
       return;
     }
     
+    // Track form submission
+    analytics.trackFormSubmit('nameEntry', {
+      hasName: !!customerName.trim(),
+      hasPhone: phoneDigits.length === 10,
+    });
+    
     // Aggressively reset zoom before navigation
     const input = document.activeElement as HTMLElement;
     if (input && input.blur) {
@@ -609,9 +656,11 @@ export default function SocialXMenuApp() {
     setExpandedCategories(prev => {
       // If the clicked category is already expanded, collapse it
       if (prev.includes(category)) {
+        analytics.trackCategoryCollapse(category);
         return [];
       }
       // Otherwise, collapse all others and expand only the clicked one
+      analytics.trackCategoryExpand(category);
       return [category];
     });
   };
@@ -623,6 +672,11 @@ export default function SocialXMenuApp() {
     }
     setSelectedItems(prev => {
       const existing = prev.find(i => i.item.id === item.id);
+      const newQuantity = existing ? existing.quantity + 1 : 1;
+      
+      // Track item addition
+      analytics.trackItemAdd(item.id, item.name, 1, item.price);
+      
       if (existing) {
         return prev.map(i => 
           i.item.id === item.id 
@@ -637,12 +691,17 @@ export default function SocialXMenuApp() {
   const removeItem = (itemId: string) => {
     setSelectedItems(prev => {
       const existing = prev.find(i => i.item.id === itemId);
-      if (existing && existing.quantity > 1) {
-        return prev.map(i => 
-          i.item.id === itemId 
-            ? { ...i, quantity: i.quantity - 1 } 
-            : i
-        );
+      if (existing) {
+        // Track item removal
+        analytics.trackItemRemove(itemId, existing.item.name);
+        
+        if (existing.quantity > 1) {
+          return prev.map(i => 
+            i.item.id === itemId 
+              ? { ...i, quantity: i.quantity - 1 } 
+              : i
+          );
+        }
       }
       return prev.filter(i => i.item.id !== itemId);
     });
@@ -843,6 +902,19 @@ export default function SocialXMenuApp() {
         localStorage.setItem('orderPlaced', 'true'); // Keep for backward compatibility
         // Clear the fromBookingPage flag after order is placed
         sessionStorage.removeItem('fromBookingPage');
+        
+        // Update session info and flush analytics events
+        try {
+          await analytics.updateSessionInfo(orderId, phoneWithPrefix, customerName);
+          console.log('✅ Session info updated with order details');
+          
+          await analytics.flushOnOrderComplete();
+          console.log('✅ Analytics events flushed on order complete');
+        } catch (error) {
+          console.error('⚠️ Failed to update analytics on order complete:', error);
+          // Continue anyway - don't block order completion
+        }
+        
         navigateToView('orderPlaced');
         // Dialog will be shown by useEffect
       } else if (response.status === 400) {
@@ -886,6 +958,16 @@ export default function SocialXMenuApp() {
       return;
     }
 
+    // Track checkout form submission
+    analytics.trackFormSubmit('checkout', {
+      hasName: !!checkoutName.trim(),
+      hasPhone: phoneDigits.length === 10,
+      itemCount: selectedItems.length,
+    });
+    
+    // Track checkout button click
+    analytics.trackButtonClick('Place Order', 'checkout-submit-btn', '/order-menu', 'nameEntry');
+
     // Ensure phone number is exactly 10 digits with +91 prefix
     const phoneWithPrefix = `+91${phoneDigits}`;
     await processOrderPlacement(checkoutName.trim(), phoneWithPrefix);
@@ -924,6 +1006,9 @@ export default function SocialXMenuApp() {
 
   // More Food/Coffee Handler - retains customer info and skips checkout dialog
   const handleMoreFoodCoffee = () => {
+    // Track button click
+    analytics.trackButtonClick('More Food/Coffee', 'more-food-btn', '/order-menu', 'orderPlaced');
+    
     // Load customer info from storage to ensure it's in state
     const savedName = getSessionData<string>('food_customerName') || 
                      localStorage.getItem('customerName') ||
@@ -1383,7 +1468,10 @@ export default function SocialXMenuApp() {
                                       width={40}
                                       height={40}
                                       className="object-cover w-full h-full cursor-pointer hover:opacity-80 transition-opacity"
-                                      onClick={() => setSelectedImagePopup({ url: item.image_url!, name: item.name })}
+                                      onClick={() => {
+                                        analytics.trackImageClick(item.id, item.name);
+                                        setSelectedImagePopup({ url: item.image_url!, name: item.name });
+                                      }}
                                     />
                                   ) : item.icon && (item.icon.startsWith('/') || item.icon.startsWith('http')) ? (
                                     <Image 
@@ -1521,6 +1609,9 @@ export default function SocialXMenuApp() {
                     {/* Book Snooker Button - Left ~45% */}
                     <button
                       onClick={() => {
+                        // Track button click
+                        analytics.trackButtonClick('Book Snooker', 'book-snooker-btn', '/order-menu', 'orderPlaced');
+                        
                         // Clear any existing snooker booking data to show empty form
                         removeSessionData('snooker_bookingDetails');
                         removeSessionData('snooker_bookingOrderId');
@@ -1547,6 +1638,9 @@ export default function SocialXMenuApp() {
                     {/* Book WorkSpace Button - Right ~55% */}
                     <button
                       onClick={() => {
+                        // Track button click
+                        analytics.trackButtonClick('Book WorkSpace', 'book-workspace-btn', '/order-menu', 'orderPlaced');
+                        
                         // Clear any existing workspace booking data to show empty form
                         removeSessionData('workspace_bookingDetails');
                         removeSessionData('workspace_bookingOrderId');
@@ -1574,6 +1668,9 @@ export default function SocialXMenuApp() {
                   {/* Home Button */}
                   <button
                     onClick={() => {
+                      // Track button click
+                      analytics.trackButtonClick('Home', 'home-btn', '/order-menu', 'orderPlaced');
+                      
                       // Store customer info in memory for future bookings (snooker/workspace)
                       if (customerName && customerPhone) {
                         const phoneWithPrefix = customerPhone.startsWith('+91') ? customerPhone : `+91${customerPhone}`;
@@ -2004,6 +2101,21 @@ export default function SocialXMenuApp() {
         >
           <button
             onClick={async () => {
+              // Track checkout button click
+              analytics.trackButtonClick('Checkout', 'checkout-btn', '/order-menu', currentView, {
+                itemCount: selectedItems.length,
+                totalAmount: getTotalAmount(),
+              });
+              
+              // Flush analytics events immediately when checkout is clicked
+              try {
+                await analytics.flushOnCheckout();
+                console.log('✅ Analytics events flushed on checkout');
+              } catch (error) {
+                console.error('⚠️ Failed to flush analytics on checkout:', error);
+                // Continue anyway - don't block checkout
+              }
+              
               // PRIORITY 1: Check skipCheckoutDialog flag from sessionStorage first (persists across navigation)
               const savedSkipCheckout = sessionStorage.getItem('skipCheckoutDialog') === 'true';
               const shouldSkipDialog = skipCheckoutDialog || savedSkipCheckout;
@@ -2345,7 +2457,10 @@ export default function SocialXMenuApp() {
                                       width={32}
                                       height={32}
                                       className="object-cover w-full h-full cursor-pointer hover:opacity-80 transition-opacity"
-                                      onClick={() => setSelectedImagePopup({ url: item.image_url!, name: item.name })}
+                                      onClick={() => {
+                                        analytics.trackImageClick(item.id, item.name);
+                                        setSelectedImagePopup({ url: item.image_url!, name: item.name });
+                                      }}
                                     />
                                   ) : item.icon && (item.icon.startsWith('/') || item.icon.startsWith('http')) ? (
                                     <Image 
