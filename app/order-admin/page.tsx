@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -266,6 +266,106 @@ export default function AdminDashboard() {
     pendingBillingRef.current = pendingBillingCount;
   }, [pendingBillingCount]);
 
+  // Fallback beep sound (used if MP3 file fails to load)
+  const playBeepSound = async () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const audioContext = new AudioContextClass();
+      
+      // Resume AudioContext if it's suspended (browser autoplay policy)
+      if (audioContext.state === 'suspended') {
+        console.log('🔄 AudioContext is suspended, attempting to resume...');
+        await audioContext.resume();
+        console.log('✅ AudioContext resumed');
+      }
+      
+      // Play 3 beeps for better attention
+      [0, 200, 400].forEach((delay, index) => {
+        setTimeout(() => {
+          try {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            // Slightly different pitch for each beep (800Hz, 900Hz, 1000Hz)
+            oscillator.frequency.value = 800 + (index * 100);
+            oscillator.type = 'sine';
+
+            // Louder and longer for better noticeability
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.4);
+            
+            if (index === 0) {
+              console.log('✅ Fallback beep sound playing');
+            }
+          } catch (beepError) {
+            console.error('❌ Error creating beep:', beepError);
+          }
+        }, delay);
+      });
+    } catch (error) {
+      console.error('❌ Could not play fallback beep sound:', error);
+      console.log('💡 Tip: Browser may be blocking audio. Try clicking anywhere on the page first to enable audio.');
+    }
+  };
+
+  // Play alert sound when new order is received (using MP3 file with fallback)
+  const playAlertSound = useCallback(() => {
+    // Check if sound is enabled (use ref to get current value, avoiding stale closures)
+    if (!soundEnabledRef.current) {
+      console.log('🔇 Sound notification is disabled');
+      return;
+    }
+    
+    console.log('🔔 Attempting to play sound notification...');
+    
+    // Try to use preloaded audio first
+    if (audioRef.current) {
+      const audio = audioRef.current;
+      
+      // Reset audio to beginning
+      audio.currentTime = 0;
+      
+      // Try to play
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('✅ Sound notification played successfully');
+          })
+          .catch((error) => {
+            console.warn('⚠️ Could not play preloaded MP3 audio:', error);
+            console.log('🔄 Falling back to beep sound...');
+            // Fallback to generated beep sound if MP3 fails
+            playBeepSound();
+          });
+      }
+    } else {
+      // If preloaded audio doesn't exist, try creating a new one
+      try {
+        console.log('⚠️ Preloaded audio not available, creating new audio element...');
+        const audio = new Audio('/sounds/order-alert.mp3');
+        audio.volume = 0.7;
+        
+        audio.play().catch((error) => {
+          console.warn('⚠️ Could not play new MP3 audio file:', error);
+          console.log('🔄 Falling back to beep sound...');
+          playBeepSound();
+        });
+      } catch (error) {
+        console.warn('⚠️ Could not initialize audio:', error);
+        console.log('🔄 Falling back to beep sound...');
+        playBeepSound();
+      }
+    }
+  }, []);
+
   // Continuous notification sound - plays until all pending orders are accepted
   useEffect(() => {
     const totalPending = pendingOrdersCount + pendingSnookerCount + pendingWorkspaceCount + pendingBillingCount;
@@ -309,7 +409,7 @@ export default function AdminDashboard() {
         soundIntervalRef.current = null;
       }
     };
-  }, [pendingOrdersCount, pendingSnookerCount, pendingWorkspaceCount, pendingBillingCount, soundEnabled]);
+  }, [pendingOrdersCount, pendingSnookerCount, pendingWorkspaceCount, pendingBillingCount, soundEnabled, playAlertSound]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -654,106 +754,6 @@ Please collect it from the counter.
     localStorage.setItem('notificationSoundEnabled', String(newValue));
   };
 
-  // Play alert sound when new order is received (using MP3 file with fallback)
-  const playAlertSound = () => {
-    // Check if sound is enabled (use ref to get current value, avoiding stale closures)
-    if (!soundEnabledRef.current) {
-      console.log('🔇 Sound notification is disabled');
-      return;
-    }
-    
-    console.log('🔔 Attempting to play sound notification...');
-    
-    // Try to use preloaded audio first
-    if (audioRef.current) {
-      const audio = audioRef.current;
-      
-      // Reset audio to beginning
-      audio.currentTime = 0;
-      
-      // Try to play
-      const playPromise = audio.play();
-      
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            console.log('✅ Sound notification played successfully');
-          })
-          .catch((error) => {
-            console.warn('⚠️ Could not play preloaded MP3 audio:', error);
-            console.log('🔄 Falling back to beep sound...');
-            // Fallback to generated beep sound if MP3 fails
-            playBeepSound();
-          });
-      }
-    } else {
-      // If preloaded audio doesn't exist, try creating a new one
-      try {
-        console.log('⚠️ Preloaded audio not available, creating new audio element...');
-        const audio = new Audio('/sounds/order-alert.mp3');
-        audio.volume = 0.7;
-        
-        audio.play().catch((error) => {
-          console.warn('⚠️ Could not play new MP3 audio file:', error);
-          console.log('🔄 Falling back to beep sound...');
-          playBeepSound();
-        });
-      } catch (error) {
-        console.warn('⚠️ Could not initialize audio:', error);
-        console.log('🔄 Falling back to beep sound...');
-        playBeepSound();
-      }
-    }
-  };
-
-  // Fallback beep sound (used if MP3 file fails to load)
-  const playBeepSound = async () => {
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      const audioContext = new AudioContextClass();
-      
-      // Resume AudioContext if it's suspended (browser autoplay policy)
-      if (audioContext.state === 'suspended') {
-        console.log('🔄 AudioContext is suspended, attempting to resume...');
-        await audioContext.resume();
-        console.log('✅ AudioContext resumed');
-      }
-      
-      // Play 3 beeps for better attention
-      [0, 200, 400].forEach((delay, index) => {
-        setTimeout(() => {
-          try {
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            // Slightly different pitch for each beep (800Hz, 900Hz, 1000Hz)
-            oscillator.frequency.value = 800 + (index * 100);
-            oscillator.type = 'sine';
-
-            // Louder and longer for better noticeability
-            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
-
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.4);
-            
-            if (index === 0) {
-              console.log('✅ Fallback beep sound playing');
-            }
-          } catch (beepError) {
-            console.error('❌ Error creating beep:', beepError);
-          }
-        }, delay);
-      });
-    } catch (error) {
-      console.error('❌ Could not play fallback beep sound:', error);
-      console.log('💡 Tip: Browser may be blocking audio. Try clicking anywhere on the page first to enable audio.');
-    }
-  };
-
   // Show desktop notification for new order (works even when browser is in background)
   const showNewOrderNotification = (order: Order) => {
     if (notificationPermission === 'granted') {
@@ -948,7 +948,7 @@ Please collect it from the counter.
   };
 
   // Fetch Snooker Bookings
-  const fetchSnookerBookings = async (showLoading = false) => {
+  const fetchSnookerBookings = useCallback(async (showLoading = false) => {
     try {
       if (showLoading) {
         setSnookerLoading(true);
@@ -1006,10 +1006,10 @@ Please collect it from the counter.
         setSnookerLoading(false);
       }
     }
-  };
+  }, [playAlertSound]);
 
   // Fetch Workspace Bookings
-  const fetchWorkspaceBookings = async (showLoading = false) => {
+  const fetchWorkspaceBookings = useCallback(async (showLoading = false) => {
     try {
       if (showLoading) {
         setWorkspaceLoading(true);
@@ -1036,7 +1036,7 @@ Please collect it from the counter.
         setWorkspaceLoading(false);
       }
     }
-  };
+  }, []);
 
   // End Play Session
   const handleStartPlay = async (bookingId: string) => {
@@ -1154,7 +1154,7 @@ Please collect it from the counter.
   };
 
   // Fetch Customer Billings
-  const fetchCustomerBillings = async (showLoading = true) => {
+  const fetchCustomerBillings = useCallback(async (showLoading = true) => {
     if (showLoading) setBillingLoading(true);
     try {
       const response = await fetch('/api/customer-billing');
@@ -1181,7 +1181,7 @@ Please collect it from the counter.
     } finally {
       setBillingLoading(false);
     }
-  };
+  }, []);
 
   // Update Customer Billing Status
   const updateCustomerBillingStatus = async (phone: string, newStatus: 'PAID' | 'UNPAID' | 'ACCEPT' | 'REJECT') => {

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     let sessionRecord;
     const { data: existingSession } = await supabase
       .from('user_sessions')
-      .select('session_id')
+      .select('session_id, created_at')
       .eq('session_id', sessionId)
       .single();
 
