@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { MenuItem } from '@/models';
 
 export default function MenuEditorPage() {
@@ -231,11 +232,12 @@ export default function MenuEditorPage() {
                             <div className="p-4">
                               {/* Image Preview */}
                               {item.image_url && (
-                                <div className="mb-3 rounded-lg overflow-hidden">
-                                  <img
+                                <div className="mb-3 rounded-lg overflow-hidden relative w-full h-40">
+                                  <Image
                                     src={item.image_url}
                                     alt={item.name}
-                                    className="w-full h-40 object-cover"
+                                    fill
+                                    className="object-cover"
                                     onError={(e) => {
                                       // Hide image if it fails to load
                                       (e.target as HTMLImageElement).style.display = 'none';
@@ -502,7 +504,7 @@ function MenuItemForm({
         }));
       }
     }
-  }, [formData.category, isCustomCategory, customCategory, item]); // Only run when category changes
+  }, [formData.category, isCustomCategory, customCategory, item, formData.id]); // Only run when category changes
 
   // Handle ID input - only allow text, '-', and '_'
   const handleIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -712,7 +714,7 @@ function MenuItemForm({
             title="Must start with category (e.g., HOT-) followed by text, numbers, '-', or '_'"
           />
           <p className="text-xs text-gray-500 mt-1">
-            Format: {formData.category}-[text/numbers/-/_]. Only letters, numbers, '-', and '_' are allowed.
+            Format: {formData.category}-[text/numbers/-/_]. Only letters, numbers, &apos;-&apos;, and &apos;_&apos; are allowed.
           </p>
         </div>
       )}
@@ -801,16 +803,17 @@ function MenuItemForm({
         <label className="block text-sm font-semibold text-orange-900 mb-1">Item Image</label>
         <div className="space-y-2">
           {imagePreview && (
-            <div className="relative w-full max-w-xs">
-              <img
+            <div className="relative w-full max-w-xs h-48">
+              <Image
                 src={imagePreview}
                 alt="Preview"
-                className="w-full h-48 object-cover rounded-lg border-2 border-orange-300"
+                fill
+                className="object-cover rounded-lg border-2 border-orange-300"
               />
               <button
                 type="button"
                 onClick={handleRemoveImage}
-                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-red-600 transition-colors"
+                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold hover:bg-red-600 transition-colors z-10"
                 aria-label="Remove image"
               >
                 ×

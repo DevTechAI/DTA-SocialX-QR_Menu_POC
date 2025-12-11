@@ -332,7 +332,7 @@ export default function SocialXMenuApp() {
         setSkipCheckoutDialog(true);
       }
     }
-  }, [mounted, currentView]);
+  }, [mounted, currentView, customerName, customerPhone, skipCheckoutDialog]);
 
   // Fetch unpaid orders when order summary page loads
   useEffect(() => {

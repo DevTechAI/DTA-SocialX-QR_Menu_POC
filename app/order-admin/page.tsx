@@ -309,7 +309,7 @@ export default function AdminDashboard() {
         soundIntervalRef.current = null;
       }
     };
-  }, [pendingOrdersCount, pendingSnookerCount, pendingWorkspaceCount, soundEnabled]);
+  }, [pendingOrdersCount, pendingSnookerCount, pendingWorkspaceCount, pendingBillingCount, soundEnabled]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -1297,7 +1297,7 @@ Please collect it from the counter.
       const interval = setInterval(() => fetchSnookerBookings(false), 5000);
       return () => clearInterval(interval);
     }
-  }, [activeTab, authChecked]);
+  }, [activeTab, authChecked, fetchSnookerBookings]);
 
   // Fetch workspace bookings when tab is active
   useEffect(() => {
@@ -1308,7 +1308,7 @@ Please collect it from the counter.
       const interval = setInterval(() => fetchWorkspaceBookings(false), 5000);
       return () => clearInterval(interval);
     }
-  }, [activeTab, authChecked]);
+  }, [activeTab, authChecked, fetchWorkspaceBookings]);
 
   // Fetch customer billings when tab is active
   useEffect(() => {
@@ -1319,7 +1319,7 @@ Please collect it from the counter.
       const interval = setInterval(() => fetchCustomerBillings(false), 5000);
       return () => clearInterval(interval);
     }
-  }, [activeTab, authChecked]);
+  }, [activeTab, authChecked, fetchCustomerBillings]);
 
   // Keyboard navigation for tabs (Left/Right Arrow keys)
   useEffect(() => {
