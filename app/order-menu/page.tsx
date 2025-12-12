@@ -63,10 +63,34 @@ export default function SocialXMenuApp() {
   // Image popup state
   const [selectedImagePopup, setSelectedImagePopup] = useState<{ url: string; name: string } | null>(null);
   
+  // Feature visibility state
+  const [isFeatureEnabled, setIsFeatureEnabled] = useState(true);
+  const [featureVisibilityLoading, setFeatureVisibilityLoading] = useState(true);
+  
   // Ref for selected items scroll container
   const selectedItemsScrollRef = useRef<HTMLDivElement>(null);
   // Ref to track if dialog has been shown for current order
   const dialogShownForOrderRef = useRef<string | null>(null);
+
+  // Fetch feature visibility
+  useEffect(() => {
+    const fetchFeatureVisibility = async () => {
+      try {
+        const response = await fetch('/api/feature-control/visibility');
+        if (response.ok) {
+          const data = await response.json();
+          setIsFeatureEnabled(data['food-order-booking'] ?? true);
+        }
+      } catch (error) {
+        console.error('Error fetching feature visibility:', error);
+        setIsFeatureEnabled(true); // Default to enabled on error
+      } finally {
+        setFeatureVisibilityLoading(false);
+      }
+    };
+
+    fetchFeatureVisibility();
+  }, []);
 
   // Fetch menu items from API
   useEffect(() => {
@@ -1933,8 +1957,47 @@ export default function SocialXMenuApp() {
         </div>
       </div>
 
+      {/* "Will ReOpen Shortly" Banner - When feature is disabled */}
+      {!isFeatureEnabled && !featureVisibilityLoading && (
+        <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 mb-4 relative z-[100]">
+          <div className="relative overflow-hidden rounded-2xl shadow-2xl">
+            {/* Animated gradient background */}
+            <div 
+              className="absolute inset-0 bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 bg-[length:200%_100%] animate-[shimmer_3s_ease-in-out_infinite]"
+              style={{
+                animation: 'shimmer 3s ease-in-out infinite',
+              }}
+            ></div>
+            {/* Waving text effect */}
+            <div className="relative px-6 py-4 text-center">
+              <h2 className="text-2xl md:text-3xl font-black text-white drop-shadow-2xl animate-pulse" style={{
+                textShadow: '0 4px 8px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3)',
+                animation: 'wave 2s ease-in-out infinite',
+              }}>
+                Will ReOpen Shortly
+              </h2>
+            </div>
+          </div>
+          <style jsx>{`
+            @keyframes shimmer {
+              0%, 100% { background-position: 0% 50%; }
+              50% { background-position: 100% 50%; }
+            }
+            @keyframes wave {
+              0%, 100% { transform: translateY(0px); }
+              50% { transform: translateY(-5px); }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Grey Out Overlay - When feature is disabled */}
+      {!isFeatureEnabled && !featureVisibilityLoading && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[99] pointer-events-none"></div>
+      )}
+
       {/* Customer Info Section - Below Header */}
-      <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-1.5 md:py-2 pb-1">
+      <div className={`w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 lg:px-10 py-1.5 md:py-2 pb-1 ${!isFeatureEnabled && !featureVisibilityLoading ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
             {!isEditingName ? (
@@ -2031,7 +2094,7 @@ export default function SocialXMenuApp() {
 
       {/* Selected Items Section - Between Header and CheckOut Button - Sticky, overlays menu items */}
       {selectedItems.length > 0 && (
-        <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 sticky z-[9999] mt-1" style={{ top: 'calc(140px + env(safe-area-inset-top, 0px))' }}>
+        <div className={`w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 sticky z-[9999] mt-1 ${!isFeatureEnabled && !featureVisibilityLoading ? 'opacity-50 grayscale pointer-events-none' : ''}`} style={{ top: 'calc(140px + env(safe-area-inset-top, 0px))' }}>
           <div 
             className="backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-primary-200/50 overflow-hidden mb-4"
             style={{
@@ -2161,7 +2224,7 @@ export default function SocialXMenuApp() {
       {/* CheckOut Button - Below Selected Items, Above Tabs */}
       {selectedItems.length > 0 && (
         <div 
-          className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 mb-4 flex justify-center sticky z-[9998]" 
+          className={`w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 mb-4 flex justify-center sticky z-[9998] ${!isFeatureEnabled && !featureVisibilityLoading ? 'opacity-50 grayscale pointer-events-none' : ''}`} 
           style={{ 
             top: selectedItems.length === 1 
               ? 'calc(250px + env(safe-area-inset-top, 0px))' // Closer to Selected Items when only 1 item
@@ -2170,6 +2233,7 @@ export default function SocialXMenuApp() {
         >
           <button
             onClick={async () => {
+              if (!isFeatureEnabled) return;
               // Track checkout button click (non-blocking)
               analytics.trackButtonClick('Checkout', 'checkout-btn', '/order-menu', currentView, {
                 itemCount: selectedItems.length,
@@ -2368,7 +2432,7 @@ export default function SocialXMenuApp() {
 
       {/* Expandable Category Accordion - Mobile Container - Scrolls behind selected items window */}
       <div 
-        className="w-full md:max-w-2xl lg:max-w-3xl space-y-1.5"
+        className={`w-full md:max-w-2xl lg:max-w-3xl space-y-1.5 ${!isFeatureEnabled && !featureVisibilityLoading ? 'opacity-50 grayscale pointer-events-none' : ''}`}
         style={{
           // Add top margin to create space from CheckOut button or selected items window
           marginTop: selectedItems.length === 1 

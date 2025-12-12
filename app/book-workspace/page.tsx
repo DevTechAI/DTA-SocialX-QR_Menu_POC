@@ -32,6 +32,30 @@ export default function BookWorkspacePage() {
     workspaceSeatId: string;
     orderDate: string;
   } | null>(null);
+  
+  // Feature visibility state
+  const [isFeatureEnabled, setIsFeatureEnabled] = useState(true);
+  const [featureVisibilityLoading, setFeatureVisibilityLoading] = useState(true);
+
+  // Fetch feature visibility
+  useEffect(() => {
+    const fetchFeatureVisibility = async () => {
+      try {
+        const response = await fetch('/api/feature-control/visibility');
+        if (response.ok) {
+          const data = await response.json();
+          setIsFeatureEnabled(data['seat-order-booking'] ?? true);
+        }
+      } catch (error) {
+        console.error('Error fetching feature visibility:', error);
+        setIsFeatureEnabled(true); // Default to enabled on error
+      } finally {
+        setFeatureVisibilityLoading(false);
+      }
+    };
+
+    fetchFeatureVisibility();
+  }, []);
 
   // Restore booking data from 12-hour session storage or server on page load
   useEffect(() => {
@@ -353,9 +377,48 @@ export default function BookWorkspacePage() {
         </div>
       </div>
 
+      {/* "Will ReOpen Shortly" Banner - When feature is disabled */}
+      {!isFeatureEnabled && !featureVisibilityLoading && (
+        <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 mb-4 relative z-[100]">
+          <div className="relative overflow-hidden rounded-2xl shadow-2xl">
+            {/* Animated gradient background */}
+            <div 
+              className="absolute inset-0 bg-gradient-to-r from-green-500 via-emerald-500 to-green-500 bg-[length:200%_100%] animate-[shimmer_3s_ease-in-out_infinite]"
+              style={{
+                animation: 'shimmer 3s ease-in-out infinite',
+              }}
+            ></div>
+            {/* Waving text effect */}
+            <div className="relative px-6 py-4 text-center">
+              <h2 className="text-2xl md:text-3xl font-black text-white drop-shadow-2xl animate-pulse" style={{
+                textShadow: '0 4px 8px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3)',
+                animation: 'wave 2s ease-in-out infinite',
+              }}>
+                Will ReOpen Shortly
+              </h2>
+            </div>
+          </div>
+          <style jsx>{`
+            @keyframes shimmer {
+              0%, 100% { background-position: 0% 50%; }
+              50% { background-position: 100% 50%; }
+            }
+            @keyframes wave {
+              0%, 100% { transform: translateY(0px); }
+              50% { transform: translateY(-5px); }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Grey Out Overlay - When feature is disabled */}
+      {!isFeatureEnabled && !featureVisibilityLoading && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[99] pointer-events-none"></div>
+      )}
+
       {/* Content Container */}
       {!showOrderSummary && (
-        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full mt-4 sm:mt-6 md:mt-8">
+        <div className={`flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full mt-4 sm:mt-6 md:mt-8 ${!isFeatureEnabled && !featureVisibilityLoading ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
           <div className="w-full md:max-w-2xl lg:max-w-3xl px-3 sm:px-0 md:px-4 lg:px-6">
             {/* Booking Form Card - Same style as snooker booking */}
             <div className="relative group mb-6 sm:mb-8">
@@ -558,7 +621,8 @@ export default function BookWorkspacePage() {
                         loading || 
                         amount <= 0 || 
                         !customerPhone || 
-                        customerPhone.replace(/\D/g, '').length !== 10
+                        customerPhone.replace(/\D/g, '').length !== 10 ||
+                        !isFeatureEnabled
                       }
                       className="relative inline-block group/btn transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -602,7 +666,7 @@ export default function BookWorkspacePage() {
 
       {/* Workspace Order Summary Card */}
       {showOrderSummary && bookingDetails && (
-        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full mt-4 sm:mt-6 md:mt-8">
+        <div className={`flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full mt-4 sm:mt-6 md:mt-8 ${!isFeatureEnabled && !featureVisibilityLoading ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
           <div className="w-full md:max-w-2xl lg:max-w-3xl px-3 sm:px-0 md:px-4 lg:px-6">
           <div className="relative group">
             {/* Glowing border effect */}
