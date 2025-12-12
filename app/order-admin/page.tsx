@@ -191,6 +191,7 @@ export default function AdminDashboard() {
   const [expandedBillings, setExpandedBillings] = useState<Set<string>>(new Set());
   const [expandedSubCards, setExpandedSubCards] = useState<Set<string>>(new Set());
   
+  
   // Use ref to always have the current soundEnabled value (avoids stale closures)
   const soundEnabledRef = useRef(soundEnabled);
   const previousOrdersRef = useRef<Order[]>([]);
@@ -1487,6 +1488,12 @@ Please collect it from the counter.
               <div className="flex-1 flex flex-col items-end gap-2">
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 flex-wrap">
+                    <Link
+                      href="/order-admin/feature-control"
+                      className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
+                    >
+                      ⚙️ Feature Control
+                    </Link>
                     <Link
                       href="/order-admin/bi-reports"
                       className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
