@@ -57,6 +57,9 @@ export default function SocialXMenuApp() {
   const [unpaidOrdersLoading, setUnpaidOrdersLoading] = useState(false);
   const [allUnpaidOrderIds, setAllUnpaidOrderIds] = useState<string[]>([]);
   
+  // Order placement loading state
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  
   // Image popup state
   const [selectedImagePopup, setSelectedImagePopup] = useState<{ url: string; name: string } | null>(null);
   
@@ -795,6 +798,9 @@ export default function SocialXMenuApp() {
       return;
     }
 
+    // Set loading state to show "Placing Order..." indicator
+    setIsPlacingOrder(true);
+
     // Ensure phone number has +91 prefix
     const phoneWithPrefix = customerPhone.startsWith('+91') ? customerPhone : `+91${customerPhone}`;
     const phoneDigits = phoneWithPrefix.startsWith('+91') ? phoneWithPrefix.slice(3) : phoneWithPrefix;
@@ -906,6 +912,9 @@ export default function SocialXMenuApp() {
         // Navigate to order summary page immediately (don't wait for analytics)
         navigateToView('orderPlaced');
         
+        // Hide loading indicator
+        setIsPlacingOrder(false);
+        
         // Update session info and flush analytics events in background (non-blocking)
         (async () => {
           try {
@@ -930,19 +939,27 @@ export default function SocialXMenuApp() {
           setUnavailableItems(responseData.unavailableItems);
           setShowUnavailableItemsDialog(true);
           console.log('✅ Dialog state set, showUnavailableItemsDialog should be true');
+          // Hide loading indicator
+          setIsPlacingOrder(false);
         } else {
           // Other 400 error
           console.error('❌ Order error (400):', responseData);
           alert(responseData.error || 'Failed to place order. Please try again.');
+          // Hide loading indicator
+          setIsPlacingOrder(false);
         }
       } else {
         // Other error
         console.error('❌ Order error:', responseData);
         alert(responseData.error || 'Failed to place order. Please try again.');
+        // Hide loading indicator
+        setIsPlacingOrder(false);
       }
     } catch (error) {
       console.error('❌ Error placing order:', error);
       alert('Failed to place order. Please try again.');
+      // Hide loading indicator
+      setIsPlacingOrder(false);
     }
   };
 
@@ -1232,6 +1249,31 @@ export default function SocialXMenuApp() {
             </p>
           </div>
         </footer>
+
+        {/* Floating "Placing Order..." Loading Indicator */}
+        {isPlacingOrder && (
+          <div className="fixed inset-0 z-[20000] flex items-center justify-center pointer-events-none">
+            <div className="relative">
+              {/* Animated background blur */}
+              <div className="absolute inset-0 bg-black/20 backdrop-blur-sm rounded-full -inset-4 animate-pulse"></div>
+              
+              {/* Text with animation */}
+              <div className="relative px-6 py-3 rounded-full bg-white/80 backdrop-blur-md shadow-2xl border border-primary-200/50">
+                <div className="flex items-center gap-3">
+                  {/* Animated dots */}
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                  <span className="text-base sm:text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
+                    Placing Order...
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     );
   }
@@ -1715,6 +1757,31 @@ export default function SocialXMenuApp() {
         </footer>
 
         {/* Order Message Dialog Popup - Removed */}
+
+        {/* Floating "Placing Order..." Loading Indicator */}
+        {isPlacingOrder && (
+          <div className="fixed inset-0 z-[20000] flex items-center justify-center pointer-events-none">
+            <div className="relative">
+              {/* Animated background blur */}
+              <div className="absolute inset-0 bg-black/20 backdrop-blur-sm rounded-full -inset-4 animate-pulse"></div>
+              
+              {/* Text with animation */}
+              <div className="relative px-6 py-3 rounded-full bg-white/80 backdrop-blur-md shadow-2xl border border-primary-200/50">
+                <div className="flex items-center gap-3">
+                  {/* Animated dots */}
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                  <span className="text-base sm:text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
+                    Placing Order...
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     );
@@ -2836,6 +2903,31 @@ export default function SocialXMenuApp() {
                 <p className="text-white font-bold text-lg md:text-xl text-center">
                   {selectedImagePopup.name}
                 </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating "Placing Order..." Loading Indicator */}
+      {isPlacingOrder && (
+        <div className="fixed inset-0 z-[20000] flex items-center justify-center pointer-events-none">
+          <div className="relative">
+            {/* Animated background blur */}
+            <div className="absolute inset-0 bg-black/20 backdrop-blur-sm rounded-full -inset-4 animate-pulse"></div>
+            
+            {/* Text with animation */}
+            <div className="relative px-6 py-3 rounded-full bg-white/80 backdrop-blur-md shadow-2xl border border-primary-200/50">
+              <div className="flex items-center gap-3">
+                {/* Animated dots */}
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+                <span className="text-base sm:text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
+                  Placing Order...
+                </span>
               </div>
             </div>
           </div>
