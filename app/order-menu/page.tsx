@@ -865,7 +865,7 @@ export default function SocialXMenuApp() {
       });
 
       if (response.ok) {
-        // Close checkout dialog if it was open
+        // Close checkout dialog immediately
         setShowCheckoutDialog(false);
         // Reset checkout form
         setCheckoutName('');
@@ -903,20 +903,22 @@ export default function SocialXMenuApp() {
         // Clear the fromBookingPage flag after order is placed
         sessionStorage.removeItem('fromBookingPage');
         
-        // Update session info and flush analytics events
-        try {
-          await analytics.updateSessionInfo(orderId, phoneWithPrefix, customerName);
-          console.log('✅ Session info updated with order details');
-          
-          await analytics.flushOnOrderComplete();
-          console.log('✅ Analytics events flushed on order complete');
-        } catch (error) {
-          console.error('⚠️ Failed to update analytics on order complete:', error);
-          // Continue anyway - don't block order completion
-        }
-        
+        // Navigate to order summary page immediately (don't wait for analytics)
         navigateToView('orderPlaced');
-        // Dialog will be shown by useEffect
+        
+        // Update session info and flush analytics events in background (non-blocking)
+        (async () => {
+          try {
+            await analytics.updateSessionInfo(orderId, phoneWithPrefix, customerName);
+            console.log('✅ Session info updated with order details');
+            
+            await analytics.flushOnOrderComplete();
+            console.log('✅ Analytics events flushed on order complete');
+          } catch (error) {
+            console.error('⚠️ Failed to update analytics on order complete:', error);
+            // Continue anyway - don't block order completion
+          }
+        })();
       } else if (response.status === 400) {
         // Check if it's an unavailable items error
         if (responseData.unavailableItems && Array.isArray(responseData.unavailableItems) && responseData.unavailableItems.length > 0) {
@@ -2101,20 +2103,16 @@ export default function SocialXMenuApp() {
         >
           <button
             onClick={async () => {
-              // Track checkout button click
+              // Track checkout button click (non-blocking)
               analytics.trackButtonClick('Checkout', 'checkout-btn', '/order-menu', currentView, {
                 itemCount: selectedItems.length,
                 totalAmount: getTotalAmount(),
               });
               
-              // Flush analytics events immediately when checkout is clicked
-              try {
-                await analytics.flushOnCheckout();
-                console.log('✅ Analytics events flushed on checkout');
-              } catch (error) {
+              // Flush analytics events in background (non-blocking)
+              analytics.flushOnCheckout().catch((error) => {
                 console.error('⚠️ Failed to flush analytics on checkout:', error);
-                // Continue anyway - don't block checkout
-              }
+              });
               
               // PRIORITY 1: Check skipCheckoutDialog flag from sessionStorage first (persists across navigation)
               const savedSkipCheckout = sessionStorage.getItem('skipCheckoutDialog') === 'true';
@@ -2200,35 +2198,7 @@ export default function SocialXMenuApp() {
               const sessionPhone = sessionStorage.getItem('customerPhone');
               const fromBookingPage = sessionStorage.getItem('fromBookingPage') === 'true';
               
-              // If coming from booking page, verify discount eligibility
-              if (fromBookingPage && sessionPhone) {
-                try {
-                  // Normalize phone number: ensure it has +91 prefix
-                  let phoneForApi = sessionPhone.replace(/\s+/g, '').replace(/-/g, '');
-                  if (!phoneForApi.startsWith('+91')) {
-                    phoneForApi = phoneForApi.replace(/^(0|91)/, '');
-                    phoneForApi = `+91${phoneForApi}`;
-                  }
-                  
-                  const snookerResponse = await fetch(`/api/snooker-bookings/by-phone?phone=${encodeURIComponent(phoneForApi)}`);
-                  const snookerResult = snookerResponse.ok ? await snookerResponse.json() : { data: null };
-                  
-                  const workspaceResponse = await fetch(`/api/workspace-bookings/by-phone?phone=${encodeURIComponent(phoneForApi)}`);
-                  const workspaceResult = workspaceResponse.ok ? await workspaceResponse.json() : { data: null };
-                  
-                  if (snookerResult.data || workspaceResult.data) {
-                    setIsDiscountEligible(true);
-                  } else {
-                    setIsDiscountEligible(false);
-                  }
-                  // Clear the flag after checking
-                  sessionStorage.removeItem('fromBookingPage');
-                } catch (error) {
-                  console.error('Error checking booking eligibility:', error);
-                  setIsDiscountEligible(false);
-                }
-              }
-              
+              // Show dialog immediately if needed (don't wait for API calls)
               if (sessionName && sessionPhone) {
                 // Customer details available - directly place order without showing dialog
                 // Validate phone number
@@ -2243,13 +2213,13 @@ export default function SocialXMenuApp() {
                   // Directly place order using sessionStorage data
                   await processOrderPlacement(sessionName, sessionPhone);
                 } else {
-                  // Invalid phone, show dialog
+                  // Invalid phone, show dialog immediately
                   setCheckoutName(sessionName);
                   setCheckoutPhone(phoneDigits);
                   setShowCheckoutDialog(true);
                 }
               } else {
-                // No sessionStorage data - show checkout dialog
+                // No sessionStorage data - show checkout dialog immediately
                 // Also clear discount eligibility if not from booking page
                 if (!fromBookingPage) {
                   setIsDiscountEligible(false);
@@ -2264,6 +2234,40 @@ export default function SocialXMenuApp() {
                   setCheckoutPhone(phoneWithoutPrefix);
                 }
                 setShowCheckoutDialog(true);
+              }
+              
+              // Check discount eligibility in background (non-blocking)
+              if (fromBookingPage && sessionPhone) {
+                // Run in background without blocking dialog display
+                (async () => {
+                  try {
+                    // Normalize phone number: ensure it has +91 prefix
+                    let phoneForApi = sessionPhone.replace(/\s+/g, '').replace(/-/g, '');
+                    if (!phoneForApi.startsWith('+91')) {
+                      phoneForApi = phoneForApi.replace(/^(0|91)/, '');
+                      phoneForApi = `+91${phoneForApi}`;
+                    }
+                    
+                    const [snookerResponse, workspaceResponse] = await Promise.all([
+                      fetch(`/api/snooker-bookings/by-phone?phone=${encodeURIComponent(phoneForApi)}`),
+                      fetch(`/api/workspace-bookings/by-phone?phone=${encodeURIComponent(phoneForApi)}`)
+                    ]);
+                    
+                    const snookerResult = snookerResponse.ok ? await snookerResponse.json() : { data: null };
+                    const workspaceResult = workspaceResponse.ok ? await workspaceResponse.json() : { data: null };
+                    
+                    if (snookerResult.data || workspaceResult.data) {
+                      setIsDiscountEligible(true);
+                    } else {
+                      setIsDiscountEligible(false);
+                    }
+                    // Clear the flag after checking
+                    sessionStorage.removeItem('fromBookingPage');
+                  } catch (error) {
+                    console.error('Error checking booking eligibility:', error);
+                    setIsDiscountEligible(false);
+                  }
+                })();
               }
             }}
             className="relative w-[45%] min-w-[140px] max-w-[240px] px-4 py-2.5 md:px-5 md:py-3 rounded-xl font-bold text-sm md:text-base transition-all shadow-lg overflow-hidden group/checkout active:scale-95 border-2 border-primary-300"
