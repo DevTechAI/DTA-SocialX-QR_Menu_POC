@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 type BookingOption = {
@@ -10,6 +11,7 @@ type BookingOption = {
   route: string;
   gradient: string;
   available: boolean;
+  featureId?: string; // feature_item_id for visibility check
 };
 
 const bookingOptions: BookingOption[] = [
@@ -21,6 +23,7 @@ const bookingOptions: BookingOption[] = [
     route: '/order-menu',
     gradient: 'from-orange-500 to-orange-600',
     available: true,
+    featureId: 'food-order-booking',
   },
   {
     id: 'snooker',
@@ -30,15 +33,17 @@ const bookingOptions: BookingOption[] = [
     route: '/book-snooker',
     gradient: 'from-blue-500 to-blue-600',
     available: true,
+    featureId: 'snooker-order-booking',
   },
   {
     id: 'cowork-seat',
     title: 'Reserve Workspace',
     description: 'Reserve a workspace seat',
     icon: '💼',
-    route: '/book-cowork-seat',
+    route: '/book-workspace',
     gradient: 'from-green-500 to-green-600',
-    available: false,
+    available: true,
+    featureId: 'seat-order-booking',
   },
   {
     id: 'eventspace',
@@ -53,6 +58,44 @@ const bookingOptions: BookingOption[] = [
 
 export default function BookOrderPage() {
   const router = useRouter();
+  const [featureVisibility, setFeatureVisibility] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+
+  // Fetch feature visibility
+  useEffect(() => {
+    const fetchVisibility = async () => {
+      try {
+        const response = await fetch('/api/feature-control/visibility');
+        if (response.ok) {
+          const data = await response.json();
+          setFeatureVisibility(data);
+        }
+      } catch (error) {
+        console.error('Error fetching feature visibility:', error);
+        // Default to all enabled on error
+        setFeatureVisibility({
+          'food-order-booking': true,
+          'snooker-order-booking': true,
+          'seat-order-booking': true,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVisibility();
+  }, []);
+
+  // Update booking options with visibility
+  const updatedBookingOptions = bookingOptions.map(option => {
+    if (option.featureId) {
+      return {
+        ...option,
+        available: featureVisibility[option.featureId] ?? true,
+      };
+    }
+    return option;
+  });
 
   const handleCardClick = (option: BookingOption) => {
     if (option.available) {
@@ -124,7 +167,7 @@ export default function BookOrderPage() {
         {/* Booking Options Grid */}
         {/* Mobile: Small emoji icons in 2x2 grid */}
         <div className="grid grid-cols-2 gap-4 md:hidden mt-16 sm:mt-18">
-          {bookingOptions.map((option) => {
+          {updatedBookingOptions.map((option) => {
             // Helper function to get title parts
             const getTitleParts = () => {
               if (option.id === 'food-order') {
@@ -140,7 +183,6 @@ export default function BookOrderPage() {
             };
             
             const titleParts = getTitleParts();
-            const showWIP = !option.available && (option.id === 'snooker' || option.id === 'cowork-seat');
             
             return (
               <button
@@ -153,16 +195,10 @@ export default function BookOrderPage() {
                   transform transition-all duration-300
                   ${option.available 
                     ? 'hover:scale-105 hover:shadow-xl cursor-pointer active:scale-95' 
-                    : 'cursor-not-allowed'
+                    : 'cursor-not-allowed opacity-60 grayscale'
                   }
                 `}
               >
-                {/* WIP Icon - Top Right Corner */}
-                {showWIP && (
-                  <div className="absolute top-2 right-2">
-                    <span className="text-lg">🚧</span>
-                  </div>
-                )}
                 
                 {/* Emoji Icon */}
                 {option.available ? (
@@ -188,19 +224,12 @@ export default function BookOrderPage() {
                   </h3>
                 ) : (
                   <>
-                    {/* Title - Line 1 */}
-                    <h3 className={`text-sm sm:text-base font-bold text-center mb-0.5 ${
-                      option.available ? 'text-gray-800' : 'text-gray-400'
-                    }`} style={{ paddingLeft: '5%', paddingRight: '5%' }}>
-                      {titleParts.line1}
-                    </h3>
-                    
-                    {/* Title - Line 2 */}
-                    {titleParts.line2 && (
+                    {/* Title - Combined Line 1 and Line 2 */}
+                    {titleParts.line1 && (
                       <h3 className={`text-xs sm:text-sm font-bold text-center leading-tight break-words ${
                         option.available ? 'text-gray-800' : 'text-gray-400'
                       }`} style={{ paddingLeft: '5%', paddingRight: '5%', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
-                        {titleParts.line2}
+                        {titleParts.line1}{titleParts.line2 ? ` ${titleParts.line2}` : ''}
                       </h3>
                     )}
                     
@@ -215,10 +244,6 @@ export default function BookOrderPage() {
                   </>
                 )}
                 
-                {/* Self-Order at Counter text */}
-                {showWIP && (
-                  <p className="text-[9px] text-gray-500 mt-1 text-center">Self-Order at Counter</p>
-                )}
               </button>
             );
           })}
@@ -226,7 +251,7 @@ export default function BookOrderPage() {
 
         {/* Desktop: Full card layout */}
         <div className="hidden md:grid md:grid-cols-2 gap-4 mt-24 md:mt-28">
-          {bookingOptions.map((option) => {
+          {updatedBookingOptions.map((option) => {
             // Helper function to get title parts
             const getTitleParts = () => {
               if (option.id === 'food-order') {
@@ -242,7 +267,6 @@ export default function BookOrderPage() {
             };
             
             const titleParts = getTitleParts();
-            const showWIP = !option.available && (option.id === 'snooker' || option.id === 'cowork-seat');
             
             return (
               <button
@@ -254,18 +278,12 @@ export default function BookOrderPage() {
                   transform transition-all duration-300
                   ${option.available 
                     ? 'hover:scale-105 hover:shadow-2xl cursor-pointer active:scale-95' 
-                    : 'opacity-60 cursor-not-allowed'
+                    : 'opacity-60 cursor-not-allowed grayscale'
                   }
                   border-2 border-transparent
                   ${option.available ? 'hover:border-primary-300' : ''}
                 `}
               >
-                {/* WIP Icon - Top Right Corner */}
-                {showWIP && (
-                  <div className="absolute top-3 right-3">
-                    <span className="text-xl">🚧</span>
-                  </div>
-                )}
 
                 {/* Icon */}
                 <div className={`
@@ -317,16 +335,9 @@ export default function BookOrderPage() {
                       ✓ Available
                     </span>
                   ) : (
-                    <>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 mb-1.5">
-                        {option.id === 'snooker' || option.id === 'cowork-seat' || option.id === 'eventspace' 
-                          ? 'For Now Check at Counter' 
-                          : 'Coming Soon'}
-                      </span>
-                      {showWIP && (
-                        <p className="text-xs text-gray-500 mt-1.5">Self-Order at Counter</p>
-                      )}
-                    </>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 mb-1.5">
+                      Temporarily Unavailable
+                    </span>
                   )}
                 </div>
 

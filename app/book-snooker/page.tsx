@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getSessionData, setSessionData, removeSessionData } from '@/lib/utils/sessionStorage';
 
 type Board = {
   snooker_board_id: string;
@@ -20,6 +21,167 @@ export default function BookSnookerPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showBookingSuccessDialog, setShowBookingSuccessDialog] = useState(false);
+  const [showOrderSummary, setShowOrderSummary] = useState(false);
+  const [bookingOrderId, setBookingOrderId] = useState<string>('');
+  const [bookingDetails, setBookingDetails] = useState<{
+    customerName: string;
+    customerPhone: string;
+    boardName: string;
+    boardId: string;
+    playersCount: number;
+    orderDate: string;
+  } | null>(null);
+  
+  // Feature visibility state
+  const [isFeatureEnabled, setIsFeatureEnabled] = useState(true);
+  const [featureVisibilityLoading, setFeatureVisibilityLoading] = useState(true);
+
+  // Fetch feature visibility
+  useEffect(() => {
+    const fetchFeatureVisibility = async () => {
+      try {
+        const response = await fetch('/api/feature-control/visibility');
+        if (response.ok) {
+          const data = await response.json();
+          setIsFeatureEnabled(data['snooker-order-booking'] ?? true);
+        }
+      } catch (error) {
+        console.error('Error fetching feature visibility:', error);
+        setIsFeatureEnabled(true); // Default to enabled on error
+      } finally {
+        setFeatureVisibilityLoading(false);
+      }
+    };
+
+    fetchFeatureVisibility();
+  }, []);
+
+  // Restore booking data from 12-hour session storage on page load
+  useEffect(() => {
+    const restoreBookingData = async () => {
+      // Check if we're starting a new booking (from Food Order Summary)
+      const startNewBooking = sessionStorage.getItem('startNewSnookerBooking') === 'true';
+      
+      if (startNewBooking) {
+        // Clear the flag
+        sessionStorage.removeItem('startNewSnookerBooking');
+        // Don't restore booking data - show empty form instead
+        setShowOrderSummary(false);
+        setLoading(false);
+        return;
+      }
+      
+      // First, try to restore from client-side 12-hour session storage
+      const savedBookingDetails = getSessionData<{
+        customerName: string;
+        customerPhone: string;
+        boardName: string;
+        boardId: string;
+        playersCount: number;
+        orderDate: string;
+      }>('snooker_bookingDetails');
+      
+      const savedBookingOrderId = getSessionData<string>('snooker_bookingOrderId');
+      const savedShowOrderSummary = getSessionData<boolean>('snooker_showOrderSummary');
+
+      if (savedBookingDetails && savedBookingOrderId) {
+        // Restore from client-side storage
+        setBookingDetails(savedBookingDetails);
+        setBookingOrderId(savedBookingOrderId);
+        // Always show order summary if we have saved booking data
+        setShowOrderSummary(true);
+        setLoading(false);
+        return;
+      }
+
+      // If no client-side data, try to restore from server using phone number
+      const savedPhone = sessionStorage.getItem('customerPhone') || 
+                        getSessionData<string>('snooker_customerPhone');
+      
+      if (savedPhone && boards.length > 0) {
+        try {
+          const response = await fetch(`/api/snooker-bookings/by-phone?phone=${encodeURIComponent(savedPhone)}`);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.data) {
+              // Found booking on server, restore it
+              const booking = result.data;
+              const selectedBoard = boards.find(b => b.snooker_board_id === booking.snooker_board_id);
+              const boardName = selectedBoard 
+                ? selectedBoard.board_name.replace(/\s+[A-Z0-9]+$/, '') 
+                : (booking.snooker_board_menu_items?.board_name?.replace(/\s+[A-Z0-9]+$/, '') || booking.snooker_board_id);
+              
+              const bookingDetails = {
+                customerName: booking.customer_name,
+                customerPhone: booking.customer_phno,
+                boardName: boardName,
+                boardId: booking.snooker_board_id,
+                playersCount: booking.players_count || 1,
+                orderDate: new Date(booking.created_at).toISOString().split('T')[0],
+              };
+              
+              setBookingDetails(bookingDetails);
+              setBookingOrderId(booking.snooker_order_id);
+              setShowOrderSummary(true);
+              setLoading(false);
+              
+              // Also save to client-side storage for future use
+              setSessionData('snooker_bookingDetails', bookingDetails);
+              setSessionData('snooker_bookingOrderId', booking.snooker_order_id);
+              setSessionData('snooker_showOrderSummary', true);
+              setSessionData('snooker_customerPhone', booking.customer_phno);
+            } else {
+              // No booking found on server, show form
+              setShowOrderSummary(false);
+              setLoading(false);
+            }
+          } else {
+            // Error fetching, show form
+            setShowOrderSummary(false);
+            setLoading(false);
+          }
+        } catch (error) {
+          console.error('Error fetching booking from server:', error);
+          // On error, show form
+          setShowOrderSummary(false);
+          setLoading(false);
+        }
+      } else {
+        // No phone number, show form
+        setShowOrderSummary(false);
+        setLoading(false);
+      }
+    };
+
+    // Only restore if boards are loaded
+    if (boards.length > 0 || loading === false) {
+      restoreBookingData();
+    }
+  }, [boards, loading]);
+
+  // Restore customer info from sessionStorage or 12-hour session storage (from workspace/food booking)
+  useEffect(() => {
+    // Always restore customer info when showing form (not order summary)
+    // This ensures customer info is pre-filled when starting a new booking
+    if (!showOrderSummary && !loading) {
+      // Check 12-hour session storage first, then regular sessionStorage
+      const savedName = getSessionData<string>('snooker_customerName') || 
+                       getSessionData<string>('food_customerName') ||
+                       sessionStorage.getItem('customerName');
+      const savedPhone = getSessionData<string>('snooker_customerPhone') || 
+                        getSessionData<string>('food_customerPhone') ||
+                        sessionStorage.getItem('customerPhone');
+      
+      if (savedName) {
+        setCustomerName(savedName);
+      }
+      if (savedPhone) {
+        // Remove +91 prefix if present (for display in input field)
+        const phoneWithoutPrefix = savedPhone.startsWith('+91') ? savedPhone.slice(3) : savedPhone;
+        setCustomerPhone(phoneWithoutPrefix);
+      }
+    }
+  }, [showOrderSummary, loading]);
 
   // Fetch boards from API
   useEffect(() => {
@@ -86,6 +248,34 @@ export default function BookSnookerPage() {
       const data = await response.json();
 
       if (response.ok) {
+        // Get board name for display
+        const selectedBoardObj = boards.find(b => b.snooker_board_id === selectedBoard);
+        const boardName = selectedBoardObj ? selectedBoardObj.board_name.replace(/\s+[A-Z0-9]+$/, '') : selectedBoard;
+        
+        // Store booking details before resetting
+        const bookingDetails = {
+          customerName: customerName.trim(),
+          customerPhone: phoneWithPrefix,
+          boardName: boardName,
+          boardId: selectedBoard,
+          playersCount: parseInt(playersCount),
+          orderDate: new Date().toISOString().split('T')[0],
+        };
+        
+        setBookingOrderId(data.booking_id || data.booking?.snooker_order_id || data.snooker_order_id || '');
+        setBookingDetails(bookingDetails);
+        
+        // Save to 12-hour session storage for persistence across refreshes
+        const orderId = data.booking_id || data.booking?.snooker_order_id || data.snooker_order_id || '';
+        setSessionData('snooker_bookingDetails', bookingDetails);
+        setSessionData('snooker_bookingOrderId', orderId);
+        setSessionData('snooker_showOrderSummary', true);
+        setSessionData('snooker_customerPhone', phoneWithPrefix);
+        
+        // Also save to sessionStorage for compatibility
+        sessionStorage.setItem('customerName', customerName.trim());
+        sessionStorage.setItem('customerPhone', phoneWithPrefix);
+        
         // Reset form
         setCustomerName('');
         setCustomerPhone('');
@@ -156,8 +346,48 @@ export default function BookSnookerPage() {
         </div>
       </div>
 
+      {/* "Will ReOpen Shortly" Banner - When feature is disabled */}
+      {!isFeatureEnabled && !featureVisibilityLoading && (
+        <div className="w-full md:max-w-2xl lg:max-w-3xl px-4 md:px-6 mb-4 relative z-[100]">
+          <div className="relative overflow-hidden rounded-2xl shadow-2xl">
+            {/* Animated gradient background */}
+            <div 
+              className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 bg-[length:200%_100%] animate-[shimmer_3s_ease-in-out_infinite]"
+              style={{
+                animation: 'shimmer 3s ease-in-out infinite',
+              }}
+            ></div>
+            {/* Waving text effect */}
+            <div className="relative px-6 py-4 text-center">
+              <h2 className="text-2xl md:text-3xl font-black text-white drop-shadow-2xl animate-pulse" style={{
+                textShadow: '0 4px 8px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3)',
+                animation: 'wave 2s ease-in-out infinite',
+              }}>
+                Will ReOpen Shortly
+              </h2>
+            </div>
+          </div>
+          <style jsx>{`
+            @keyframes shimmer {
+              0%, 100% { background-position: 0% 50%; }
+              50% { background-position: 100% 50%; }
+            }
+            @keyframes wave {
+              0%, 100% { transform: translateY(0px); }
+              50% { transform: translateY(-5px); }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Grey Out Overlay - When feature is disabled */}
+      {!isFeatureEnabled && !featureVisibilityLoading && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[99] pointer-events-none"></div>
+      )}
+
       {/* Content Container */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full mt-4 sm:mt-6 md:mt-8">
+      {!showOrderSummary && (
+      <div className={`flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full mt-4 sm:mt-6 md:mt-8 ${!isFeatureEnabled && !featureVisibilityLoading ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
         <div className="w-full md:max-w-2xl lg:max-w-3xl px-3 sm:px-0 md:px-4 lg:px-6">
           {/* Booking Form Card - Same style as order-menu */}
           <div className="relative group mb-6 sm:mb-8">
@@ -312,7 +542,7 @@ export default function BookSnookerPage() {
                   {/* Submit Button - Same style as "Click for Menu" */}
           <button
                     type="submit"
-                    disabled={submitting || loading}
+                    disabled={submitting || loading || !isFeatureEnabled}
                     className="relative w-full group/btn transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {/* Elite outer border */}
@@ -350,6 +580,179 @@ export default function BookSnookerPage() {
           </div>
         </div>
       </div>
+      )}
+
+      {/* Snooker Order Summary Card */}
+      {showOrderSummary && bookingDetails && (
+        <div className={`flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full mt-4 sm:mt-6 md:mt-8 ${!isFeatureEnabled && !featureVisibilityLoading ? 'opacity-50 grayscale pointer-events-none' : ''}`}>
+          <div className="w-full md:max-w-2xl lg:max-w-3xl px-3 sm:px-0 md:px-4 lg:px-6">
+          <div className="relative group">
+            {/* Glowing border effect */}
+            <div className="absolute -inset-0.5 gradient-primary rounded-[28px] opacity-75 blur-md"></div>
+            
+            {/* Main card with glass-morphism */}
+            <div className="relative rounded-3xl overflow-hidden shadow-soft-xl flex flex-col">
+              {/* Glass background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-blue-50/80 backdrop-blur-xl"></div>
+              
+              {/* Shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent"></div>
+              
+              {/* Content */}
+              <div className="relative z-10 flex flex-col">
+                {/* Header Section */}
+                <div className="flex-shrink-0 p-4 sm:p-6 pb-0">
+                  {/* Header: Tick Mark + Name + Booking ID */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-500 shadow-soft-lg flex-shrink-0">
+                        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
+                          {bookingDetails.customerName}
+                        </h2>
+                        <p className="text-xs font-semibold text-gray-600 mt-0.5">Booking ID: {bookingOrderId.slice(0, 8)}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">Status</p>
+                      <p className="text-lg font-bold text-green-600">Received</p>
+                    </div>
+                  </div>
+
+                  {/* Booking Message */}
+                  <div className="mb-4">
+                    <div className="space-y-2">
+                      <p className="text-base font-bold text-gray-800">
+                        Snooker booking is confirmed
+                      </p>
+                      <p className="text-sm font-semibold text-gray-700 leading-relaxed">
+                        Thank you for booking Snooker Table, kindly collect Cue sticks from the counter.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Booking Details List */}
+                <div className="px-4 sm:px-6 max-h-[35vh] sm:max-h-[40vh] md:max-h-[45vh] overflow-y-auto">
+                  <h3 className="text-sm font-bold text-gray-700 mb-3">Booking Details</h3>
+                  <div className="space-y-2 pb-4">
+                    <div className="relative group/item rounded-2xl overflow-hidden">
+                      <div className="bg-gradient-to-br from-white via-white to-blue-50/60 p-4 border border-blue-100 shadow-sm">
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-semibold text-gray-700">Customer Name:</span>
+                            <span className="text-sm font-bold text-gray-800">{bookingDetails.customerName}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-semibold text-gray-700">Contact:</span>
+                            <span className="text-sm font-bold text-gray-800">{bookingDetails.customerPhone}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-semibold text-gray-700">Gaming Table:</span>
+                            <span className="text-sm font-bold text-gray-800">{bookingDetails.boardName}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-semibold text-gray-700">Players Count:</span>
+                            <span className="text-sm font-bold text-gray-800">{bookingDetails.playersCount}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-semibold text-gray-700">Order Date:</span>
+                            <span className="text-sm font-bold text-gray-800">{bookingDetails.orderDate}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fixed Bottom Section */}
+                <div className="p-4 sm:p-6 pt-3 sm:pt-4 border-t border-blue-100 bg-white/50">
+                  {/* Action Buttons */}
+                  <div className="flex flex-col gap-3">
+                    {/* Book Another Snooker Button */}
+                    <button
+                      onClick={() => {
+                        // Clear booking data and show form with pre-filled customer info
+                        setShowOrderSummary(false);
+                        setBookingOrderId('');
+                        setBookingDetails(null);
+                        
+                        // Clear 12-hour session storage
+                        removeSessionData('snooker_bookingDetails');
+                        removeSessionData('snooker_bookingOrderId');
+                        removeSessionData('snooker_showOrderSummary');
+                        
+                        // Keep customer info for pre-filling
+                        if (bookingDetails) {
+                          const phoneWithoutPrefix = bookingDetails.customerPhone.startsWith('+91') 
+                            ? bookingDetails.customerPhone.slice(3) 
+                            : bookingDetails.customerPhone;
+                          setCustomerName(bookingDetails.customerName);
+                          setCustomerPhone(phoneWithoutPrefix);
+                        }
+                      }}
+                      className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
+                    >
+                      <div className="absolute inset-0 gradient-primary"></div>
+                      <span className="relative z-10 text-white">Book Another Snooker</span>
+                    </button>
+
+                    {/* Order Food Button */}
+                    <button
+                      onClick={() => {
+                        // Store customer name and phone in sessionStorage
+                        if (bookingDetails) {
+                          sessionStorage.setItem('customerName', bookingDetails.customerName);
+                          sessionStorage.setItem('customerPhone', bookingDetails.customerPhone);
+                          // Set flag to indicate user came from booking page (for discount eligibility)
+                          sessionStorage.setItem('fromBookingPage', 'true');
+                        }
+                        router.push('/order-menu');
+                      }}
+                      className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-orange-600"></div>
+                      <span className="relative z-10 text-white">Order Food</span>
+                    </button>
+
+                    {/* Reserve WorkSpace Button */}
+                    <button
+                      onClick={() => {
+                        // Store customer info for workspace booking
+                        if (bookingDetails) {
+                          sessionStorage.setItem('customerName', bookingDetails.customerName);
+                          sessionStorage.setItem('customerPhone', bookingDetails.customerPhone);
+                        }
+                        router.push('/book-workspace');
+                      }}
+                      className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-green-600"></div>
+                      <span className="relative z-10 text-white">Reserve WorkSpace</span>
+                    </button>
+
+                    {/* Home Button */}
+                    <button
+                      onClick={() => {
+                        router.push('/book-order');
+                      }}
+                      className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-gray-600 to-gray-700"></div>
+                      <span className="relative z-10 text-white">Home</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer - Subtle Bottom Banner */}
       <footer className="w-full mt-auto">
@@ -377,7 +780,8 @@ export default function BookSnookerPage() {
             // Close when clicking outside
             if (e.target === e.currentTarget) {
               setShowBookingSuccessDialog(false);
-              router.push('/book-order');
+              setShowOrderSummary(true);
+              setSessionData('snooker_showOrderSummary', true);
             }
           }}
         >
@@ -388,7 +792,8 @@ export default function BookSnookerPage() {
             <button
               onClick={() => {
                 setShowBookingSuccessDialog(false);
-                router.push('/book-order');
+                setShowOrderSummary(true);
+                setSessionData('snooker_showOrderSummary', true);
               }}
               className="absolute top-4 right-4 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full p-1.5 transition-all"
               aria-label="Close"
@@ -421,7 +826,8 @@ export default function BookSnookerPage() {
             <button
               onClick={() => {
                 setShowBookingSuccessDialog(false);
-                router.push('/book-order');
+                setShowOrderSummary(true);
+                setSessionData('snooker_showOrderSummary', true);
               }}
               className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
             >

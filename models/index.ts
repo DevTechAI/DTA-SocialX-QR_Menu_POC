@@ -17,6 +17,7 @@ export interface MenuItem {
   available: boolean;
   image_url?: string;
   icon?: string;
+  show_image?: boolean;
   created_at: string;
   updated_at: string;
 }

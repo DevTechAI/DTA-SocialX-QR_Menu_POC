@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -113,12 +113,84 @@ export default function AdminDashboard() {
     }
     return true;
   });
-  const [activeTab, setActiveTab] = useState<'food' | 'snooker'>('food');
+  const [activeTab, setActiveTab] = useState<'food' | 'snooker' | 'workspace' | 'billing'>('food');
   const [snookerBookings, setSnookerBookings] = useState<SnookerBooking[]>([]);
   const [snookerLoading, setSnookerLoading] = useState(true);
   const [expandedSnookerBookings, setExpandedSnookerBookings] = useState<Set<string>>(new Set());
   const [newSnookerBookingsCount, setNewSnookerBookingsCount] = useState(0);
   const [previousSnookerBookings, setPreviousSnookerBookings] = useState<SnookerBooking[]>([]);
+  
+  // Continuous notification sound state
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+  const [pendingSnookerCount, setPendingSnookerCount] = useState(0);
+  const [pendingWorkspaceCount, setPendingWorkspaceCount] = useState(0);
+  const [pendingBillingCount, setPendingBillingCount] = useState(0);
+  const soundIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingOrdersRef = useRef(0);
+  const pendingSnookerRef = useRef(0);
+  const pendingWorkspaceRef = useRef(0);
+  const pendingBillingRef = useRef(0);
+  
+  // Workspace bookings state
+  interface WorkspaceBooking {
+    workspace_order_id: string;
+    customer_name: string;
+    customer_phno: string;
+    workspace_seat_id: string;
+    seats_count: number;
+    order_date: string;
+    order_status: 'Received' | 'Accepted' | 'Paid' | 'Delivered' | 'Rejected';
+    created_at: string;
+    workspace_seat_menu_items?: {
+      workspace_seat_id: string;
+      workspace_seat_value: number;
+    };
+  }
+  const [workspaceBookings, setWorkspaceBookings] = useState<WorkspaceBooking[]>([]);
+  const [workspaceLoading, setWorkspaceLoading] = useState(true);
+  const [expandedWorkspaceBookings, setExpandedWorkspaceBookings] = useState<Set<string>>(new Set());
+  
+  // Customer Billing state
+  interface CustomerBilling {
+    customer_phno: string;
+    customer_name: string;
+    total_ordered_value_at_socialx: number;
+    order_history_json: Array<{
+      order_date: string;
+      Customer_PhNo: string;
+      Customer_Name: string;
+      allorder_value: number;
+      FoodOrderUUID?: string;
+      WorkSpaceOrderUUID?: string;
+      SnookerOrderUUID?: string;
+      allOrder_Status: 'PAID' | 'UNPAID';
+      foodOrders?: any[];
+      snookerBookings?: any[];
+      workspaceBookings?: any[];
+    }>;
+    latestdate_allorder_json: {
+      order_date: string;
+      Customer_PhNo: string;
+      Customer_Name: string;
+      allorder_value: number;
+      FoodOrderUUID?: string;
+      WorkSpaceOrderUUID?: string;
+      SnookerOrderUUID?: string;
+      allOrder_Status: 'PAID' | 'UNPAID';
+      foodOrders?: any[];
+      snookerBookings?: any[];
+      workspaceBookings?: any[];
+    };
+    latestdate_allorder_value: number;
+    latestdate_allorder_status: 'PAID' | 'UNPAID';
+    created_at: string;
+    updated_at: string;
+  }
+  const [customerBillings, setCustomerBillings] = useState<CustomerBilling[]>([]);
+  const [billingLoading, setBillingLoading] = useState(true);
+  const [expandedBillings, setExpandedBillings] = useState<Set<string>>(new Set());
+  const [expandedSubCards, setExpandedSubCards] = useState<Set<string>>(new Set());
+  
   
   // Use ref to always have the current soundEnabled value (avoids stale closures)
   const soundEnabledRef = useRef(soundEnabled);
@@ -177,6 +249,168 @@ export default function AdminDashboard() {
   useEffect(() => {
     newOrdersCountRef.current = newOrdersCount;
   }, [newOrdersCount]);
+
+  // Update refs for pending orders
+  useEffect(() => {
+    pendingOrdersRef.current = pendingOrdersCount;
+  }, [pendingOrdersCount]);
+
+  useEffect(() => {
+    pendingSnookerRef.current = pendingSnookerCount;
+  }, [pendingSnookerCount]);
+
+  useEffect(() => {
+    pendingWorkspaceRef.current = pendingWorkspaceCount;
+  }, [pendingWorkspaceCount]);
+
+  useEffect(() => {
+    pendingBillingRef.current = pendingBillingCount;
+  }, [pendingBillingCount]);
+
+  // Fallback beep sound (used if MP3 file fails to load)
+  const playBeepSound = async () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const audioContext = new AudioContextClass();
+      
+      // Resume AudioContext if it's suspended (browser autoplay policy)
+      if (audioContext.state === 'suspended') {
+        console.log('🔄 AudioContext is suspended, attempting to resume...');
+        await audioContext.resume();
+        console.log('✅ AudioContext resumed');
+      }
+      
+      // Play 3 beeps for better attention
+      [0, 200, 400].forEach((delay, index) => {
+        setTimeout(() => {
+          try {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            // Slightly different pitch for each beep (800Hz, 900Hz, 1000Hz)
+            oscillator.frequency.value = 800 + (index * 100);
+            oscillator.type = 'sine';
+
+            // Louder and longer for better noticeability
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.4);
+            
+            if (index === 0) {
+              console.log('✅ Fallback beep sound playing');
+            }
+          } catch (beepError) {
+            console.error('❌ Error creating beep:', beepError);
+          }
+        }, delay);
+      });
+    } catch (error) {
+      console.error('❌ Could not play fallback beep sound:', error);
+      console.log('💡 Tip: Browser may be blocking audio. Try clicking anywhere on the page first to enable audio.');
+    }
+  };
+
+  // Play alert sound when new order is received (using MP3 file with fallback)
+  const playAlertSound = useCallback(() => {
+    // Check if sound is enabled (use ref to get current value, avoiding stale closures)
+    if (!soundEnabledRef.current) {
+      console.log('🔇 Sound notification is disabled');
+      return;
+    }
+    
+    console.log('🔔 Attempting to play sound notification...');
+    
+    // Try to use preloaded audio first
+    if (audioRef.current) {
+      const audio = audioRef.current;
+      
+      // Reset audio to beginning
+      audio.currentTime = 0;
+      
+      // Try to play
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('✅ Sound notification played successfully');
+          })
+          .catch((error) => {
+            console.warn('⚠️ Could not play preloaded MP3 audio:', error);
+            console.log('🔄 Falling back to beep sound...');
+            // Fallback to generated beep sound if MP3 fails
+            playBeepSound();
+          });
+      }
+    } else {
+      // If preloaded audio doesn't exist, try creating a new one
+      try {
+        console.log('⚠️ Preloaded audio not available, creating new audio element...');
+        const audio = new Audio('/sounds/order-alert.mp3');
+        audio.volume = 0.7;
+        
+        audio.play().catch((error) => {
+          console.warn('⚠️ Could not play new MP3 audio file:', error);
+          console.log('🔄 Falling back to beep sound...');
+          playBeepSound();
+        });
+      } catch (error) {
+        console.warn('⚠️ Could not initialize audio:', error);
+        console.log('🔄 Falling back to beep sound...');
+        playBeepSound();
+      }
+    }
+  }, []);
+
+  // Continuous notification sound - plays until all pending orders are accepted
+  useEffect(() => {
+    const totalPending = pendingOrdersCount + pendingSnookerCount + pendingWorkspaceCount + pendingBillingCount;
+    
+    // Clear existing interval if any
+    if (soundIntervalRef.current) {
+      clearInterval(soundIntervalRef.current);
+      soundIntervalRef.current = null;
+    }
+
+    // If there are pending orders and sound is enabled, start continuous notification
+    if (totalPending > 0 && soundEnabledRef.current) {
+      console.log(`🔔 Starting continuous notification for ${totalPending} pending order(s)`);
+      
+      // Play immediately
+      playAlertSound();
+      
+      // Then play every 3 seconds until all orders are accepted
+      soundIntervalRef.current = setInterval(() => {
+        const currentPending = pendingOrdersRef.current + pendingSnookerRef.current + pendingWorkspaceRef.current + pendingBillingRef.current;
+        
+        if (currentPending > 0 && soundEnabledRef.current) {
+          playAlertSound();
+        } else {
+          // Stop if no pending orders or sound disabled
+          if (soundIntervalRef.current) {
+            clearInterval(soundIntervalRef.current);
+            soundIntervalRef.current = null;
+            console.log('🔇 Stopped continuous notification - no pending orders');
+          }
+        }
+      }, 3000); // Play every 3 seconds
+    } else {
+      console.log('🔇 Continuous notification stopped - no pending orders or sound disabled');
+    }
+
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (soundIntervalRef.current) {
+        clearInterval(soundIntervalRef.current);
+        soundIntervalRef.current = null;
+      }
+    };
+  }, [pendingOrdersCount, pendingSnookerCount, pendingWorkspaceCount, pendingBillingCount, soundEnabled, playAlertSound]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -521,106 +755,6 @@ Please collect it from the counter.
     localStorage.setItem('notificationSoundEnabled', String(newValue));
   };
 
-  // Play alert sound when new order is received (using MP3 file with fallback)
-  const playAlertSound = () => {
-    // Check if sound is enabled (use ref to get current value, avoiding stale closures)
-    if (!soundEnabledRef.current) {
-      console.log('🔇 Sound notification is disabled');
-      return;
-    }
-    
-    console.log('🔔 Attempting to play sound notification...');
-    
-    // Try to use preloaded audio first
-    if (audioRef.current) {
-      const audio = audioRef.current;
-      
-      // Reset audio to beginning
-      audio.currentTime = 0;
-      
-      // Try to play
-      const playPromise = audio.play();
-      
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            console.log('✅ Sound notification played successfully');
-          })
-          .catch((error) => {
-            console.warn('⚠️ Could not play preloaded MP3 audio:', error);
-            console.log('🔄 Falling back to beep sound...');
-            // Fallback to generated beep sound if MP3 fails
-            playBeepSound();
-          });
-      }
-    } else {
-      // If preloaded audio doesn't exist, try creating a new one
-      try {
-        console.log('⚠️ Preloaded audio not available, creating new audio element...');
-        const audio = new Audio('/sounds/order-alert.mp3');
-        audio.volume = 0.7;
-        
-        audio.play().catch((error) => {
-          console.warn('⚠️ Could not play new MP3 audio file:', error);
-          console.log('🔄 Falling back to beep sound...');
-          playBeepSound();
-        });
-      } catch (error) {
-        console.warn('⚠️ Could not initialize audio:', error);
-        console.log('🔄 Falling back to beep sound...');
-        playBeepSound();
-      }
-    }
-  };
-
-  // Fallback beep sound (used if MP3 file fails to load)
-  const playBeepSound = async () => {
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      const audioContext = new AudioContextClass();
-      
-      // Resume AudioContext if it's suspended (browser autoplay policy)
-      if (audioContext.state === 'suspended') {
-        console.log('🔄 AudioContext is suspended, attempting to resume...');
-        await audioContext.resume();
-        console.log('✅ AudioContext resumed');
-      }
-      
-      // Play 3 beeps for better attention
-      [0, 200, 400].forEach((delay, index) => {
-        setTimeout(() => {
-          try {
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            // Slightly different pitch for each beep (800Hz, 900Hz, 1000Hz)
-            oscillator.frequency.value = 800 + (index * 100);
-            oscillator.type = 'sine';
-
-            // Louder and longer for better noticeability
-            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
-
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.4);
-            
-            if (index === 0) {
-              console.log('✅ Fallback beep sound playing');
-            }
-          } catch (beepError) {
-            console.error('❌ Error creating beep:', beepError);
-          }
-        }, delay);
-      });
-    } catch (error) {
-      console.error('❌ Could not play fallback beep sound:', error);
-      console.log('💡 Tip: Browser may be blocking audio. Try clicking anywhere on the page first to enable audio.');
-    }
-  };
-
   // Show desktop notification for new order (works even when browser is in background)
   const showNewOrderNotification = (order: Order) => {
     if (notificationPermission === 'granted') {
@@ -733,6 +867,9 @@ Please collect it from the counter.
           (order: Order) => order.status === 'received'
         ).length;
         
+        // Update pending orders count - this will trigger continuous notification
+        setPendingOrdersCount(receivedCount);
+        
         // Play sound if count is 1 or greater (and count increased)
         // This ensures sound plays when count goes from 0 to 1 or more
         // Only play if we didn't already play for new orders detection above
@@ -792,6 +929,8 @@ Please collect it from the counter.
           // Recalculate new orders count
           const receivedCount = updated.filter(order => order.status === 'received').length;
           setNewOrdersCount(receivedCount);
+          // Update pending orders count - this will stop notification if count becomes 0
+          setPendingOrdersCount(receivedCount);
           const currentSnookerCount = newSnookerBookingsCountRef.current;
           updateTabTitle(receivedCount, currentSnookerCount);
           
@@ -810,7 +949,7 @@ Please collect it from the counter.
   };
 
   // Fetch Snooker Bookings
-  const fetchSnookerBookings = async (showLoading = false) => {
+  const fetchSnookerBookings = useCallback(async (showLoading = false) => {
     try {
       if (showLoading) {
         setSnookerLoading(true);
@@ -843,6 +982,9 @@ Please collect it from the counter.
           (booking: SnookerBooking) => booking.order_status === 'Received'
         ).length;
         
+        // Update pending snooker count - this will trigger continuous notification
+        setPendingSnookerCount(receivedCount);
+        
         // Play sound if count is 1 or greater (and count increased)
         // Only play if we didn't already play for new bookings detection above
         const previousCount = newSnookerBookingsCountRef.current;
@@ -865,7 +1007,37 @@ Please collect it from the counter.
         setSnookerLoading(false);
       }
     }
-  };
+  }, [playAlertSound]);
+
+  // Fetch Workspace Bookings
+  const fetchWorkspaceBookings = useCallback(async (showLoading = false) => {
+    try {
+      if (showLoading) {
+        setWorkspaceLoading(true);
+      }
+      const response = await fetch('/api/workspace-bookings');
+      if (response.ok) {
+        const data = await response.json();
+        setWorkspaceBookings(data);
+        
+        // Calculate pending workspace bookings count (Received status)
+        const receivedCount = data.filter(
+          (booking: WorkspaceBooking) => booking.order_status === 'Received'
+        ).length;
+        
+        // Update pending workspace count - this will trigger continuous notification
+        setPendingWorkspaceCount(receivedCount);
+      } else {
+        console.error('Failed to fetch workspace bookings');
+      }
+    } catch (error) {
+      console.error('Error fetching workspace bookings:', error);
+    } finally {
+      if (showLoading) {
+        setWorkspaceLoading(false);
+      }
+    }
+  }, []);
 
   // End Play Session
   const handleStartPlay = async (bookingId: string) => {
@@ -918,6 +1090,167 @@ Please collect it from the counter.
     }
   };
 
+  // Update Workspace Booking Status
+  const updateWorkspaceBookingStatus = async (bookingId: string, newStatus: 'Received' | 'Accepted' | 'Paid' | 'Delivered' | 'Rejected') => {
+    try {
+      const response = await fetch(`/api/workspace-bookings/${bookingId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_status: newStatus }),
+      });
+
+      if (response.ok) {
+        // Update pending count immediately if status changed from Received
+        if (newStatus !== 'Received') {
+          setWorkspaceBookings(prev => {
+            const receivedCount = prev.filter(b => b.order_status === 'Received' && b.workspace_order_id !== bookingId).length;
+            setPendingWorkspaceCount(receivedCount);
+            return prev.map(b => 
+              b.workspace_order_id === bookingId ? { ...b, order_status: newStatus } : b
+            );
+          });
+        }
+        // Refresh workspace bookings
+        await fetchWorkspaceBookings(false);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        alert(`Failed to update booking status: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating workspace booking status:', error);
+      alert(`Error updating booking status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Update Snooker Booking Status
+  const updateSnookerBookingStatus = async (bookingId: string, newStatus: 'Received' | 'Accepted' | 'Started' | 'Paused' | 'Resumed' | 'Ended') => {
+    try {
+      const response = await fetch(`/api/snooker-bookings/${bookingId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_status: newStatus }),
+      });
+
+      if (response.ok) {
+        // Update pending count immediately if status changed from Received
+        if (newStatus !== 'Received') {
+          setSnookerBookings(prev => {
+            const receivedCount = prev.filter(b => b.order_status === 'Received' && b.snooker_order_id !== bookingId).length;
+            setPendingSnookerCount(receivedCount);
+            return prev.map(b => 
+              b.snooker_order_id === bookingId ? { ...b, order_status: newStatus } : b
+            );
+          });
+        }
+        // Refresh snooker bookings
+        await fetchSnookerBookings(false);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        alert(`Failed to update booking status: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating snooker booking status:', error);
+      alert(`Error updating booking status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Fetch Customer Billings
+  const fetchCustomerBillings = useCallback(async (showLoading = true) => {
+    if (showLoading) setBillingLoading(true);
+    try {
+      const response = await fetch('/api/customer-billing');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Fetched customer billings:', data?.length || 0, 'records');
+        setCustomerBillings(data || []);
+        
+        // Calculate pending billings (UNPAID status)
+        const unpaidCount = (data || []).filter(
+          (billing: CustomerBilling) => billing.latestdate_allorder_status === 'UNPAID'
+        ).length;
+        setPendingBillingCount(unpaidCount);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ Failed to fetch customer billings:', errorData);
+        setCustomerBillings([]);
+        setPendingBillingCount(0);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching customer billings:', error);
+      setCustomerBillings([]);
+      setPendingBillingCount(0);
+    } finally {
+      setBillingLoading(false);
+    }
+  }, []);
+
+  // Update Customer Billing Status
+  const updateCustomerBillingStatus = async (phone: string, newStatus: 'PAID' | 'UNPAID' | 'ACCEPT' | 'REJECT') => {
+    try {
+      const response = await fetch(`/api/customer-billing/${encodeURIComponent(phone)}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        // Play notification sound
+        if (soundEnabledRef.current && audioRef.current) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        }
+        // Refresh customer billings
+        await fetchCustomerBillings(false);
+        // Also refresh other tabs to sync status
+        if (activeTab === 'food') await fetchOrders(false);
+        if (activeTab === 'snooker') await fetchSnookerBookings(false);
+        if (activeTab === 'workspace') await fetchWorkspaceBookings(false);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        alert(`Failed to update billing status: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating customer billing status:', error);
+      alert(`Error updating billing status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Update Individual Order Status
+  const updateIndividualOrderStatus = async (phone: string, orderType: 'food' | 'workspace' | 'snooker', orderId: string, status: 'PAID' | 'UNPAID') => {
+    try {
+      const response = await fetch(`/api/customer-billing/${encodeURIComponent(phone)}/order-status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderType, orderId, status }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Play notification sound
+        if (soundEnabledRef.current && audioRef.current) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch(err => console.log('Audio play failed:', err));
+        }
+        // Refresh customer billings
+        await fetchCustomerBillings(false);
+        // Also refresh other tabs to sync status
+        if (activeTab === 'food') await fetchOrders(false);
+        if (activeTab === 'snooker') await fetchSnookerBookings(false);
+        if (activeTab === 'workspace') await fetchWorkspaceBookings(false);
+        
+        if (result.mainStatusUpdated) {
+          console.log('✅ All orders are now PAID - main card status updated to PAID');
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        alert(`Failed to update order status: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating individual order status:', error);
+      alert(`Error updating order status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   // Countdown Timer Component
   const CountdownTimer = ({ startTime }: { startTime: string }) => {
     const [timeElapsed, setTimeElapsed] = useState('00:00:00');
@@ -965,7 +1298,63 @@ Please collect it from the counter.
       const interval = setInterval(() => fetchSnookerBookings(false), 5000);
       return () => clearInterval(interval);
     }
-  }, [activeTab, authChecked]);
+  }, [activeTab, authChecked, fetchSnookerBookings]);
+
+  // Fetch workspace bookings when tab is active
+  useEffect(() => {
+    if (activeTab === 'workspace' && authChecked) {
+      // Initial fetch with loading state
+      fetchWorkspaceBookings(true);
+      // Refresh every 5 seconds without loading state
+      const interval = setInterval(() => fetchWorkspaceBookings(false), 5000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, authChecked, fetchWorkspaceBookings]);
+
+  // Fetch customer billings when tab is active
+  useEffect(() => {
+    if (activeTab === 'billing' && authChecked) {
+      // Initial fetch with loading state
+      fetchCustomerBillings(true);
+      // Refresh every 5 seconds without loading state
+      const interval = setInterval(() => fetchCustomerBillings(false), 5000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, authChecked, fetchCustomerBillings]);
+
+  // Keyboard navigation for tabs (Left/Right Arrow keys)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle arrow keys if not typing in an input/textarea
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return; // Don't interfere with text input
+      }
+
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        
+        const tabs: Array<'billing' | 'food' | 'snooker' | 'workspace'> = ['billing', 'food', 'snooker', 'workspace'];
+        const currentIndex = tabs.indexOf(activeTab);
+        
+        let newIndex: number;
+        if (event.key === 'ArrowLeft') {
+          // Move to previous tab (left)
+          newIndex = currentIndex > 0 ? currentIndex - 1 : tabs.length - 1;
+        } else {
+          // Move to next tab (right)
+          newIndex = currentIndex < tabs.length - 1 ? currentIndex + 1 : 0;
+        }
+        
+        setActiveTab(tabs[newIndex]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeTab]);
 
   // Orders are already filtered by business day (8 AM to 8 AM) from the API
   // So we can use them directly - no need for additional client-side filtering
@@ -978,11 +1367,11 @@ Please collect it from the counter.
     .filter(order => order.status === 'paid')
     .reduce((sum, order) => sum + order.total_amount, 0);
 
-  // Display orders: sort by created_at (oldest first) - show all orders
+  // Display orders: sort by created_at (newest first) - show all orders
   const todayOrders = allTodayOrders
     .sort((a, b) => {
-      // Sort by created_at ascending (oldest first)
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      // Sort by created_at descending (newest first)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
   // Calculate item-wise metrics
@@ -1072,25 +1461,48 @@ Please collect it from the counter.
           {/* Content */}
           <div className="relative z-10">
             <div className="flex items-center justify-between flex-wrap gap-4">
-              {/* Left spacer for balance */}
-              <div className="flex-1"></div>
+              {/* Left side - Vendor StockYard Button */}
+              <div className="flex-1 flex flex-col items-start gap-2">
+                <Link
+                  href="/order-admin/vendor-stock-manage"
+                  className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
+                >
+                  📦 Vendor StockYard
+                </Link>
+              </div>
               
               {/* Centered Admin Dashboard */}
               <div className="flex-1 flex flex-col items-center text-center">
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white flex items-center gap-3 drop-shadow-lg">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white flex items-center gap-3 drop-shadow-lg whitespace-nowrap">
                   <span className="text-4xl md:text-5xl">👨‍💼</span>
                   <span>Admin Dashboard</span>
                 </h1>
-                <p className="text-white text-base md:text-lg mt-2 font-bold drop-shadow-lg">SocialX Hub - Order Management</p>
+                <p className="text-white text-base md:text-lg mt-2 font-bold" style={{ 
+                  textShadow: '3px 3px 6px rgba(0, 0, 0, 0.9), -2px -2px 4px rgba(0, 0, 0, 0.9), 2px 2px 4px rgba(0, 0, 0, 0.9), -2px 2px 4px rgba(0, 0, 0, 0.9), 2px -2px 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.8)',
+                  WebkitTextStroke: '1px rgba(0, 0, 0, 0.7)',
+                  paintOrder: 'stroke fill'
+                }}>SocialX Hub - Order Management</p>
               </div>
               
               {/* Right side - Date and Time + Actions */}
               <div className="flex-1 flex flex-col items-end gap-2">
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 flex-wrap">
+                    <Link
+                      href="/order-admin/feature-control"
+                      className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
+                    >
+                      ⚙️ Feature Control
+                    </Link>
+                    <Link
+                      href="/order-admin/bi-reports"
+                      className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
+                    >
+                      📊 BI Reports
+                    </Link>
                   <Link
                     href="/order-admin/menu-edit"
-                    className="px-4 py-2 bg-white/20 backdrop-blur-md text-white rounded-lg border border-white/30 hover:bg-white/30 transition-colors font-semibold text-sm"
+                      className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
                   >
                     📝 Menu Editor
                   </Link>
@@ -1234,6 +1646,21 @@ Please collect it from the counter.
         <div className="mb-6 md:mb-8 w-full">
           <div className="flex items-center justify-center gap-4 mb-6">
             <button
+              onClick={() => setActiveTab('billing')}
+              className={`px-6 py-3 rounded-xl font-bold text-lg transition-all relative ${
+                activeTab === 'billing'
+                  ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 shadow-soft'
+              }`}
+            >
+              💳 Customer Billing
+              {pendingBillingCount > 0 && (
+                <span className="ml-2 text-xl animate-pulse" title="Notification sound active - pending billings">
+                  🔊
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => setActiveTab('food')}
               className={`px-6 py-3 rounded-xl font-bold text-lg transition-all relative ${
                 activeTab === 'food'
@@ -1242,6 +1669,11 @@ Please collect it from the counter.
               }`}
             >
               🍽️ Food Orders
+              {pendingOrdersCount > 0 && (
+                <span className="ml-2 text-xl animate-pulse" title="Notification sound active - pending orders">
+                  🔊
+                </span>
+              )}
               {newOrdersCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
                   {newOrdersCount}
@@ -1257,9 +1689,29 @@ Please collect it from the counter.
               }`}
             >
               🎱 Snooker Booking
+              {pendingSnookerCount > 0 && (
+                <span className="ml-2 text-xl animate-pulse" title="Notification sound active - pending bookings">
+                  🔊
+                </span>
+              )}
               {newSnookerBookingsCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
                   {newSnookerBookingsCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('workspace')}
+              className={`px-6 py-3 rounded-xl font-bold text-lg transition-all relative ${
+                activeTab === 'workspace'
+                  ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 shadow-soft'
+              }`}
+            >
+              💼 WorkSpace Booking
+              {pendingWorkspaceCount > 0 && (
+                <span className="ml-2 text-xl animate-pulse" title="Notification sound active - pending bookings">
+                  🔊
                 </span>
               )}
             </button>
@@ -1298,7 +1750,7 @@ Please collect it from the counter.
             Click on an order to expand and view details
             {allTodayOrders.length > 0 && (
               <span className="ml-2 text-orange-600 font-semibold">
-                (sorted by time - oldest first)
+                (sorted by time - latest first)
               </span>
             )}
           </p>
@@ -1401,6 +1853,11 @@ Please collect it from the counter.
                             {/* Status Badge */}
                             <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${config.badge} mt-1 mb-1`}>
                               <span className="text-xs font-bold text-white uppercase">{config.label}</span>
+                              {(order.status === 'received' || order.status === 'unpaid') && (
+                                <span className="text-sm animate-pulse" title="Notification sound active - needs attention">
+                                  🔊
+                                </span>
+                              )}
                             </div>
                             <p className="text-xs font-semibold text-gray-600 mt-1">
                               {isExpanded ? '▲ Hide' : '▼ Show'}
@@ -1579,6 +2036,23 @@ Please collect it from the counter.
                   <span className="text-3xl md:text-4xl">🎱</span>
                   <span>Snooker Bookings</span>
                 </h2>
+                
+                {/* Sound Notification Toggle */}
+                <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-soft border border-blue-200">
+                  <span className="text-sm font-semibold text-gray-700">🔔</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={soundEnabled}
+                      onChange={toggleSound}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                    <span className="ml-2 text-sm font-medium text-gray-700">
+                      {soundEnabled ? 'On' : 'Off'}
+                    </span>
+                  </label>
+                </div>
               </div>
               <p className="text-gray-600 mt-2 text-sm md:text-base font-medium text-center">
                 Click on a booking to expand and view details
@@ -1718,6 +2192,11 @@ Please collect it from the counter.
                                   {/* Status Badge */}
                                   <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${config.badge} mb-2`}>
                                     <span className="text-xs font-bold text-white uppercase">{config.label}</span>
+                                    {booking.order_status === 'Received' && (
+                                      <span className="text-sm animate-pulse" title="Notification sound active - needs attention">
+                                        🔊
+                                      </span>
+                                    )}
                                   </div>
                                   {/* START PLAY Button - Show for Received orders (DISABLED) */}
                                   {normalizedStatus === 'Received' && (
@@ -1823,12 +2302,111 @@ Please collect it from the counter.
                                       e.stopPropagation();
                                       handleEndPlay(booking.snooker_order_id);
                                     }}
-                                    className="w-full py-3 px-4 rounded-xl font-bold text-sm md:text-base transition-all shadow-soft hover:shadow-soft-lg active:scale-95 bg-gradient-to-r from-red-500 to-red-600 text-white border-2 border-red-400"
+                                    className="w-full py-3 px-4 rounded-xl font-bold text-sm md:text-base transition-all shadow-soft hover:shadow-soft-lg active:scale-95 bg-gradient-to-r from-red-500 to-red-600 text-white border-2 border-red-400 mb-4"
                                   >
                                     <span className="block text-lg mb-1">🛑</span>
                                     <span>END PLAY</span>
                                   </button>
                                 )}
+
+                                {/* Status Update Buttons */}
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateSnookerBookingStatus(booking.snooker_order_id, 'Received');
+                                    }}
+                                    disabled={booking.order_status === 'Received'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Received'
+                                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-2 border-yellow-400'
+                                        : 'bg-gradient-to-br from-yellow-100 to-orange-100 text-yellow-700 hover:from-yellow-200 hover:to-orange-200 border border-yellow-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">⏳</span>
+                                    <span>Received</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateSnookerBookingStatus(booking.snooker_order_id, 'Accepted');
+                                    }}
+                                    disabled={booking.order_status === 'Accepted'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Accepted'
+                                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-2 border-blue-400'
+                                        : 'bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-700 hover:from-blue-200 hover:to-indigo-200 border border-blue-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">✅</span>
+                                    <span>Accepted</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateSnookerBookingStatus(booking.snooker_order_id, 'Started');
+                                    }}
+                                    disabled={booking.order_status === 'Started' || booking.order_status === 'STARTED'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Started' || booking.order_status === 'STARTED'
+                                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border-2 border-green-400'
+                                        : 'bg-gradient-to-br from-green-100 to-emerald-100 text-green-700 hover:from-green-200 hover:to-emerald-200 border border-green-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">▶️</span>
+                                    <span>Started</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateSnookerBookingStatus(booking.snooker_order_id, 'Paused');
+                                    }}
+                                    disabled={booking.order_status === 'Paused'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Paused'
+                                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-2 border-purple-400'
+                                        : 'bg-gradient-to-br from-purple-100 to-pink-100 text-purple-700 hover:from-purple-200 hover:to-pink-200 border border-purple-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">⏸️</span>
+                                    <span>Paused</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateSnookerBookingStatus(booking.snooker_order_id, 'Resumed');
+                                    }}
+                                    disabled={booking.order_status === 'Resumed'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Resumed'
+                                        ? 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white border-2 border-cyan-400'
+                                        : 'bg-gradient-to-br from-cyan-100 to-teal-100 text-cyan-700 hover:from-cyan-200 hover:to-teal-200 border border-cyan-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">▶️</span>
+                                    <span>Resumed</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateSnookerBookingStatus(booking.snooker_order_id, 'Ended');
+                                    }}
+                                    disabled={booking.order_status === 'Ended' || booking.order_status === 'ENDED'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Ended' || booking.order_status === 'ENDED'
+                                        ? 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border-2 border-gray-400'
+                                        : 'bg-gradient-to-br from-gray-100 to-slate-100 text-gray-700 hover:from-gray-200 hover:to-slate-200 border border-gray-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">✅</span>
+                                    <span>Ended</span>
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -1836,6 +2414,995 @@ Please collect it from the counter.
                       </div>
                     );
                   })}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Workspace Booking Tab */}
+        {activeTab === 'workspace' && (
+          <>
+            {/* Workspace Bookings Header */}
+            <div className="mb-6 md:mb-8">
+              <div className="flex items-center justify-center gap-4 flex-wrap">
+                <h2 className="text-2xl md:text-3xl font-bold text-green-600 flex items-center gap-3">
+                  <span className="text-3xl md:text-4xl">💼</span>
+                  <span>Workspace Bookings</span>
+                </h2>
+                
+                {/* Sound Notification Toggle */}
+                <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-soft border border-green-200">
+                  <span className="text-sm font-semibold text-gray-700">🔔</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={soundEnabled}
+                      onChange={toggleSound}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                    <span className="ml-2 text-sm font-medium text-gray-700">
+                      {soundEnabled ? 'On' : 'Off'}
+                    </span>
+                  </label>
+                </div>
+              </div>
+              <p className="text-gray-600 mt-2 text-sm md:text-base font-medium text-center">
+                Click on a booking to expand and view details
+              </p>
+            </div>
+
+            {/* Loading State */}
+            {workspaceLoading && (
+              <div className="text-center py-12">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 mb-4 shadow-soft">
+                  <div className="animate-pulse">
+                    <span className="text-5xl text-green-600">⏳</span>
+                  </div>
+                </div>
+                <p className="text-gray-700 font-bold text-lg">Loading Bookings...</p>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!workspaceLoading && workspaceBookings.length === 0 && (
+              <div className="relative rounded-3xl overflow-hidden shadow-soft-lg">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-green-50/80 backdrop-blur-xl"></div>
+                <div className="relative z-10 text-center py-16 md:py-20 px-6">
+                  <div className="inline-flex items-center justify-center w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 mb-6 shadow-soft">
+                    <span className="text-6xl md:text-7xl">💼</span>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold text-transparent bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text mb-3">No bookings yet</h3>
+                  <p className="text-gray-600 font-medium">Workspace bookings will appear here as customers reserve seats</p>
+                </div>
+              </div>
+            )}
+
+            {/* Workspace Bookings Grid */}
+            {!workspaceLoading && workspaceBookings.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                {workspaceBookings
+                  .filter(booking => {
+                    // Show all bookings with status: Received, Accepted, Paid, Delivered, Rejected
+                    const validStatuses = ['Received', 'Accepted', 'Paid', 'Delivered', 'Rejected'];
+                    return validStatuses.includes(booking.order_status);
+                  })
+                  .map(booking => {
+                    const isExpanded = expandedWorkspaceBookings.has(booking.workspace_order_id);
+                    const seatInfo = booking.workspace_seat_menu_items;
+                    const workspaceStatusConfig = {
+                      Received: {
+                        label: 'Received',
+                        color: 'border-yellow-300',
+                        cardBg: 'bg-gradient-to-br from-yellow-50 via-yellow-100/70 to-orange-50/80',
+                        textColor: 'text-yellow-700',
+                        badge: 'bg-gradient-to-r from-yellow-500 to-orange-500',
+                        icon: '⏳',
+                      },
+                      Accepted: {
+                        label: 'Accepted',
+                        color: 'border-blue-300',
+                        cardBg: 'bg-gradient-to-br from-blue-50 via-blue-100/70 to-indigo-50/80',
+                        textColor: 'text-blue-700',
+                        badge: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+                        icon: '✅',
+                      },
+                      Paid: {
+                        label: 'Paid',
+                        color: 'border-green-300',
+                        cardBg: 'bg-gradient-to-br from-green-50 via-green-100/70 to-emerald-50/80',
+                        textColor: 'text-green-700',
+                        badge: 'bg-gradient-to-r from-green-500 to-emerald-500',
+                        icon: '💰',
+                      },
+                      Delivered: {
+                        label: 'Delivered',
+                        color: 'border-gray-300',
+                        cardBg: 'bg-gradient-to-br from-gray-50 via-gray-100/70 to-slate-50/80',
+                        textColor: 'text-gray-700',
+                        badge: 'bg-gradient-to-r from-gray-500 to-slate-500',
+                        icon: '✅',
+                      },
+                      Rejected: {
+                        label: 'Rejected',
+                        color: 'border-red-400',
+                        cardBg: 'bg-gradient-to-br from-red-50 via-red-100/70 to-rose-50/80',
+                        textColor: 'text-red-800',
+                        badge: 'bg-gradient-to-r from-red-600 to-rose-600',
+                        icon: '❌',
+                      },
+                    };
+                    const config = workspaceStatusConfig[booking.order_status] || workspaceStatusConfig.Received;
+                    const totalAmount = seatInfo ? booking.seats_count * seatInfo.workspace_seat_value : 0;
+
+                    return (
+                      <div
+                        key={booking.workspace_order_id}
+                        className="relative rounded-2xl overflow-hidden transition-all shadow-soft hover:shadow-soft-lg"
+                      >
+                        {/* Card Background with Status Color */}
+                        <div className={`relative ${config.cardBg} p-5 md:p-6 border-2 ${config.color} rounded-2xl`}>
+                          {/* Glass Effect Overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent rounded-2xl pointer-events-none"></div>
+                          
+                          {/* Content */}
+                          <div className="relative z-10">
+                            {/* Booking Header - Clickable */}
+                            <div
+                              onClick={() => {
+                                const newExpanded = new Set(expandedWorkspaceBookings);
+                                if (isExpanded) {
+                                  newExpanded.delete(booking.workspace_order_id);
+                                } else {
+                                  newExpanded.add(booking.workspace_order_id);
+                                }
+                                setExpandedWorkspaceBookings(newExpanded);
+                              }}
+                              className="w-full text-left hover:bg-white/30 rounded-xl p-3 -m-3 mb-0 transition-all cursor-pointer"
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                {/* Left Section - Customer Info */}
+                                <div className="flex items-start gap-3 flex-1 min-w-0">
+                                  {/* Status Icon */}
+                                  <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl ${config.badge} flex items-center justify-center shadow-soft flex-shrink-0`}>
+                                    <span className="text-2xl md:text-3xl text-white">{config.icon}</span>
+                                  </div>
+
+                                  {/* Customer Name & Booking ID */}
+                                  <div className="flex-1 min-w-0 space-y-1">
+                                    <h3 className="text-base md:text-lg font-bold text-gray-800 truncate leading-tight">
+                                      {booking.customer_name}
+                                    </h3>
+                                    <p className="text-xs text-gray-600 font-medium truncate">
+                                      📞 {booking.customer_phno || 'N/A'}
+                                    </p>
+                                    <p className="text-xs text-gray-600 font-medium truncate">
+                                      #{booking.workspace_order_id.slice(0, 8)}
+                                      {seatInfo && ` • Seat ID: ${booking.workspace_seat_id}`}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {new Date(booking.created_at).toLocaleString('en-US', { 
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: '2-digit', 
+                                        minute: '2-digit' 
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Right Section - Status */}
+                                <div className="text-right flex-shrink-0 flex flex-col items-end">
+                                  {/* Status Badge */}
+                                  <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${config.badge} mb-2`}>
+                                    <span className="text-xs font-bold text-white uppercase">{config.label}</span>
+                                    {booking.order_status === 'Received' && (
+                                      <span className="text-sm animate-pulse" title="Notification sound active - needs attention">
+                                        🔊
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs font-semibold text-gray-600 mt-2">
+                                    {isExpanded ? '▲ Hide' : '▼ Show'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Expanded Details */}
+                            {isExpanded && (
+                              <div className="mt-4 pt-4 border-t-2 border-gray-300/50">
+                                {/* Booking Details */}
+                                <div className="mb-4">
+                                  <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2 text-sm md:text-base">
+                                    <span className="text-lg">💼</span>
+                                    <span>Booking Details:</span>
+                                  </h4>
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between items-center bg-white/60 rounded-lg px-3 py-2">
+                                      <span className="text-sm font-semibold text-gray-700">Seats Count:</span>
+                                      <span className="text-sm font-bold text-gray-900">{booking.seats_count}</span>
+                                    </div>
+                                    {seatInfo && (
+                                      <>
+                                        <div className="flex justify-between items-center bg-white/60 rounded-lg px-3 py-2">
+                                          <span className="text-sm font-semibold text-gray-700">Per Seat Cost:</span>
+                                          <span className="text-sm font-bold text-gray-900">₹{seatInfo.workspace_seat_value}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center bg-white/60 rounded-lg px-3 py-2">
+                                          <span className="text-sm font-semibold text-gray-700">Total Amount:</span>
+                                          <span className="text-sm font-bold text-green-700">₹{totalAmount}</span>
+                                        </div>
+                                      </>
+                                    )}
+                                    <div className="flex justify-between items-center bg-white/60 rounded-lg px-3 py-2">
+                                      <span className="text-sm font-semibold text-gray-700">Order Date:</span>
+                                      <span className="text-sm font-bold text-gray-900">{booking.order_date}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Status Update Buttons */}
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateWorkspaceBookingStatus(booking.workspace_order_id, 'Received');
+                                    }}
+                                    disabled={booking.order_status === 'Received'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Received'
+                                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-2 border-yellow-400'
+                                        : 'bg-gradient-to-br from-yellow-100 to-orange-100 text-yellow-700 hover:from-yellow-200 hover:to-orange-200 border border-yellow-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">⏳</span>
+                                    <span>Received</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateWorkspaceBookingStatus(booking.workspace_order_id, 'Accepted');
+                                    }}
+                                    disabled={booking.order_status === 'Accepted'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Accepted'
+                                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-2 border-blue-400'
+                                        : 'bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-700 hover:from-blue-200 hover:to-indigo-200 border border-blue-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">✅</span>
+                                    <span>Accepted</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateWorkspaceBookingStatus(booking.workspace_order_id, 'Rejected');
+                                    }}
+                                    disabled={booking.order_status === 'Rejected'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Rejected'
+                                        ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white border-2 border-red-500'
+                                        : 'bg-gradient-to-br from-red-100 to-rose-100 text-red-800 hover:from-red-200 hover:to-rose-200 border border-red-400'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">❌</span>
+                                    <span>Rejected</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateWorkspaceBookingStatus(booking.workspace_order_id, 'Delivered');
+                                    }}
+                                    disabled={booking.order_status === 'Delivered'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Delivered'
+                                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border-2 border-green-400'
+                                        : 'bg-gradient-to-br from-green-100 to-emerald-100 text-green-700 hover:from-green-200 hover:to-emerald-200 border border-green-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">✅</span>
+                                    <span>Delivered</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateWorkspaceBookingStatus(booking.workspace_order_id, 'Paid');
+                                    }}
+                                    disabled={booking.order_status === 'Paid'}
+                                    className={`py-3 px-3 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all shadow-soft hover:shadow-soft-lg active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${
+                                      booking.order_status === 'Paid'
+                                        ? 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border-2 border-gray-400'
+                                        : 'bg-gradient-to-br from-gray-100 to-slate-100 text-gray-700 hover:from-gray-200 hover:to-slate-200 border border-gray-300'
+                                    }`}
+                                  >
+                                    <span className="block text-base md:text-lg mb-0.5">💰</span>
+                                    <span>Paid</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Customer Billing Tab */}
+        {activeTab === 'billing' && (
+          <>
+            {/* Customer Billing Header */}
+            <div className="mb-6 md:mb-8">
+              <div className="flex items-center justify-center gap-4 flex-wrap">
+                <h2 className="text-2xl md:text-3xl font-bold text-purple-600 flex items-center gap-3">
+                  <span className="text-3xl md:text-4xl">💳</span>
+                  <span>Customer Billing</span>
+                </h2>
+                
+                {/* Sound Notification Toggle */}
+                <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 shadow-soft border border-purple-200">
+                  <span className="text-sm font-semibold text-gray-700">🔔</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={soundEnabled}
+                      onChange={toggleSound}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                    <span className="ml-2 text-sm font-medium text-gray-700">
+                      {soundEnabled ? 'On' : 'Off'}
+                    </span>
+                  </label>
+                </div>
+              </div>
+              <p className="text-gray-600 mt-2 text-sm md:text-base font-medium text-center">
+                Click on a customer to expand and view consolidated billing details
+              </p>
+            </div>
+
+            {/* Loading State */}
+            {billingLoading && (
+              <div className="text-center py-12">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 mb-4 shadow-soft">
+                  <div className="animate-pulse">
+                    <span className="text-5xl text-purple-600">⏳</span>
+                  </div>
+                </div>
+                <p className="text-gray-700 font-bold text-lg">Loading Billing Records...</p>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!billingLoading && customerBillings.length === 0 && (
+              <div className="relative rounded-3xl overflow-hidden shadow-soft-lg">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-purple-50/80 backdrop-blur-xl"></div>
+                <div className="relative z-10 text-center py-16 md:py-20 px-6">
+                  <div className="inline-flex items-center justify-center w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 mb-6 shadow-soft">
+                    <span className="text-6xl md:text-7xl">💳</span>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold text-transparent bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text mb-3">No billing records yet</h3>
+                  <p className="text-gray-600 font-medium">Customer billing records will appear here as orders are placed</p>
+                </div>
+              </div>
+            )}
+
+            {/* Customer Billing Grid */}
+            {!billingLoading && customerBillings.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                {customerBillings.map((billing) => {
+                  const isExpanded = expandedBillings.has(billing.customer_phno);
+                  const latestOrder = billing.latestdate_allorder_json || {};
+                  const billingStatusConfig = {
+                    PAID: {
+                      label: 'Paid',
+                      color: 'border-green-300',
+                      cardBg: 'bg-gradient-to-br from-green-50 via-green-100/70 to-emerald-50/80',
+                      textColor: 'text-green-700',
+                      badge: 'bg-gradient-to-r from-green-500 to-emerald-500',
+                      icon: '💰',
+                    },
+                    UNPAID: {
+                      label: 'Unpaid',
+                      color: 'border-red-300',
+                      cardBg: 'bg-gradient-to-br from-red-50 via-orange-100/70 to-red-50/80',
+                      textColor: 'text-red-700',
+                      badge: 'bg-gradient-to-r from-red-500 to-orange-500',
+                      icon: '💳',
+                    },
+                  };
+                  const config = billingStatusConfig[billing.latestdate_allorder_status] || billingStatusConfig.UNPAID;
+
+                  return (
+                    <div
+                      key={billing.customer_phno}
+                      className="relative rounded-2xl overflow-hidden transition-all shadow-soft hover:shadow-soft-lg"
+                    >
+                      <div className={`relative ${config.cardBg} p-3 sm:p-4 md:p-6 border-2 ${config.color} rounded-2xl`}>
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent rounded-2xl pointer-events-none"></div>
+                        
+                        <div className="relative z-10">
+                          {/* Billing Header - Clickable */}
+                          <div
+                            onClick={() => {
+                              const newExpanded = new Set(expandedBillings);
+                              if (isExpanded) {
+                                newExpanded.delete(billing.customer_phno);
+                              } else {
+                                newExpanded.add(billing.customer_phno);
+                              }
+                              setExpandedBillings(newExpanded);
+                            }}
+                            className="w-full text-left hover:bg-white/30 rounded-xl p-2 sm:p-3 -m-2 sm:-m-3 mb-0 transition-all cursor-pointer"
+                          >
+                            <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-2 sm:gap-4">
+                              <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0 w-full sm:w-auto">
+                                <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl ${config.badge} flex items-center justify-center shadow-soft flex-shrink-0`}>
+                                  <span className="text-xl sm:text-2xl md:text-3xl text-white">{config.icon}</span>
+                                </div>
+                                <div className="flex-1 min-w-0 space-y-0.5 sm:space-y-1">
+                                  <h3 className="text-sm sm:text-base md:text-lg font-bold text-gray-800 truncate leading-tight">
+                                    {billing.customer_name}
+                                  </h3>
+                                  <p className="text-xs text-gray-600 font-medium truncate">
+                                    📞 {billing.customer_phno || 'N/A'}
+                                  </p>
+                                  <p className="text-xs text-gray-600 font-medium">
+                                    Total: ₹{billing.total_ordered_value_at_socialx.toFixed(2)}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(billing.updated_at).toLocaleString('en-US', { 
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit', 
+                                      minute: '2-digit' 
+                                    })}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right sm:text-right flex-shrink-0 flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-0 w-full sm:w-auto justify-between sm:justify-start">
+                                <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${config.badge}`}>
+                                  <span className="text-xs font-bold text-white uppercase">{config.label}</span>
+                                  {billing.latestdate_allorder_status === 'UNPAID' && (
+                                    <span className="text-sm animate-pulse" title="Notification sound active - needs attention">
+                                      🔊
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs font-semibold text-gray-600 sm:mt-2">
+                                  {isExpanded ? '▲ Hide' : '▼ Show'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Expanded Details */}
+                          {isExpanded && (
+                            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t-2 border-gray-300/50">
+                              {/* Order History from order_history_json */}
+                              {billing.order_history_json && billing.order_history_json.length > 0 ? (
+                                <div className="space-y-3 sm:space-y-4 mb-3 sm:mb-4">
+                                  <h4 className="font-bold text-gray-700 mb-2 sm:mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs sm:text-sm md:text-base">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-base sm:text-lg">📋</span>
+                                      <span>Order History:</span>
+                                    </div>
+                                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${
+                                      billing.latestdate_allorder_status === 'PAID' 
+                                        ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                                        : 'bg-gradient-to-r from-red-500 to-orange-500'
+                                    }`}>
+                                      <span className="text-xs font-bold text-white uppercase">
+                                        {billing.latestdate_allorder_status || 'UNPAID'}
+                                      </span>
+                                    </div>
+                                  </h4>
+                                  {billing.order_history_json.map((orderHistory: any, index: number) => {
+                                    const orderDate = orderHistory.order_date || 'N/A';
+                                    const orderValue = orderHistory.allorder_value || 0;
+                                    const orderStatus = orderHistory.allOrder_Status || 'UNPAID';
+                                    const foodUUIDs = orderHistory.FoodOrderUUID || '';
+                                    const workspaceUUIDs = orderHistory.WorkSpaceOrderUUID || '';
+                                    const snookerUUIDs = orderHistory.SnookerOrderUUID || '';
+                                    
+                                    const orderStatusConfig = {
+                                      PAID: {
+                                        label: 'Paid',
+                                        color: 'border-green-300',
+                                        bg: 'bg-green-50/80',
+                                        textColor: 'text-green-700',
+                                        badge: 'bg-gradient-to-r from-green-500 to-emerald-500',
+                                      },
+                                      UNPAID: {
+                                        label: 'Unpaid',
+                                        color: 'border-red-300',
+                                        bg: 'bg-red-50/80',
+                                        textColor: 'text-red-700',
+                                        badge: 'bg-gradient-to-r from-red-500 to-orange-500',
+                                      },
+                                    };
+                                    const statusConfig = orderStatusConfig[orderStatus as 'PAID' | 'UNPAID'] || orderStatusConfig.UNPAID;
+
+                                    return (
+                                      <div
+                                        key={index}
+                                        className={`relative rounded-xl overflow-hidden ${statusConfig.bg} border-2 ${statusConfig.color} p-3 sm:p-4`}
+                                      >
+                                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent rounded-xl pointer-events-none"></div>
+                                        
+                                        <div className="relative z-10">
+                                          {/* Order Date Header */}
+                                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-2 mb-2 sm:mb-3">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-base sm:text-lg">📅</span>
+                                              <h5 className="font-bold text-gray-800 text-xs sm:text-sm md:text-base">
+                                                {new Date(orderDate).toLocaleDateString('en-US', { 
+                                                  weekday: 'short',
+                                                  year: 'numeric',
+                                                  month: 'short',
+                                                  day: 'numeric'
+                                                })}
+                                              </h5>
+                                            </div>
+                                            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+                                              <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${statusConfig.badge}`}>
+                                                <span className="text-xs font-bold text-white uppercase">{statusConfig.label}</span>
+                                              </div>
+                                              <span className="text-xs sm:text-sm font-bold text-gray-900">₹{orderValue.toFixed(2)}</span>
+                                            </div>
+                                          </div>
+
+                                          {/* Sub-cards for individual order types */}
+                                          <div className="space-y-3">
+                                            {/* Food Orders */}
+                                            {orderHistory.foodOrders && orderHistory.foodOrders.length > 0 && (() => {
+                                              const subCardKey = `${billing.customer_phno}-${orderDate}-food`;
+                                              const isSubCardExpanded = expandedSubCards.has(subCardKey);
+                                              const allPaid = orderHistory.foodOrders.every((fo: any) => 
+                                                fo.status === 'paid' || fo.status === 'Paid'
+                                              );
+                                              const statusBadge = allPaid 
+                                                ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                                                : 'bg-gradient-to-r from-red-500 to-orange-500';
+                                              
+                                              return (
+                                                <div className="bg-orange-50/90 rounded-lg p-2 sm:p-3 border-2 border-orange-300">
+                                                  <div 
+                                                    className="flex items-center justify-between mb-2 cursor-pointer hover:bg-orange-100/50 rounded p-1 -m-1 transition-all"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      const newExpanded = new Set(expandedSubCards);
+                                                      if (isSubCardExpanded) {
+                                                        newExpanded.delete(subCardKey);
+                                                      } else {
+                                                        newExpanded.add(subCardKey);
+                                                      }
+                                                      setExpandedSubCards(newExpanded);
+                                                    }}
+                                                  >
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                                      <span className="text-base sm:text-lg">🍽️</span>
+                                                      <p className="text-xs font-bold text-orange-700">Food Order(s)</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                                      <div className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-lg ${statusBadge}`}>
+                                                        <span className="text-xs font-bold text-white uppercase">
+                                                          {allPaid ? 'PAID' : 'UNPAID'}
+                                                        </span>
+                                                      </div>
+                                                      <span className="text-xs font-semibold text-gray-600">
+                                                        {isSubCardExpanded ? '▲' : '▼'}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                  {isSubCardExpanded && (
+                                                    <div>
+                                                      {orderHistory.foodOrders.map((foodOrder: any, foodIdx: number) => {
+                                                  const items = Array.isArray(foodOrder.items) ? foodOrder.items : [];
+                                                  const subtotal = foodOrder.total_amount || 0;
+                                                  const isPaid = foodOrder.status === 'paid' || foodOrder.status === 'Paid';
+                                                  return (
+                                                    <div key={foodIdx} className="mb-2 last:mb-0 bg-white/60 rounded-lg p-2 sm:p-2.5 border border-orange-200">
+                                                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-1.5">
+                                                        <div className="text-xs text-gray-600 font-semibold">
+                                                          Order #{foodOrder.id.slice(0, 8)}
+                                                        </div>
+                                                        <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${
+                                                          isPaid 
+                                                            ? 'bg-green-500 text-white' 
+                                                            : 'bg-red-500 text-white'
+                                                        }`}>
+                                                          <span className="text-xs font-bold uppercase">
+                                                            {isPaid ? 'PAID' : 'UNPAID'}
+                                                          </span>
+                                                        </div>
+                                                      </div>
+                                                      {items.length > 0 ? (
+                                                        <div className="space-y-1 mb-2">
+                                                          {items.map((item: any, itemIdx: number) => (
+                                                            <div key={itemIdx} className="flex justify-between items-center text-xs">
+                                                              <span className="text-gray-700 flex-1 truncate">
+                                                                {item.name} × {item.quantity}
+                                                              </span>
+                                                              <span className="text-gray-800 font-bold ml-2">
+                                                                ₹{(item.price || 0) * (item.quantity || 0)}
+                                                              </span>
+                                                            </div>
+                                                          ))}
+                                                        </div>
+                                                      ) : (
+                                                        <div className="text-xs text-gray-500 mb-2">No items found</div>
+                                                      )}
+                                                      <div className="flex justify-between items-center pt-1.5 border-t border-orange-200 mb-2">
+                                                        <span className="text-xs font-bold text-orange-700">Subtotal:</span>
+                                                        <span className="text-sm font-bold text-orange-800">₹{subtotal.toFixed(2)}</span>
+                                                      </div>
+                                                      <div className="flex gap-1.5 sm:gap-2">
+                                                        <button
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            updateIndividualOrderStatus(billing.customer_phno, 'food', foodOrder.id, 'PAID');
+                                                          }}
+                                                          disabled={isPaid}
+                                                          className={`flex-1 py-2 sm:py-1.5 px-2 sm:px-3 rounded text-xs font-semibold transition-all touch-manipulation ${
+                                                            isPaid
+                                                              ? 'bg-green-100 text-green-700 cursor-not-allowed opacity-50'
+                                                              : 'bg-green-500 text-white hover:bg-green-600 active:scale-95'
+                                                          }`}
+                                                        >
+                                                          💰 Paid
+                                                        </button>
+                                                        <button
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            updateIndividualOrderStatus(billing.customer_phno, 'food', foodOrder.id, 'UNPAID');
+                                                          }}
+                                                          disabled={!isPaid}
+                                                          className={`flex-1 py-2 sm:py-1.5 px-2 sm:px-3 rounded text-xs font-semibold transition-all touch-manipulation ${
+                                                            !isPaid
+                                                              ? 'bg-red-100 text-red-700 cursor-not-allowed opacity-50'
+                                                              : 'bg-red-500 text-white hover:bg-red-600 active:scale-95'
+                                                          }`}
+                                                        >
+                                                          💳 Unpaid
+                                                        </button>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            );
+                                            })()}
+                                            
+                                            {/* Workspace Bookings */}
+                                            {orderHistory.workspaceBookings && orderHistory.workspaceBookings.length > 0 && (() => {
+                                              const subCardKey = `${billing.customer_phno}-${orderDate}-workspace`;
+                                              const isSubCardExpanded = expandedSubCards.has(subCardKey);
+                                              const allPaid = orderHistory.workspaceBookings.every((wb: any) => 
+                                                wb.order_status === 'Paid' || wb.order_status === 'PAID'
+                                              );
+                                              const statusBadge = allPaid 
+                                                ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                                                : 'bg-gradient-to-r from-red-500 to-orange-500';
+                                              
+                                              return (
+                                                <div className="bg-green-50/90 rounded-lg p-2 sm:p-3 border-2 border-green-300">
+                                                  <div 
+                                                    className="flex items-center justify-between mb-2 cursor-pointer hover:bg-green-100/50 rounded p-1 -m-1 transition-all"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      const newExpanded = new Set(expandedSubCards);
+                                                      if (isSubCardExpanded) {
+                                                        newExpanded.delete(subCardKey);
+                                                      } else {
+                                                        newExpanded.add(subCardKey);
+                                                      }
+                                                      setExpandedSubCards(newExpanded);
+                                                    }}
+                                                  >
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                                      <span className="text-base sm:text-lg">💼</span>
+                                                      <p className="text-xs font-bold text-green-700">Workspace Booking(s)</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                                      <div className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-lg ${statusBadge}`}>
+                                                        <span className="text-xs font-bold text-white uppercase">
+                                                          {allPaid ? 'PAID' : 'UNPAID'}
+                                                        </span>
+                                                      </div>
+                                                      <span className="text-xs font-semibold text-gray-600">
+                                                        {isSubCardExpanded ? '▲' : '▼'}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                  {isSubCardExpanded && (
+                                                    <div>
+                                                      {orderHistory.workspaceBookings.map((workspaceBooking: any, wsIdx: number) => {
+                                                  const seatInfo = workspaceBooking.workspace_seat_menu_items;
+                                                  const subtotal = workspaceBooking.total_order_value || 0;
+                                                  const isPaid = workspaceBooking.order_status === 'Paid' || workspaceBooking.order_status === 'PAID';
+                                                  return (
+                                                    <div key={wsIdx} className="mb-2 last:mb-0 bg-white/60 rounded-lg p-2 sm:p-2.5 border border-green-200">
+                                                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-1.5">
+                                                        <div className="text-xs text-gray-600 font-semibold">
+                                                          Booking #{workspaceBooking.workspace_order_id.slice(0, 8)}
+                                                        </div>
+                                                        <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${
+                                                          isPaid 
+                                                            ? 'bg-green-500 text-white' 
+                                                            : 'bg-red-500 text-white'
+                                                        }`}>
+                                                          <span className="text-xs font-bold uppercase">
+                                                            {isPaid ? 'PAID' : 'UNPAID'}
+                                                          </span>
+                                                        </div>
+                                                      </div>
+                                                      <div className="space-y-1 mb-2">
+                                                        <div className="flex justify-between items-center text-xs">
+                                                          <span className="text-gray-700">Seat ID:</span>
+                                                          <span className="text-gray-800 font-semibold">{workspaceBooking.workspace_seat_id}</span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center text-xs">
+                                                          <span className="text-gray-700">Seats Count:</span>
+                                                          <span className="text-gray-800 font-semibold">{workspaceBooking.seats_count}</span>
+                                                        </div>
+                                                        {seatInfo && (
+                                                          <div className="flex justify-between items-center text-xs">
+                                                            <span className="text-gray-700">Seat Value:</span>
+                                                            <span className="text-gray-800 font-semibold">₹{seatInfo.workspace_seat_value}</span>
+                                                          </div>
+                                                        )}
+                                                        <div className="flex justify-between items-center text-xs">
+                                                          <span className="text-gray-700">Total:</span>
+                                                          <span className="text-gray-800 font-semibold">₹{subtotal.toFixed(2)}</span>
+                                                        </div>
+                                                      </div>
+                                                      <div className="flex justify-between items-center pt-1.5 border-t border-green-200 mb-2">
+                                                        <span className="text-xs font-bold text-green-700">Subtotal:</span>
+                                                        <span className="text-sm font-bold text-green-800">₹{subtotal.toFixed(2)}</span>
+                                                      </div>
+                                                      <div className="flex gap-1.5 sm:gap-2">
+                                                        <button
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            updateIndividualOrderStatus(billing.customer_phno, 'workspace', workspaceBooking.workspace_order_id, 'PAID');
+                                                          }}
+                                                          disabled={isPaid}
+                                                          className={`flex-1 py-2 sm:py-1.5 px-2 sm:px-3 rounded text-xs font-semibold transition-all touch-manipulation ${
+                                                            isPaid
+                                                              ? 'bg-green-100 text-green-700 cursor-not-allowed opacity-50'
+                                                              : 'bg-green-500 text-white hover:bg-green-600 active:scale-95'
+                                                          }`}
+                                                        >
+                                                          💰 Paid
+                                                        </button>
+                                                        <button
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            updateIndividualOrderStatus(billing.customer_phno, 'workspace', workspaceBooking.workspace_order_id, 'UNPAID');
+                                                          }}
+                                                          disabled={!isPaid}
+                                                          className={`flex-1 py-2 sm:py-1.5 px-2 sm:px-3 rounded text-xs font-semibold transition-all touch-manipulation ${
+                                                            !isPaid
+                                                              ? 'bg-red-100 text-red-700 cursor-not-allowed opacity-50'
+                                                              : 'bg-red-500 text-white hover:bg-red-600 active:scale-95'
+                                                          }`}
+                                                        >
+                                                          💳 Unpaid
+                                                        </button>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            );
+                                            })()}
+                                            
+                                            {/* Snooker Bookings */}
+                                            {orderHistory.snookerBookings && orderHistory.snookerBookings.length > 0 && (() => {
+                                              const subCardKey = `${billing.customer_phno}-${orderDate}-snooker`;
+                                              const isSubCardExpanded = expandedSubCards.has(subCardKey);
+                                              const allPaid = orderHistory.snookerBookings.every((sb: any) => 
+                                                sb.order_status === 'Ended' || sb.order_status === 'ENDED'
+                                              );
+                                              const statusBadge = allPaid 
+                                                ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                                                : 'bg-gradient-to-r from-red-500 to-orange-500';
+                                              
+                                              return (
+                                                <div className="bg-blue-50/90 rounded-lg p-2 sm:p-3 border-2 border-blue-300">
+                                                  <div 
+                                                    className="flex items-center justify-between mb-2 cursor-pointer hover:bg-blue-100/50 rounded p-1 -m-1 transition-all"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      const newExpanded = new Set(expandedSubCards);
+                                                      if (isSubCardExpanded) {
+                                                        newExpanded.delete(subCardKey);
+                                                      } else {
+                                                        newExpanded.add(subCardKey);
+                                                      }
+                                                      setExpandedSubCards(newExpanded);
+                                                    }}
+                                                  >
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                                      <span className="text-base sm:text-lg">🎱</span>
+                                                      <p className="text-xs font-bold text-blue-700">Snooker Booking(s)</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                                      <div className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-lg ${statusBadge}`}>
+                                                        <span className="text-xs font-bold text-white uppercase">
+                                                          {allPaid ? 'PAID' : 'UNPAID'}
+                                                        </span>
+                                                      </div>
+                                                      <span className="text-xs font-semibold text-gray-600">
+                                                        {isSubCardExpanded ? '▲' : '▼'}
+                                                        </span>
+                                                    </div>
+                                                  </div>
+                                                  {isSubCardExpanded && (
+                                                    <div>
+                                                      {orderHistory.snookerBookings.map((snookerBooking: any, snookerIdx: number) => {
+                                                  const boardInfo = snookerBooking.snooker_board_menu_items;
+                                                  const subtotal = snookerBooking.total_order_amount || 0;
+                                                  const isPaid = snookerBooking.order_status === 'Ended' || snookerBooking.order_status === 'ENDED';
+                                                  return (
+                                                    <div key={snookerIdx} className="mb-2 last:mb-0 bg-white/60 rounded-lg p-2 sm:p-2.5 border border-blue-200">
+                                                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 sm:gap-2 mb-1.5">
+                                                        <div className="text-xs text-gray-600 font-semibold">
+                                                          Booking #{snookerBooking.snooker_order_id.slice(0, 8)}
+                                                        </div>
+                                                        <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${
+                                                          isPaid 
+                                                            ? 'bg-green-500 text-white' 
+                                                            : 'bg-red-500 text-white'
+                                                        }`}>
+                                                          <span className="text-xs font-bold uppercase">
+                                                            {isPaid ? 'PAID' : 'UNPAID'}
+                                                          </span>
+                                                        </div>
+                                                      </div>
+                                                      <div className="space-y-1 mb-2">
+                                                        {boardInfo && (
+                                                          <div className="flex justify-between items-center text-xs">
+                                                            <span className="text-gray-700">Board:</span>
+                                                            <span className="text-gray-800 font-semibold">{boardInfo.board_name} ({boardInfo.type})</span>
+                                                          </div>
+                                                        )}
+                                                        <div className="flex justify-between items-center text-xs">
+                                                          <span className="text-gray-700">Players:</span>
+                                                          <span className="text-gray-800 font-semibold">{snookerBooking.players_count || 0}</span>
+                                                        </div>
+                                                        {snookerBooking.total_duration_minutes && (
+                                                          <div className="flex justify-between items-center text-xs">
+                                                            <span className="text-gray-700">Duration:</span>
+                                                            <span className="text-gray-800 font-semibold">{snookerBooking.total_duration_minutes} min</span>
+                                                          </div>
+                                                        )}
+                                                        <div className="flex justify-between items-center text-xs">
+                                                          <span className="text-gray-700">Total:</span>
+                                                          <span className="text-gray-800 font-semibold">₹{subtotal.toFixed(2)}</span>
+                                                        </div>
+                                                      </div>
+                                                      <div className="flex justify-between items-center pt-1.5 border-t border-blue-200 mb-2">
+                                                        <span className="text-xs font-bold text-blue-700">Subtotal:</span>
+                                                        <span className="text-sm font-bold text-blue-800">₹{subtotal.toFixed(2)}</span>
+                                                      </div>
+                                                      <div className="flex gap-1.5 sm:gap-2">
+                                                        <button
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            updateIndividualOrderStatus(billing.customer_phno, 'snooker', snookerBooking.snooker_order_id, 'PAID');
+                                                          }}
+                                                          disabled={isPaid}
+                                                          className={`flex-1 py-2 sm:py-1.5 px-2 sm:px-3 rounded text-xs font-semibold transition-all touch-manipulation ${
+                                                            isPaid
+                                                              ? 'bg-green-100 text-green-700 cursor-not-allowed opacity-50'
+                                                              : 'bg-green-500 text-white hover:bg-green-600 active:scale-95'
+                                                          }`}
+                                                        >
+                                                          💰 Paid
+                                                        </button>
+                                                        <button
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            updateIndividualOrderStatus(billing.customer_phno, 'snooker', snookerBooking.snooker_order_id, 'UNPAID');
+                                                          }}
+                                                          disabled={!isPaid}
+                                                          className={`flex-1 py-2 sm:py-1.5 px-2 sm:px-3 rounded text-xs font-semibold transition-all touch-manipulation ${
+                                                            !isPaid
+                                                              ? 'bg-red-100 text-red-700 cursor-not-allowed opacity-50'
+                                                              : 'bg-red-500 text-white hover:bg-red-600 active:scale-95'
+                                                          }`}
+                                                        >
+                                                          💳 Unpaid
+                                                        </button>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            );
+                                            })()}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="mb-4 text-center py-4 bg-white/60 rounded-lg">
+                                  <p className="text-sm text-gray-600 font-medium">No order history available</p>
+                                </div>
+                              )}
+
+                              {/* Status Update Buttons */}
+                              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateCustomerBillingStatus(billing.customer_phno, 'PAID');
+                                  }}
+                                  className={`py-2.5 sm:py-2 px-2 sm:px-3 rounded-xl font-semibold text-xs sm:text-sm transition-all shadow-soft active:scale-95 touch-manipulation ${
+                                    billing.latestdate_allorder_status === 'PAID'
+                                      ? 'bg-gradient-to-br from-green-500 to-emerald-500 text-white shadow-soft-lg'
+                                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  }`}
+                                >
+                                  💰 Paid
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateCustomerBillingStatus(billing.customer_phno, 'UNPAID');
+                                  }}
+                                  className={`py-2.5 sm:py-2 px-2 sm:px-3 rounded-xl font-semibold text-xs sm:text-sm transition-all shadow-soft active:scale-95 touch-manipulation ${
+                                    billing.latestdate_allorder_status === 'UNPAID'
+                                      ? 'bg-gradient-to-br from-red-500 to-orange-500 text-white shadow-soft-lg'
+                                      : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                  }`}
+                                >
+                                  💳 Unpaid
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateCustomerBillingStatus(billing.customer_phno, 'ACCEPT');
+                                  }}
+                                  className="py-2.5 sm:py-2 px-2 sm:px-3 rounded-xl font-semibold text-xs sm:text-sm transition-all shadow-soft active:scale-95 touch-manipulation bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                >
+                                  ✅ Accept
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateCustomerBillingStatus(billing.customer_phno, 'REJECT');
+                                  }}
+                                  className="py-2.5 sm:py-2 px-2 sm:px-3 rounded-xl font-semibold text-xs sm:text-sm transition-all shadow-soft active:scale-95 touch-manipulation bg-red-100 text-red-700 hover:bg-red-200"
+                                >
+                                  ❌ Reject
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </>
@@ -1959,7 +3526,7 @@ Please collect it from the counter.
       )}
 
         {/* Footer */}
-      <footer className="mt-12 py-6 text-center border-t border-gray-200/50">
+      <footer className="mt-12 py-6 text-center border-t border-gray-200/50 bg-white/60 backdrop-blur-sm">
           <p className="text-sm text-gray-600">
             Tech Powered by{' '}
             <a

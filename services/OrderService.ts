@@ -11,6 +11,34 @@ export class OrderService {
     total_amount: number;
     table_number?: string;
   }): Promise<Order> {
+    // First, ensure customer exists in customer_allorders_details table
+    // The trigger will handle updating this record when the order is created
+    const { data: existingCustomer } = await this.supabase
+      .from('customer_allorders_details')
+      .select('customer_phno')
+      .eq('customer_phno', orderData.customer_phNo)
+      .single();
+
+    // Only insert if customer doesn't exist
+    if (!existingCustomer) {
+      const { error: customerError } = await this.supabase
+        .from('customer_allorders_details')
+        .insert({
+          customer_phno: orderData.customer_phNo,
+          customer_name: orderData.customer_name,
+          total_ordered_value_at_socialx: 0,
+          order_history_json: [],
+          latestdate_allorder_json: {},
+          latestdate_allorder_value: 0,
+          latestdate_allorder_status: 'UNPAID',
+        });
+
+      if (customerError) {
+        console.error('❌ Error creating customer:', customerError);
+        // Don't throw - let the trigger handle it, but log the error
+      }
+    }
+
     const { data, error } = await this.supabase
       .from('orders')
       .insert({
@@ -34,6 +62,93 @@ export class OrderService {
       ...data,
       customer_phno: phoneNumber, // Always use lowercase to match interface
       items: typeof data.items === 'string' ? JSON.parse(data.items) : data.items,
+    };
+  }
+
+  async consolidateOrder(orderData: {
+    customer_name: string;
+    customer_phNo: string;
+    items: OrderItem[];
+    total_amount: number;
+    table_number?: string;
+    existingOrderIds: string[];
+  }): Promise<Order> {
+    // Get the first existing order to consolidate with
+    if (orderData.existingOrderIds.length === 0) {
+      // No existing orders, create new one
+      return this.createOrder(orderData);
+    }
+
+    const firstExistingOrderId = orderData.existingOrderIds[0];
+    
+    // Fetch the existing order
+    const { data: existingOrder, error: fetchError } = await this.supabase
+      .from('orders')
+      .select('*')
+      .eq('id', firstExistingOrderId)
+      .single();
+
+    if (fetchError || !existingOrder) {
+      console.error('❌ Error fetching existing order for consolidation:', fetchError);
+      // Fallback to creating new order
+      return this.createOrder(orderData);
+    }
+
+    // Parse existing items
+    const existingItems = typeof existingOrder.items === 'string' 
+      ? JSON.parse(existingOrder.items) 
+      : existingOrder.items;
+
+    // Merge items: combine quantities for same items, add new items
+    const mergedItemsMap = new Map<string, OrderItem>();
+    
+    // Add existing items to map
+    existingItems.forEach((item: OrderItem) => {
+      mergedItemsMap.set(item.menu_item_id, { ...item });
+    });
+
+    // Add/merge new items
+    orderData.items.forEach((newItem) => {
+      const existingItem = mergedItemsMap.get(newItem.menu_item_id);
+      if (existingItem) {
+        // Item exists, add quantities
+        existingItem.quantity = (existingItem.quantity || 0) + (newItem.quantity || 0);
+        // Use the higher price (or new price if different)
+        existingItem.price = newItem.price;
+      } else {
+        // New item, add to map
+        mergedItemsMap.set(newItem.menu_item_id, { ...newItem });
+      }
+    });
+
+    const mergedItems = Array.from(mergedItemsMap.values());
+    const mergedTotal = mergedItems.reduce((sum, item) => sum + (item.price * (item.quantity || 0)), 0);
+
+    // Update the existing order with merged items and new total
+    const { data: updatedOrder, error: updateError } = await this.supabase
+      .from('orders')
+      .update({
+        items: JSON.stringify(mergedItems),
+        total_amount: mergedTotal,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', firstExistingOrderId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('❌ Error consolidating order:', updateError);
+      // Fallback to creating new order
+      return this.createOrder(orderData);
+    }
+
+    // Ensure customer_phno is properly mapped
+    const phoneNumber = updatedOrder.customer_phno || updatedOrder.customer_phNo || 'N/A';
+    return {
+      ...updatedOrder,
+      customer_phno: phoneNumber,
+      items: typeof updatedOrder.items === 'string' ? JSON.parse(updatedOrder.items) : updatedOrder.items,
+      consolidatedOrderIds: orderData.existingOrderIds, // Include all order IDs for reference
     };
   }
 

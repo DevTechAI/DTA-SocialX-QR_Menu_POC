@@ -59,7 +59,7 @@ export class MenuService {
     return data;
   }
 
-  async createMenuItem(item: Omit<MenuItem, 'id' | 'created_at' | 'updated_at'>): Promise<MenuItem> {
+  async createMenuItem(item: Partial<MenuItem> & { id?: string }): Promise<MenuItem> {
     const { data, error } = await this.supabase
       .from('menu_items')
       .insert({
