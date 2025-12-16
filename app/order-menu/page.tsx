@@ -723,11 +723,11 @@ export default function SocialXMenuApp() {
         analytics.trackItemRemove(itemId, existing.item.name);
         
         if (existing.quantity > 1) {
-          return prev.map(i => 
-            i.item.id === itemId 
-              ? { ...i, quantity: i.quantity - 1 } 
-              : i
-          );
+        return prev.map(i => 
+          i.item.id === itemId 
+            ? { ...i, quantity: i.quantity - 1 } 
+            : i
+        );
         }
       }
       return prev.filter(i => i.item.id !== itemId);
@@ -1797,11 +1797,11 @@ export default function SocialXMenuApp() {
                     <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                     <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                     <div className="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                  </div>
+                </div>
                   <span className="text-base sm:text-lg font-bold text-transparent bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text">
                     Placing Order...
                   </span>
-                </div>
+              </div>
               </div>
             </div>
           </div>
