@@ -120,6 +120,66 @@ export default function AdminDashboard() {
   const [newSnookerBookingsCount, setNewSnookerBookingsCount] = useState(0);
   const [previousSnookerBookings, setPreviousSnookerBookings] = useState<SnookerBooking[]>([]);
   
+  // WhatsApp message popup state
+  const [whatsappPopup, setWhatsappPopup] = useState<{
+    isOpen: boolean;
+    orderId: string | null;
+    phoneNumber: string;
+    customerName: string;
+    category: 'food' | 'snooker' | 'workspace';
+    buttonPosition: { top: number; left: number } | null;
+  }>({
+    isOpen: false,
+    orderId: null,
+    phoneNumber: '',
+    customerName: '',
+    category: 'food',
+    buttonPosition: null,
+  });
+  const [availableMessages, setAvailableMessages] = useState<Array<{ key: string; label: string; value: string }>>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const popupRef = useRef<HTMLDivElement>(null);
+  
+  // Copy to clipboard state
+  const [hoveredPhone, setHoveredPhone] = useState<string | null>(null);
+  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+
+  // Copy phone number to clipboard
+  const copyPhoneNumber = useCallback(async (phoneNumber: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    
+    try {
+      await navigator.clipboard.writeText(phoneNumber);
+      setCopiedPhone(phoneNumber);
+      
+      // Reset copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedPhone(null);
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy phone number:', error);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = phoneNumber;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopiedPhone(phoneNumber);
+        setTimeout(() => {
+          setCopiedPhone(null);
+        }, 2000);
+      } catch (err) {
+        console.error('Fallback copy failed:', err);
+      }
+      document.body.removeChild(textArea);
+    }
+  }, []);
+  
   // Continuous notification sound state
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const [pendingSnookerCount, setPendingSnookerCount] = useState(0);
@@ -458,18 +518,149 @@ export default function AdminDashboard() {
   };
 
   // Format WhatsApp link with pre-filled message
-  const formatWhatsAppMessageLink = (phoneNumber: string, customerName: string): string => {
+  const formatWhatsAppMessageLink = (phoneNumber: string, customerName: string, message?: string): string => {
     const formattedPhone = formatPhoneForWhatsApp(phoneNumber);
     if (!formattedPhone) return '';
     
-    const message = `Hey ${customerName}, 
+    const defaultMessage = message || `Hey ${customerName}, 
 your order is ready!
 Please collect it from the counter. 
 -socialx kitchen`;
     
-    const encodedMessage = encodeURIComponent(message);
+    const encodedMessage = encodeURIComponent(defaultMessage);
     return `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
   };
+
+  // Fetch available messages for a category
+  const fetchAvailableMessages = useCallback(async (category: 'food' | 'snooker' | 'workspace') => {
+    setMessagesLoading(true);
+    try {
+      const response = await fetch('/api/whatsapp-messages');
+      if (response.ok) {
+        const result = await response.json();
+        const data = result?.data || result || [];
+        
+        // Map category to msg_id
+        const categoryToMsgId: Record<string, string> = {
+          food: 'FnB-Order-Msg',
+          snooker: 'Snooker-Booking-Msg',
+          workspace: 'WorkSpace-Booking-Msg',
+        };
+        
+        const msgId = categoryToMsgId[category];
+        const categoryMessages = data.find((msg: any) => msg.msg_id === msgId);
+        
+        if (categoryMessages) {
+          const fields = [
+            { key: 'default_msg', label: 'Default Message' },
+            { key: 'custom_msg1', label: 'Custom Message 1' },
+            { key: 'custom_msg2', label: 'Custom Message 2' },
+            { key: 'custom_msg3', label: 'Custom Message 3' },
+            { key: 'custom_msg4', label: 'Custom Message 4' },
+            { key: 'custom_msg5', label: 'Custom Message 5' },
+          ];
+          
+          // Filter only non-empty messages
+          const available = fields
+            .map(field => ({
+              key: field.key,
+              label: field.label,
+              value: categoryMessages[field.key],
+            }))
+            .filter(msg => msg.value && msg.value.trim() !== '');
+          
+          setAvailableMessages(available);
+        } else {
+          setAvailableMessages([]);
+        }
+      } else {
+        setAvailableMessages([]);
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      setAvailableMessages([]);
+    } finally {
+      setMessagesLoading(false);
+    }
+  }, []);
+
+  // Open WhatsApp popup
+  const openWhatsAppPopup = useCallback((
+    event: React.MouseEvent<HTMLButtonElement>,
+    orderId: string,
+    phoneNumber: string,
+    customerName: string,
+    category: 'food' | 'snooker' | 'workspace'
+  ) => {
+    event.stopPropagation();
+    
+    // Get button position
+    const buttonRect = event.currentTarget.getBoundingClientRect();
+    const buttonPosition = {
+      top: buttonRect.bottom + window.scrollY + 8,
+      left: buttonRect.left + window.scrollX,
+    };
+    
+    setWhatsappPopup({
+      isOpen: true,
+      orderId,
+      phoneNumber,
+      customerName,
+      category,
+      buttonPosition,
+    });
+    
+    // Fetch available messages
+    fetchAvailableMessages(category);
+  }, [fetchAvailableMessages]);
+
+  // Close WhatsApp popup
+  const closeWhatsAppPopup = useCallback(() => {
+    setWhatsappPopup({
+      isOpen: false,
+      orderId: null,
+      phoneNumber: '',
+      customerName: '',
+      category: 'food',
+      buttonPosition: null,
+    });
+    setAvailableMessages([]);
+  }, []);
+
+  // Send WhatsApp message
+  const sendWhatsAppMessage = useCallback((message: string) => {
+    const { phoneNumber, customerName } = whatsappPopup;
+    const link = formatWhatsAppMessageLink(phoneNumber, customerName, message);
+    if (link) {
+      window.open(link, '_blank');
+      closeWhatsAppPopup();
+    }
+  }, [whatsappPopup, closeWhatsAppPopup]);
+
+  // Handle clicks outside popup and escape key
+  useEffect(() => {
+    if (!whatsappPopup.isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+        closeWhatsAppPopup();
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeWhatsAppPopup();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [whatsappPopup.isOpen, closeWhatsAppPopup]);
 
   // Bypass login is disabled - authentication is required
   // This function is kept for reference but should not be used
@@ -1486,23 +1677,11 @@ Please collect it from the counter.
               
               {/* Right side - Date and Time + Actions */}
               <div className="flex-1 flex flex-col items-end gap-2">
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2 flex-wrap">
-                    <Link
-                      href="/order-admin/feature-control"
-                      className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
-                    >
-                      ⚙️ Feature Control
-                    </Link>
-                    <Link
-                      href="/order-admin/bi-reports"
-                      className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
-                    >
-                      📊 BI Reports
-                    </Link>
+                {/* Action Buttons - First Line: Menu Editor & Sign Out */}
+                <div className="flex items-center gap-2">
                   <Link
                     href="/order-admin/menu-edit"
-                      className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
+                    className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
                   >
                     📝 Menu Editor
                   </Link>
@@ -1513,7 +1692,22 @@ Please collect it from the counter.
                     Sign Out
                   </button>
                 </div>
-                {/* Date and Time */}
+                {/* Action Buttons - Second Line: Admin Control & BI Reports */}
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/order-admin/feature-control"
+                    className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
+                  >
+                    ⚙️ Admin Control
+                  </Link>
+                  <Link
+                    href="/order-admin/bi-reports"
+                    className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
+                  >
+                    📊 BI Reports
+                  </Link>
+                </div>
+                {/* Date and Time - Vertically Centered */}
                 <div className="flex items-center gap-3 bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30">
                   <span className="text-white font-bold text-sm md:text-base">
                     {currentDateTime.toLocaleDateString('en-US', { 
@@ -1533,7 +1727,7 @@ Please collect it from the counter.
                     })}
                   </span>
                 </div>
-                {/* Live Status */}
+                {/* Live Status - Vertically Centered */}
                 <div className="flex items-center gap-3 bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30">
                   <div className="w-3 h-3 rounded-full bg-green-400 shadow-soft"></div>
                   <span className="text-white font-bold text-sm md:text-base">Live</span>
@@ -1816,20 +2010,37 @@ Please collect it from the counter.
                                 {order.customer_name}
                               </h3>
                               <div className="flex items-center gap-2">
-                              <p className="text-xs text-gray-600 font-medium truncate">
-                                📞 {order.customer_phno || 'N/A'}
-                              </p>
-                                {order.customer_phno && formatWhatsAppMessageLink(order.customer_phno, order.customer_name) && (
-                                  <a
-                                    href={formatWhatsAppMessageLink(order.customer_phno, order.customer_name)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
+                                <div
+                                  className="relative group"
+                                  onMouseEnter={() => order.customer_phno && setHoveredPhone(order.customer_phno)}
+                                  onMouseLeave={() => setHoveredPhone(null)}
+                                >
+                                  <p className="text-xs text-gray-600 font-medium truncate cursor-pointer hover:text-indigo-600 transition-colors">
+                                    📞 {order.customer_phno || 'N/A'}
+                                  </p>
+                                  {order.customer_phno && hoveredPhone === order.customer_phno && (
+                                    <div
+                                      onMouseEnter={() => setHoveredPhone(order.customer_phno)}
+                                      onMouseLeave={() => setHoveredPhone(null)}
+                                      className="absolute left-0 top-full pt-1 z-10"
+                                    >
+                                      <button
+                                        onClick={(e) => copyPhoneNumber(order.customer_phno, e)}
+                                        className="px-2 py-1 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-lg whitespace-nowrap transition-all"
+                                      >
+                                        {copiedPhone === order.customer_phno ? '✓ Copied!' : '📋 Copy'}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                                {order.customer_phno && (
+                                  <button
+                                    onClick={(e) => openWhatsAppPopup(e, order.id, order.customer_phno, order.customer_name, 'food')}
                                     className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#25D366] hover:bg-[#20BA5A] transition-all shadow-md hover:shadow-lg hover:scale-110"
                                     title={`Notify ${order.customer_name} on WhatsApp`}
                                   >
                                     <span className="text-sm font-bold text-white">💬</span>
-                                  </a>
+                                  </button>
                                 )}
                               </div>
                               <p className="text-xs text-gray-600 font-medium truncate">
@@ -2169,9 +2380,40 @@ Please collect it from the counter.
                                     <h3 className="text-base md:text-lg font-bold text-gray-800 truncate leading-tight">
                                       {booking.customer_name}
                                     </h3>
-                                    <p className="text-xs text-gray-600 font-medium truncate">
-                                      📞 {booking.customer_phno || 'N/A'}
-                                    </p>
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="relative group"
+                                        onMouseEnter={() => booking.customer_phno && setHoveredPhone(booking.customer_phno)}
+                                        onMouseLeave={() => setHoveredPhone(null)}
+                                      >
+                                        <p className="text-xs text-gray-600 font-medium truncate cursor-pointer hover:text-indigo-600 transition-colors">
+                                          📞 {booking.customer_phno || 'N/A'}
+                                        </p>
+                                        {booking.customer_phno && hoveredPhone === booking.customer_phno && (
+                                          <div
+                                            onMouseEnter={() => setHoveredPhone(booking.customer_phno)}
+                                            onMouseLeave={() => setHoveredPhone(null)}
+                                            className="absolute left-0 top-full pt-1 z-10"
+                                          >
+                                            <button
+                                              onClick={(e) => copyPhoneNumber(booking.customer_phno, e)}
+                                              className="px-2 py-1 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-lg whitespace-nowrap transition-all"
+                                            >
+                                              {copiedPhone === booking.customer_phno ? '✓ Copied!' : '📋 Copy'}
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                      {booking.customer_phno && (
+                                        <button
+                                          onClick={(e) => openWhatsAppPopup(e, booking.snooker_order_id, booking.customer_phno, booking.customer_name, 'snooker')}
+                                          className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#25D366] hover:bg-[#20BA5A] transition-all shadow-md hover:shadow-lg hover:scale-110"
+                                          title={`Notify ${booking.customer_name} on WhatsApp`}
+                                        >
+                                          <span className="text-sm font-bold text-white">💬</span>
+                                        </button>
+                                      )}
+                                    </div>
                                     <p className="text-xs text-gray-600 font-medium truncate">
                                       #{booking.snooker_order_id.slice(0, 8)}
                                       {boardInfo && ` • ${boardInfo.board_name}`}
@@ -2573,9 +2815,40 @@ Please collect it from the counter.
                                     <h3 className="text-base md:text-lg font-bold text-gray-800 truncate leading-tight">
                                       {booking.customer_name}
                                     </h3>
-                                    <p className="text-xs text-gray-600 font-medium truncate">
-                                      📞 {booking.customer_phno || 'N/A'}
-                                    </p>
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="relative group"
+                                        onMouseEnter={() => booking.customer_phno && setHoveredPhone(booking.customer_phno)}
+                                        onMouseLeave={() => setHoveredPhone(null)}
+                                      >
+                                        <p className="text-xs text-gray-600 font-medium truncate cursor-pointer hover:text-indigo-600 transition-colors">
+                                          📞 {booking.customer_phno || 'N/A'}
+                                        </p>
+                                        {booking.customer_phno && hoveredPhone === booking.customer_phno && (
+                                          <div
+                                            onMouseEnter={() => setHoveredPhone(booking.customer_phno)}
+                                            onMouseLeave={() => setHoveredPhone(null)}
+                                            className="absolute left-0 top-full pt-1 z-10"
+                                          >
+                                            <button
+                                              onClick={(e) => copyPhoneNumber(booking.customer_phno, e)}
+                                              className="px-2 py-1 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-lg whitespace-nowrap transition-all"
+                                            >
+                                              {copiedPhone === booking.customer_phno ? '✓ Copied!' : '📋 Copy'}
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                      {booking.customer_phno && (
+                                        <button
+                                          onClick={(e) => openWhatsAppPopup(e, booking.workspace_order_id, booking.customer_phno, booking.customer_name, 'workspace')}
+                                          className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#25D366] hover:bg-[#20BA5A] transition-all shadow-md hover:shadow-lg hover:scale-110"
+                                          title={`Notify ${booking.customer_name} on WhatsApp`}
+                                        >
+                                          <span className="text-sm font-bold text-white">💬</span>
+                                        </button>
+                                      )}
+                                    </div>
                                     <p className="text-xs text-gray-600 font-medium truncate">
                                       #{booking.workspace_order_id.slice(0, 8)}
                                       {seatInfo && ` • Seat ID: ${booking.workspace_seat_id}`}
@@ -3539,6 +3812,77 @@ Please collect it from the counter.
             </a>
           </p>
         </footer>
+
+        {/* WhatsApp Message Popup */}
+        {whatsappPopup.isOpen && whatsappPopup.buttonPosition && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-40"
+              onClick={closeWhatsAppPopup}
+            />
+            {/* Popup */}
+            <div
+              ref={popupRef}
+              className="fixed z-50 bg-white rounded-xl shadow-2xl border-2 border-indigo-200 p-4 min-w-[280px] max-w-[400px] max-h-[500px] overflow-y-auto"
+              style={{
+                top: `${whatsappPopup.buttonPosition.top}px`,
+                left: `${whatsappPopup.buttonPosition.left}px`,
+                transform: 'translateY(8px)',
+              }}
+            >
+              <div className="flex items-center justify-between mb-3 pb-2 border-b-2 border-indigo-200">
+                <h3 className="text-lg font-bold text-indigo-600 flex items-center gap-2">
+                  <span>💬</span>
+                  <span>Select Message</span>
+                </h3>
+                <button
+                  onClick={closeWhatsAppPopup}
+                  className="text-gray-500 hover:text-red-600 transition-colors text-xl"
+                  title="Close"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {messagesLoading ? (
+                <div className="text-center py-8">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 mb-3">
+                    <div className="animate-pulse">
+                      <span className="text-2xl text-indigo-600">⏳</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 font-semibold">Loading messages...</p>
+                </div>
+              ) : availableMessages.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-gray-500">No messages available for this category.</p>
+                  <p className="text-xs text-gray-400 mt-2">Please add messages in Admin Control.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {availableMessages.map((msg, index) => (
+                    <button
+                      key={index}
+                      onClick={() => sendWhatsAppMessage(msg.value)}
+                      className="w-full text-left p-3 rounded-lg border-2 border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all group"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-indigo-600 mb-1">{msg.label}</p>
+                          <p className="text-sm text-gray-700 line-clamp-2 group-hover:text-indigo-700">
+                            {msg.value}
+                          </p>
+                        </div>
+                        <span className="text-lg flex-shrink-0">📤</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
   );
 }
