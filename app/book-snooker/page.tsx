@@ -8,7 +8,8 @@ type Board = {
   snooker_board_id: string;
   board_name: string;
   type: string;
-  given_duration_for_100inr: number;
+  unit_duration: number;
+  unit_duration_price: number;
 };
 
 export default function BookSnookerPage() {
@@ -491,17 +492,22 @@ export default function BookSnookerPage() {
                       >
                         <option value="">Select a Gaming Table</option>
                         {boards.map((board) => {
-                          // Calculate hourly price based on type
-                          // Pool Table: 300/hr, French Table: 400/hr
-                          const hourlyPrice = board.type === 'Pool-Table' ? 300 : 400;
                           // Remove trailing numbers and letters from board name for display
                           const displayName = board.board_name.replace(/\s+[A-Z0-9]+$/, '');
+                          
+                          // Calculate hourly price from unit_duration and unit_duration_price
+                          // Formula: (price per unit_duration) * (60 minutes / unit_duration)
+                          const hourlyPrice = (board.unit_duration_price / board.unit_duration) * 60;
+                          
+                          // Apply display rule: if multiple of 10, subtract 1
+                          const displayPrice = hourlyPrice % 10 === 0 ? hourlyPrice - 1 : hourlyPrice;
+                          
                           return (
                             <option 
                               key={board.snooker_board_id} 
                               value={board.snooker_board_id}
                             >
-                              {displayName} - ₹{hourlyPrice}/hr
+                              {displayName} - ₹{Math.round(displayPrice)}/hr
                             </option>
                           );
                         })}
