@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const supabase = createClient();
     const { data, error } = await supabase
       .from('snooker_board_menu_items')
-      .select('snooker_board_id, board_name, type, given_duration_for_100inr')
+      .select('snooker_board_id, board_name, type, unit_duration, unit_duration_price')
       .order('board_name', { ascending: true });
 
     if (error) {

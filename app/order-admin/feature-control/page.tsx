@@ -21,6 +21,194 @@ interface WhatsAppMessagesContentProps {
   onUpdate: (msgId: string, field: string, value: string) => void;
 }
 
+interface SnookerBoard {
+  snooker_board_id: string;
+  board_name: string;
+  type: string;
+  unit_duration: number;
+  unit_duration_price: number;
+}
+
+function SnookerControlContent() {
+  const [boards, setBoards] = useState<SnookerBoard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<{ unit_duration: number; unit_duration_price: number }>({
+    unit_duration: 0,
+    unit_duration_price: 0,
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  // Fetch boards
+  const fetchBoards = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/snooker-boards');
+      if (response.ok) {
+        const result = await response.json();
+        const data = result?.data || result || [];
+        setBoards(Array.isArray(data) ? data : []);
+      } else {
+        console.error('Failed to fetch snooker boards');
+        setBoards([]);
+      }
+    } catch (error) {
+      console.error('Error fetching snooker boards:', error);
+      setBoards([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBoards();
+  }, [fetchBoards]);
+
+  const handleEdit = (board: SnookerBoard) => {
+    setEditingBoardId(board.snooker_board_id);
+    setEditValues({
+      unit_duration: board.unit_duration,
+      unit_duration_price: board.unit_duration_price,
+    });
+  };
+
+  const handleCancel = () => {
+    setEditingBoardId(null);
+    setEditValues({ unit_duration: 0, unit_duration_price: 0 });
+  };
+
+  const handleSubmit = async (boardId: string) => {
+    setSubmitting(true);
+    try {
+      const response = await fetch('/api/snooker-boards', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          snooker_board_id: boardId,
+          unit_duration: editValues.unit_duration,
+          unit_duration_price: editValues.unit_duration_price,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchBoards();
+        setEditingBoardId(null);
+        setEditValues({ unit_duration: 0, unit_duration_price: 0 });
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        alert(`Failed to update snooker board: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating snooker board:', error);
+      alert(`Error updating snooker board: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center py-8">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 mb-4">
+          <div className="animate-pulse">
+            <span className="text-4xl text-indigo-600">⏳</span>
+          </div>
+        </div>
+        <p className="text-gray-700 font-bold">Loading snooker boards...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto space-y-4">
+      {boards.map((board) => {
+        const isEditing = editingBoardId === board.snooker_board_id;
+        const displayName = board.board_name.replace(/\s+[A-Z0-9]+$/, '');
+
+        return (
+          <div
+            key={board.snooker_board_id}
+            className="relative rounded-xl border-2 border-indigo-200 bg-white/80 p-4"
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-800">{displayName}</h3>
+                {!isEditing && (
+                  <button
+                    onClick={() => handleEdit(board)}
+                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                    title="Edit"
+                  >
+                    ✏️
+                  </button>
+                )}
+              </div>
+
+              {isEditing ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Unit Duration (minutes)
+                    </label>
+                    <input
+                      type="number"
+                      value={editValues.unit_duration}
+                      onChange={(e) => setEditValues({ ...editValues, unit_duration: parseInt(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 border-2 border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      min="1"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Unit Duration Price (₹)
+                    </label>
+                    <input
+                      type="number"
+                      value={editValues.unit_duration_price}
+                      onChange={(e) => setEditValues({ ...editValues, unit_duration_price: parseFloat(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 border-2 border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      min="0"
+                      step="0.01"
+                      required
+                    />
+                  </div>
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={handleCancel}
+                      className="px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-all border border-red-200"
+                    >
+                      ✕ Cancel
+                    </button>
+                    <button
+                      onClick={() => handleSubmit(board.snooker_board_id)}
+                      disabled={submitting}
+                      className="px-3 py-1.5 text-xs font-semibold text-green-600 hover:bg-green-50 rounded-lg transition-all border border-green-200 disabled:opacity-50"
+                    >
+                      {submitting ? 'Saving...' : '✓ Submit'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold text-gray-700">Unit Duration:</span>
+                    <span className="text-sm font-bold text-gray-800">{board.unit_duration} minutes</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold text-gray-700">Unit Price:</span>
+                    <span className="text-sm font-bold text-gray-800">₹{board.unit_duration_price}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function WhatsAppMessagesContent({ msgId, messages, onUpdate }: WhatsAppMessagesContentProps) {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [expandedField, setExpandedField] = useState<string | null>(null);
@@ -432,7 +620,7 @@ export default function FeatureControlPage() {
               <div className="flex-1 flex flex-col items-center text-center">
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white flex items-center gap-3 drop-shadow-lg whitespace-nowrap">
                   <span className="text-4xl md:text-5xl">⚙️</span>
-                  <span>Feature Control</span>
+                  <span>Admin Control</span>
                 </h1>
                 <p className="text-white text-base md:text-lg mt-2 font-bold" style={{ 
                   textShadow: '3px 3px 6px rgba(0, 0, 0, 0.9), -2px -2px 4px rgba(0, 0, 0, 0.9), 2px 2px 4px rgba(0, 0, 0, 0.9), -2px 2px 4px rgba(0, 0, 0, 0.9), 2px -2px 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.8)',
@@ -498,8 +686,8 @@ export default function FeatureControlPage() {
       {/* Main Content */}
       <div className="flex-1 w-full px-6 md:px-10 lg:px-16 py-8 md:py-12">
         <div className="flex flex-col lg:flex-row gap-6 md:gap-8 h-full items-stretch">
-          {/* Left Side - Feature Control Cards */}
-          <div className="flex-1 lg:flex-[0_0_65%] flex">
+          {/* Left Side - Feature Control Cards (Narrowed) */}
+          <div className="lg:flex-[0_0_25%] flex">
             <div className="relative rounded-2xl overflow-hidden shadow-soft-lg bg-white/95 backdrop-blur-xl border-2 border-indigo-200 p-6 md:p-8 w-full h-full flex flex-col">
               {/* Header Section */}
               <div className="mb-6 md:mb-8 flex-shrink-0">
@@ -509,7 +697,7 @@ export default function FeatureControlPage() {
                     <span>Feature Toggles</span>
                   </h2>
                 </div>
-                <p className="text-gray-600 mt-2 text-sm md:text-base font-medium text-center">
+                <p className="text-gray-600 mt-2 text-xs md:text-sm font-medium text-center">
                   Enable or disable features for user visibility
                 </p>
               </div>
@@ -528,73 +716,51 @@ export default function FeatureControlPage() {
                   </div>
                 )}
 
-                {/* Feature Controls Grid */}
+                {/* Feature Controls - Vertical List */}
                 {!loading && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                  <div className="space-y-4">
                     {featuresToShow.map((feature) => {
                       return (
                         <div
                           key={feature.id}
-                          className="relative rounded-2xl overflow-hidden transition-all shadow-soft hover:shadow-soft-lg"
-                        >
-                          <div className={`relative ${
+                          className={`relative rounded-xl overflow-hidden transition-all shadow-soft hover:shadow-soft-lg ${
                             feature.user_visibility
                               ? 'bg-gradient-to-br from-green-50 via-green-100/70 to-emerald-50/80 border-2 border-green-300'
                               : 'bg-gradient-to-br from-gray-50 via-gray-100/70 to-slate-50/80 border-2 border-gray-300'
-                          } p-6 md:p-8 rounded-2xl`}>
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent rounded-2xl pointer-events-none"></div>
-                            
-                            <div className="relative z-10">
-                              {/* Feature Header */}
-                              <div className="flex flex-col items-center gap-4 mb-6">
-                                <div className={`w-16 h-16 md:w-20 md:h-20 rounded-xl ${
-                                  feature.user_visibility
-                                    ? 'bg-gradient-to-r from-green-500 to-emerald-500'
-                                    : 'bg-gradient-to-r from-gray-400 to-gray-500'
-                                } flex items-center justify-center shadow-soft`}>
-                                  <span className="text-3xl md:text-4xl text-white">{feature.icon}</span>
-                                </div>
-                                <div className="text-center">
-                                  <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-1">
-                                    {feature.name}
-                                  </h3>
-                                  <p className="text-xs text-gray-600">
-                                    {feature.route}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Toggle Switch */}
-                              <div className="flex flex-col items-center gap-4">
-                                <div className="flex items-center justify-between bg-white/60 rounded-xl p-4 border border-gray-200 w-full">
-                                  <span className="text-base font-semibold text-gray-700">
-                                    User Visibility
-                                  </span>
-                                  <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={feature.user_visibility}
-                                      onChange={(e) => {
-                                        updateFeatureControl(feature.id, e.target.checked);
-                                      }}
-                                      className="sr-only peer"
-                                    />
-                                    <div className="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-500"></div>
-                                  </label>
-                                </div>
-
-                                {/* Status Badge */}
-                                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${
-                                  feature.user_visibility
-                                    ? 'bg-gradient-to-r from-green-500 to-emerald-500'
-                                    : 'bg-gradient-to-r from-gray-400 to-gray-500'
-                                }`}>
-                                  <span className="text-sm font-bold text-white uppercase">
-                                    {feature.user_visibility ? 'ON' : 'OFF'}
-                                  </span>
-                                </div>
-                              </div>
+                          } p-4`}
+                        >
+                          <div className="flex items-center justify-between gap-4">
+                            {/* Left: Icon */}
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-soft flex-shrink-0 ${
+                              feature.user_visibility
+                                ? 'bg-gradient-to-r from-green-500 to-emerald-500'
+                                : 'bg-gradient-to-r from-gray-400 to-gray-500'
+                            }`}>
+                              <span className="text-2xl text-white">{feature.icon}</span>
                             </div>
+                            
+                            {/* Center: Name */}
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-base font-bold text-gray-800 truncate">
+                                {feature.name}
+                              </h3>
+                              <p className="text-xs text-gray-600 truncate">
+                                {feature.route}
+                              </p>
+                            </div>
+                            
+                            {/* Right: Toggle */}
+                            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                              <input
+                                type="checkbox"
+                                checked={feature.user_visibility}
+                                onChange={(e) => {
+                                  updateFeatureControl(feature.id, e.target.checked);
+                                }}
+                                className="sr-only peer"
+                              />
+                              <div className="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-500"></div>
+                            </label>
                           </div>
                         </div>
                       );
@@ -604,17 +770,24 @@ export default function FeatureControlPage() {
 
                 {/* Empty State */}
                 {!loading && featuresToShow.length === 0 && (
-                  <div className="relative rounded-3xl overflow-hidden shadow-soft-lg">
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/90 to-indigo-50/80 backdrop-blur-xl"></div>
-                    <div className="relative z-10 text-center py-16 md:py-20 px-6">
-                      <div className="inline-flex items-center justify-center w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100 mb-6 shadow-soft">
-                        <span className="text-6xl md:text-7xl">⚙️</span>
-                      </div>
-                      <h3 className="text-2xl md:text-3xl font-bold text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text mb-3">No feature controls found</h3>
-                      <p className="text-gray-600 font-medium">Feature controls will appear here once configured in the database</p>
-                    </div>
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No feature controls found</p>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+
+          {/* Middle - Snooker Control */}
+          <div className="lg:flex-[0_0_35%] flex">
+            <div className="w-full h-full flex flex-col">
+              <div className="relative rounded-2xl overflow-hidden shadow-soft-lg bg-white/95 backdrop-blur-xl border-2 border-indigo-200 p-6 md:p-8 w-full h-full flex flex-col">
+                <h2 className="text-2xl md:text-3xl font-bold text-indigo-600 flex items-center gap-3 mb-6 flex-shrink-0">
+                  <span className="text-3xl md:text-4xl">🎱</span>
+                  <span>Snooker Control</span>
+                </h2>
+                
+                <SnookerControlContent />
               </div>
             </div>
           </div>
