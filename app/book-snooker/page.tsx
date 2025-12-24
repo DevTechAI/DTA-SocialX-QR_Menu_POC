@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { getSessionData, setSessionData, removeSessionData } from '@/lib/utils/sessionStorage';
 
 type Board = {
@@ -31,6 +32,7 @@ export default function BookSnookerPage() {
     boardId: string;
     playersCount: number;
     orderDate: string;
+    orderDateTime: string;
   } | null>(null);
   
   // Feature visibility state
@@ -80,6 +82,7 @@ export default function BookSnookerPage() {
         boardId: string;
         playersCount: number;
         orderDate: string;
+        orderDateTime?: string;
       }>('snooker_bookingDetails');
       
       const savedBookingOrderId = getSessionData<string>('snooker_bookingOrderId');
@@ -87,7 +90,24 @@ export default function BookSnookerPage() {
 
       if (savedBookingDetails && savedBookingOrderId) {
         // Restore from client-side storage
-        setBookingDetails(savedBookingDetails);
+        // Ensure orderDateTime exists (for backward compatibility with old saved data)
+        const bookingDetailsWithDateTime = {
+          ...savedBookingDetails,
+          orderDateTime: savedBookingDetails.orderDateTime || (() => {
+            // Generate from orderDate if orderDateTime is missing
+            const date = savedBookingDetails.orderDate ? new Date(savedBookingDetails.orderDate) : new Date();
+            return date.toLocaleString('en-US', {
+              weekday: 'short',
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            });
+          })(),
+        };
+        setBookingDetails(bookingDetailsWithDateTime);
         setBookingOrderId(savedBookingOrderId);
         // Always show order summary if we have saved booking data
         setShowOrderSummary(true);
@@ -112,13 +132,23 @@ export default function BookSnookerPage() {
                 ? selectedBoard.board_name.replace(/\s+[A-Z0-9]+$/, '') 
                 : (booking.snooker_board_menu_items?.board_name?.replace(/\s+[A-Z0-9]+$/, '') || booking.snooker_board_id);
               
+              const bookingDate = new Date(booking.created_at);
               const bookingDetails = {
                 customerName: booking.customer_name,
                 customerPhone: booking.customer_phno,
                 boardName: boardName,
                 boardId: booking.snooker_board_id,
                 playersCount: booking.players_count || 1,
-                orderDate: new Date(booking.created_at).toISOString().split('T')[0],
+                orderDate: bookingDate.toISOString().split('T')[0],
+                orderDateTime: bookingDate.toLocaleString('en-US', {
+                  weekday: 'short',
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true
+                }),
               };
               
               setBookingDetails(bookingDetails);
@@ -254,13 +284,23 @@ export default function BookSnookerPage() {
         const boardName = selectedBoardObj ? selectedBoardObj.board_name.replace(/\s+[A-Z0-9]+$/, '') : selectedBoard;
         
         // Store booking details before resetting
+        const now = new Date();
         const bookingDetails = {
           customerName: customerName.trim(),
           customerPhone: phoneWithPrefix,
           boardName: boardName,
           boardId: selectedBoard,
           playersCount: parseInt(playersCount),
-          orderDate: new Date().toISOString().split('T')[0],
+          orderDate: now.toISOString().split('T')[0],
+          orderDateTime: now.toLocaleString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          }),
         };
         
         setBookingOrderId(data.booking_id || data.booking?.snooker_order_id || data.snooker_order_id || '');
@@ -631,14 +671,33 @@ export default function BookSnookerPage() {
 
                   {/* Booking Message */}
                   <div className="mb-4">
-                    <div className="space-y-2">
+                    <div className="flex items-center justify-between mb-2">
                       <p className="text-base font-bold text-gray-800">
                         Snooker booking is confirmed
                       </p>
-                      <p className="text-sm font-semibold text-gray-700 leading-relaxed">
-                        Thank you for booking Snooker Table, kindly collect Cue sticks from the counter.
-                      </p>
+                      {/* Follow us on Instagram */}
+                      <div className="mt-3 flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-700">Follow us</span>
+                        <a
+                          href="https://www.instagram.com/socialxcafe/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center w-6 h-6 hover:scale-110 transition-transform"
+                          title="Follow us on Instagram"
+                        >
+                          <Image
+                            src="/resources/instagram-logo.svg"
+                            alt="Instagram"
+                            width={24}
+                            height={24}
+                            className="w-6 h-6"
+                          />
+                        </a>
+                      </div>
                     </div>
+                    <p className="text-sm font-semibold text-gray-700 leading-relaxed">
+                      Thank you for booking Snooker Table, kindly collect Cue sticks from the counter.
+                    </p>
                   </div>
                 </div>
 
@@ -669,6 +728,24 @@ export default function BookSnookerPage() {
                             <span className="text-sm font-semibold text-gray-700">Order Date:</span>
                             <span className="text-sm font-bold text-gray-800">{bookingDetails.orderDate}</span>
                           </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-semibold text-gray-700">Order Placed At:</span>
+                            <span className="text-sm font-bold text-gray-800">
+                              {bookingDetails.orderDateTime || (() => {
+                                // Fallback: generate from orderDate if orderDateTime is missing
+                                const date = bookingDetails.orderDate ? new Date(bookingDetails.orderDate) : new Date();
+                                return date.toLocaleString('en-US', {
+                                  weekday: 'short',
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true
+                                });
+                              })()}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -679,34 +756,6 @@ export default function BookSnookerPage() {
                 <div className="p-4 sm:p-6 pt-3 sm:pt-4 border-t border-blue-100 bg-white/50">
                   {/* Action Buttons */}
                   <div className="flex flex-col gap-3">
-                    {/* Book Another Snooker Button */}
-                    <button
-                      onClick={() => {
-                        // Clear booking data and show form with pre-filled customer info
-                        setShowOrderSummary(false);
-                        setBookingOrderId('');
-                        setBookingDetails(null);
-                        
-                        // Clear 12-hour session storage
-                        removeSessionData('snooker_bookingDetails');
-                        removeSessionData('snooker_bookingOrderId');
-                        removeSessionData('snooker_showOrderSummary');
-                        
-                        // Keep customer info for pre-filling
-                        if (bookingDetails) {
-                          const phoneWithoutPrefix = bookingDetails.customerPhone.startsWith('+91') 
-                            ? bookingDetails.customerPhone.slice(3) 
-                            : bookingDetails.customerPhone;
-                          setCustomerName(bookingDetails.customerName);
-                          setCustomerPhone(phoneWithoutPrefix);
-                        }
-                      }}
-                      className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
-                    >
-                      <div className="absolute inset-0 gradient-primary"></div>
-                      <span className="relative z-10 text-white">Book Another Snooker</span>
-                    </button>
-
                     {/* Order Food Button */}
                     <button
                       onClick={() => {
