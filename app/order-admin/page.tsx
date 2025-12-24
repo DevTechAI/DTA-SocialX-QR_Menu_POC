@@ -87,7 +87,8 @@ interface SnookerBooking {
   snooker_board_menu_items?: {
     board_name: string;
     type: string;
-    given_duration_for_100inr: number;
+    unit_duration: number;
+    unit_duration_price: number;
   };
 }
 
@@ -1695,7 +1696,7 @@ Please collect it from the counter.
                 {/* Action Buttons - Second Line: Admin Control & BI Reports */}
                 <div className="flex items-center gap-2">
                   <Link
-                    href="/order-admin/feature-control"
+                    href="/order-admin/admin-control"
                     className="px-5 py-2.5 bg-white/50 backdrop-blur-md text-gray-900 rounded-lg border-2 border-white/70 hover:bg-white/60 hover:border-white/90 transition-all font-bold text-base shadow-lg hover:shadow-xl active:scale-95"
                   >
                     ⚙️ Admin Control
