@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const boardIds = [...new Set(bookings?.map(b => b.snooker_board_id) || [])];
     const { data: boards, error: boardsError } = await supabase
       .from('snooker_board_menu_items')
-      .select('snooker_board_id, board_name, type, given_duration_for_100inr')
+      .select('snooker_board_id, board_name, type, unit_duration, unit_duration_price')
       .in('snooker_board_id', boardIds);
 
     if (boardsError) {
