@@ -51,6 +51,12 @@ export default function SocialXMenuApp() {
   const [skipCheckoutDialog, setSkipCheckoutDialog] = useState(false);
   const [consolidatedOrderIds, setConsolidatedOrderIds] = useState<string[]>([]);
   
+  // Event check-in details state
+  const [eventCheckInDetails, setEventCheckInDetails] = useState<{
+    eventName: string;
+    checkInTime: string;
+  } | null>(null);
+  
   // Unpaid orders state
   const [unpaidOrders, setUnpaidOrders] = useState<any[]>([]);
   const [unpaidOrdersTotal, setUnpaidOrdersTotal] = useState(0);
@@ -296,6 +302,17 @@ export default function SocialXMenuApp() {
     const savedSkipCheckout = sessionStorage.getItem('skipCheckoutDialog') === 'true';
     if (savedSkipCheckout) {
       setSkipCheckoutDialog(true);
+    }
+    
+    // Restore event check-in details if available
+    const savedEventDetails = sessionStorage.getItem('eventCheckInDetails');
+    if (savedEventDetails) {
+      try {
+        const eventDetails = JSON.parse(savedEventDetails);
+        setEventCheckInDetails(eventDetails);
+      } catch (error) {
+        console.error('Error parsing event check-in details:', error);
+      }
     }
     
     // Keep categories collapsed by default when menu view loads
@@ -1639,6 +1656,30 @@ export default function SocialXMenuApp() {
                   </div>
                 )}
               </div>
+
+              {/* Event Check-In Details Card - Display below order items if from event check-in */}
+              {eventCheckInDetails && (
+                <div className="px-4 sm:px-6 pb-4">
+                  <div className="relative group/item rounded-2xl overflow-hidden">
+                    <div className="bg-gradient-to-br from-white via-white to-green-50/60 p-4 border border-green-100 shadow-sm">
+                      <h3 className="text-sm font-bold text-gray-700 mb-3">Event Check-In Details</h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-start gap-2">
+                          <p className="text-sm font-semibold text-gray-600">Event:</p>
+                          <p className="text-sm font-bold text-gray-800">
+                            {eventCheckInDetails.eventName}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-start">
+                          <p className="text-sm font-semibold text-gray-600">
+                            Check-in Time: {eventCheckInDetails.checkInTime}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Fixed Bottom Section */}
               <div className="p-4 sm:p-6 pt-2 sm:pt-2 border-t border-primary-100 bg-white/50 -mt-2">

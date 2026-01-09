@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { event_uuid, attendee_name, attendee_phno } = body;
+    const { event_uuid, attendee_name, attendee_phno, notify_future_events } = body;
 
     // Validate required fields
     if (!event_uuid || !attendee_name || !attendee_phno) {
@@ -23,6 +23,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Default notify_future_events to false if not provided
+    const notifyFutureEvents = notify_future_events === true || notify_future_events === 'true';
 
     // Validate phone number format (should be 10 digits or with +91)
     const phoneDigits = attendee_phno.replace(/\D/g, '');
@@ -70,7 +73,8 @@ export async function POST(request: NextRequest) {
         .from('event_attendees')
         .update({ 
           attendee_name: attendee_name.trim(),
-          check_in_time: new Date().toISOString()
+          check_in_time: new Date().toISOString(),
+          notify_future_events: notifyFutureEvents
         })
         .eq('event_uuid', event_uuid)
         .eq('attendee_phno', formattedPhone)
@@ -103,7 +107,8 @@ export async function POST(request: NextRequest) {
         event_uuid: event_uuid,
         attendee_name: attendee_name.trim(),
         attendee_phno: formattedPhone,
-        check_in_time: new Date().toISOString()
+        check_in_time: new Date().toISOString(),
+        notify_future_events: notifyFutureEvents
       })
       .select()
       .single();

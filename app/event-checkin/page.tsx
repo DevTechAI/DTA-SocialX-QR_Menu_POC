@@ -13,11 +13,12 @@ type Event = {
   event_organiser_ph: string;
 };
 
-export default function RegisterEventPage() {
+export default function EventCheckInPage() {
   const router = useRouter();
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [selectedEventUuid, setSelectedEventUuid] = useState('');
+  const [wantUpdates, setWantUpdates] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -103,6 +104,7 @@ export default function RegisterEventPage() {
           event_uuid: selectedEventUuid,
           attendee_name: customerName.trim(),
           attendee_phno: phoneWithPrefix,
+          notify_future_events: wantUpdates,
         }),
       });
 
@@ -303,6 +305,20 @@ export default function RegisterEventPage() {
                           })}
                         </select>
                       </div>
+                      
+                      {/* Want Updates Checkbox */}
+                      <div className="mt-3 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="wantUpdates"
+                          checked={wantUpdates}
+                          onChange={(e) => setWantUpdates(e.target.checked)}
+                          className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 focus:ring-2 cursor-pointer"
+                        />
+                        <label htmlFor="wantUpdates" className="text-sm font-semibold text-gray-700 cursor-pointer">
+                          Want updates about future events?
+                        </label>
+                      </div>
                     </div>
 
                     {/* Check-In Button */}
@@ -336,7 +352,7 @@ export default function RegisterEventPage() {
         </div>
       ) : (
         /* Success Screen */
-        <div className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 py-6 sm:py-8 w-full mt-2 sm:mt-3 md:mt-4">
+        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-8 w-full mt-2 sm:mt-3 md:mt-4">
           <div className="w-full md:max-w-2xl lg:max-w-3xl px-3 sm:px-0 md:px-4 lg:px-6">
             <div className="relative group">
               {/* Glowing border effect */}
@@ -391,9 +407,78 @@ export default function RegisterEventPage() {
 
                     {/* Discount Message */}
                     <div className="mb-6 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border border-orange-200">
-                      <p className="text-sm sm:text-base font-semibold text-gray-800 text-center">
+                      <p className="text-sm sm:text-base font-semibold text-gray-800 text-center mb-3">
                         Event attendees get 10% off on food today
                       </p>
+                      <button
+                        onClick={() => {
+                          // Get customer phone number from check-in
+                          const phoneWithPrefix = sessionStorage.getItem('customerPhone') || 
+                                                 getSessionData<string>('event_customerPhone') || '';
+                          
+                          // Check if there's an existing food order for this phone number
+                          const savedOrderPlaced = getSessionData<boolean>('food_orderPlaced') || 
+                                                   (localStorage.getItem('orderPlaced') === 'true');
+                          const savedPhone = getSessionData<string>('food_customerPhone') || 
+                                           sessionStorage.getItem('customerPhone') || '';
+                          
+                          // Normalize phone numbers for comparison (ensure both have +91 prefix)
+                          const normalizePhone = (phone: string) => {
+                            if (!phone) return '';
+                            const digits = phone.replace(/\D/g, '');
+                            if (digits.startsWith('91') && digits.length === 12) {
+                              return `+${digits}`;
+                            } else if (digits.length === 10) {
+                              return `+91${digits}`;
+                            }
+                            return phone.startsWith('+') ? phone : `+${phone}`;
+                          };
+                          
+                          const normalizedCurrentPhone = normalizePhone(phoneWithPrefix);
+                          const normalizedSavedPhone = normalizePhone(savedPhone);
+                          
+                          // Check if there's an existing order for the same phone number
+                          const hasExistingOrder = savedOrderPlaced && 
+                                                  normalizedSavedPhone && 
+                                                  normalizedCurrentPhone && 
+                                                  normalizedSavedPhone === normalizedCurrentPhone;
+                          
+                          if (hasExistingOrder) {
+                            // Set view to orderPlaced to show order summary
+                            localStorage.setItem('currentView', 'orderPlaced');
+                            // Ensure orderPlaced flag is set
+                            if (!getSessionData<boolean>('food_orderPlaced')) {
+                              setSessionData('food_orderPlaced', true);
+                            }
+                            localStorage.setItem('orderPlaced', 'true');
+                          } else {
+                            // No existing order - show fresh menu
+                            // Clear any existing order flags to start fresh
+                            localStorage.setItem('currentView', 'menu');
+                            localStorage.removeItem('orderPlaced');
+                            // Set flags to skip checkout dialog and pre-fill customer info
+                            sessionStorage.setItem('skipCheckoutDialog', 'true');
+                          }
+                          
+                          // Set flag to indicate coming from event check-in
+                          sessionStorage.setItem('fromEventCheckIn', 'true');
+                          
+                          // Store event details to display in order summary
+                          if (checkInDetails) {
+                            sessionStorage.setItem('eventCheckInDetails', JSON.stringify({
+                              eventName: checkInDetails.eventName,
+                              checkInTime: checkInDetails.checkInTime,
+                            }));
+                          }
+                          
+                          // Navigate to order menu
+                          router.push('/order-menu');
+                        }}
+                        className="relative w-full py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-orange-600"></div>
+                        <span className="relative z-10 text-white">Order Food/Coffee</span>
+                      </button>
                     </div>
                   </div>
 
@@ -415,17 +500,15 @@ export default function RegisterEventPage() {
                           height={20}
                           className="w-5 h-5"
                         />
-                        <span>👉 Follow @socialxcafe</span>
+                        <span>@socialxcafe</span>
                       </a>
                     </div>
 
                     {/* Explore Upcoming Events */}
                     <button
                       onClick={() => {
-                        // Navigate to events page or external link
-                        // You can update this URL to point to your events page
-                        window.open('https://www.bookmyshow.com', '_blank');
-                        // Or use: router.push('/events');
+                        // Navigate to SocialX Linktree for upcoming events
+                        window.open('https://linktr.ee/socialx.hub', '_blank');
                       }}
                       className="w-full py-3 px-4 rounded-xl font-bold transition-all shadow-soft hover:shadow-soft-lg active:scale-95 overflow-hidden group/btn bg-white/90 backdrop-blur-sm border border-gray-300/50 hover:border-primary-300"
                     >
@@ -440,6 +523,23 @@ export default function RegisterEventPage() {
           </div>
         </div>
       )}
+
+      {/* Footer - Subtle Bottom Banner */}
+      <footer className="w-full mt-auto">
+        <div className="w-full bg-white/60 backdrop-blur-sm border-t border-gray-200/50 py-2 shadow-sm">
+          <p className="text-xs text-gray-500 text-center">
+            Tech Powered by{' '}
+            <a
+              href="https://www.devtechai.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-500 hover:text-primary-600 font-semibold underline"
+            >
+              DevTechAi.Org
+            </a>
+          </p>
+        </div>
+      </footer>
     </main>
   );
 }
