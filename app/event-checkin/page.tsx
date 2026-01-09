@@ -225,85 +225,91 @@ export default function EventCheckInPage() {
                   <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                     {/* Name Input */}
                     <div>
-                      <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Name <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative group/input">
-                        <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
-                        
-                        <input
-                          type="text"
-                          id="name"
-                          value={customerName}
-                          onChange={(e) => setCustomerName(e.target.value)}
-                          placeholder="Please enter your name"
-                          className="relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
-                          style={{ fontSize: '16px' }}
-                          required
-                          autoFocus
-                        />
+                      <div className="flex items-center gap-3 mb-1.5">
+                        <label htmlFor="name" className="text-sm font-semibold text-gray-700 whitespace-nowrap">
+                          Name <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative group/input flex-1">
+                          <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
+                          
+                          <input
+                            type="text"
+                            id="name"
+                            value={customerName}
+                            onChange={(e) => setCustomerName(e.target.value)}
+                            placeholder="Please enter your name"
+                            className="relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                            style={{ fontSize: '16px' }}
+                            required
+                            autoFocus
+                          />
+                        </div>
                       </div>
                     </div>
 
                     {/* Phone Number Input */}
                     <div>
-                      <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Phone <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative group/input">
-                        <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
-                        
-                        {/* Phone prefix */}
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-                          <span className="text-base font-medium text-gray-700">+91</span>
+                      <div className="flex items-center gap-3 mb-1.5">
+                        <label htmlFor="phone" className="text-sm font-semibold text-gray-700 whitespace-nowrap">
+                          Phone <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative group/input flex-1">
+                          <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
+                          
+                          {/* Phone prefix */}
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                            <span className="text-base font-medium text-gray-700">+91</span>
+                          </div>
+                          
+                          <input
+                            type="tel"
+                            id="phone"
+                            value={customerPhone}
+                            onChange={(e) => {
+                              const numericValue = e.target.value.replace(/\D/g, '').slice(0, 10);
+                              setCustomerPhone(numericValue);
+                            }}
+                            placeholder="Enter 10 digit phone number"
+                            className="relative w-full pl-14 sm:pl-16 pr-4 sm:pr-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
+                            style={{ fontSize: '16px' }}
+                            inputMode="numeric"
+                            pattern="[0-9]{10}"
+                            required
+                            minLength={10}
+                            maxLength={10}
+                          />
                         </div>
-                        
-                        <input
-                          type="tel"
-                          id="phone"
-                          value={customerPhone}
-                          onChange={(e) => {
-                            const numericValue = e.target.value.replace(/\D/g, '').slice(0, 10);
-                            setCustomerPhone(numericValue);
-                          }}
-                          placeholder="Enter 10 digit phone number"
-                          className="relative w-full pl-14 sm:pl-16 pr-4 sm:pr-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium"
-                          style={{ fontSize: '16px' }}
-                          inputMode="numeric"
-                          pattern="[0-9]{10}"
-                          required
-                          minLength={10}
-                          maxLength={10}
-                        />
                       </div>
                     </div>
 
                     {/* Event Dropdown */}
                     <div>
-                      <label htmlFor="event" className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Event <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative group/input">
-                        <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
-                        
-                        <select
-                          id="event"
-                          value={selectedEventUuid}
-                          onChange={(e) => setSelectedEventUuid(e.target.value)}
-                          className="relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium text-center"
-                          style={{ fontSize: '16px', textAlign: 'center' }}
-                          required
-                          disabled={loading}
-                        >
-                          <option value="">Select an Event</option>
-                          {events.map((event) => {
-                            return (
-                              <option key={event.event_uuid} value={event.event_uuid}>
-                                {event.event_name}
-                              </option>
-                            );
-                          })}
-                        </select>
+                      <div className="flex items-center gap-3 mb-1.5">
+                        <label htmlFor="event" className="text-sm font-semibold text-gray-700 whitespace-nowrap">
+                          Event <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative group/input flex-1">
+                          <div className="absolute -inset-px bg-gradient-to-r from-primary-400 via-accent-400 to-primary-400 rounded-xl opacity-0 group-hover/input:opacity-100 transition duration-300"></div>
+                          
+                          <select
+                            id="event"
+                            value={selectedEventUuid}
+                            onChange={(e) => setSelectedEventUuid(e.target.value)}
+                            className="relative w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-white/90 backdrop-blur-sm border border-gray-300/50 rounded-xl focus:outline-none focus:border-primary-400 text-base sm:text-base transition-all hover:border-primary-300 hover:bg-white shadow-sm font-medium text-center"
+                            style={{ fontSize: '16px', textAlign: 'center' }}
+                            required
+                            disabled={loading}
+                          >
+                            <option value="">Select an Event</option>
+                            {events.map((event) => {
+                              return (
+                                <option key={event.event_uuid} value={event.event_uuid}>
+                                  {event.event_name}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
                       </div>
                       
                       {/* Want Updates Checkbox */}
