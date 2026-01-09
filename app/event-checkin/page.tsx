@@ -408,7 +408,7 @@ export default function EventCheckInPage() {
                     {/* Discount Message */}
                     <div className="mb-6 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border border-orange-200">
                       <p className="text-sm sm:text-base font-semibold text-gray-800 text-center mb-3">
-                        Event attendees get 10% off on food today
+                        10% Off for Event Attendees today
                       </p>
                       <button
                         onClick={() => {
