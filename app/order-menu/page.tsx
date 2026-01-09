@@ -51,6 +51,12 @@ export default function SocialXMenuApp() {
   const [skipCheckoutDialog, setSkipCheckoutDialog] = useState(false);
   const [consolidatedOrderIds, setConsolidatedOrderIds] = useState<string[]>([]);
   
+  // Event check-in details state
+  const [eventCheckInDetails, setEventCheckInDetails] = useState<{
+    eventName: string;
+    checkInTime: string;
+  } | null>(null);
+  
   // Unpaid orders state
   const [unpaidOrders, setUnpaidOrders] = useState<any[]>([]);
   const [unpaidOrdersTotal, setUnpaidOrdersTotal] = useState(0);
@@ -153,14 +159,23 @@ export default function SocialXMenuApp() {
   }, []);
 
   // Check for active booking and discount eligibility on page load
-  // Discount ONLY applies when navigating from Snooker or Workspace Order Summary cards
+  // Discount applies when navigating from Snooker, Workspace Order Summary cards, or Event Check-In
   useEffect(() => {
     const checkDiscountEligibility = async () => {
-      // Check if user came from a booking page (snooker or workspace)
+      // Check if user came from a booking page (snooker or workspace) or event check-in
       const fromBookingPage = sessionStorage.getItem('fromBookingPage') === 'true';
+      const fromEventCheckIn = sessionStorage.getItem('fromEventCheckIn') === 'true';
       
-      // Clear any saved discount eligibility - only apply if coming from booking page
+      // Clear any saved discount eligibility - only apply if coming from booking page or event check-in
       removeSessionData('food_discountEligible');
+      
+      // If coming from event check-in, automatically apply discount
+      if (fromEventCheckIn) {
+        setIsDiscountEligible(true);
+        setSessionData('food_discountEligible', true);
+        // Don't clear the flag yet - keep it for the session
+        return;
+      }
       
       if (fromBookingPage) {
         // Get phone number - try multiple sources in order of priority
@@ -296,6 +311,23 @@ export default function SocialXMenuApp() {
     const savedSkipCheckout = sessionStorage.getItem('skipCheckoutDialog') === 'true';
     if (savedSkipCheckout) {
       setSkipCheckoutDialog(true);
+    }
+    
+    // Restore discount eligibility if available (for event check-in)
+    const savedDiscountEligible = getSessionData<boolean>('food_discountEligible');
+    if (savedDiscountEligible) {
+      setIsDiscountEligible(true);
+    }
+    
+    // Restore event check-in details if available
+    const savedEventDetails = sessionStorage.getItem('eventCheckInDetails');
+    if (savedEventDetails) {
+      try {
+        const eventDetails = JSON.parse(savedEventDetails);
+        setEventCheckInDetails(eventDetails);
+      } catch (error) {
+        console.error('Error parsing event check-in details:', error);
+      }
     }
     
     // Keep categories collapsed by default when menu view loads
@@ -1556,11 +1588,29 @@ export default function SocialXMenuApp() {
                               )}
                               <div className="flex-1 min-w-0">
                                 <h4 className="font-bold text-gray-800 truncate">{item.name}</h4>
-                                <p className="text-xs text-gray-500">₹{item.price.toFixed(2)} each</p>
+                                <p className="text-xs text-gray-500">
+                                  {isDiscountEligible && item.price !== getDiscountedPrice(item.price) ? (
+                                    <>
+                                      <span className="line-through text-gray-400">₹{item.price.toFixed(2)}</span>
+                                      <span className="ml-1 text-green-600 font-bold">₹{getDiscountedPrice(item.price).toFixed(2)}</span> each
+                                    </>
+                                  ) : (
+                                    <>₹{item.price.toFixed(2)} each</>
+                                  )}
+                                </p>
                               </div>
                               <div className="text-right flex-shrink-0">
                                 <p className="text-lg font-bold text-primary-600">× {quantity}</p>
-                                <p className="text-xs text-gray-600">₹{(item.price * quantity).toFixed(2)}</p>
+                                <p className="text-xs text-gray-600">
+                                  {isDiscountEligible && item.price !== getDiscountedPrice(item.price) ? (
+                                    <>
+                                      <span className="line-through text-gray-400">₹{(item.price * quantity).toFixed(2)}</span>
+                                      <span className="ml-1 text-green-600 font-bold">₹{(getDiscountedPrice(item.price) * quantity).toFixed(2)}</span>
+                                    </>
+                                  ) : (
+                                    <>₹{(item.price * quantity).toFixed(2)}</>
+                                  )}
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -1639,6 +1689,30 @@ export default function SocialXMenuApp() {
                   </div>
                 )}
               </div>
+
+              {/* Event Check-In Details Card - Display below order items if from event check-in */}
+              {eventCheckInDetails && (
+                <div className="px-4 sm:px-6 pb-4">
+                  <div className="relative group/item rounded-2xl overflow-hidden">
+                    <div className="bg-gradient-to-br from-white via-white to-green-50/60 p-4 border border-green-100 shadow-sm">
+                      <h3 className="text-sm font-bold text-gray-700 mb-3">Event Check-In Details</h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-start gap-2">
+                          <p className="text-sm font-semibold text-gray-600">Event:</p>
+                          <p className="text-sm font-bold text-gray-800">
+                            {eventCheckInDetails.eventName}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-start">
+                          <p className="text-sm font-semibold text-gray-600">
+                            Check-in Time: {eventCheckInDetails.checkInTime}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Fixed Bottom Section */}
               <div className="p-4 sm:p-6 pt-2 sm:pt-2 border-t border-primary-100 bg-white/50 -mt-2">
