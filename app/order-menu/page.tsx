@@ -159,14 +159,23 @@ export default function SocialXMenuApp() {
   }, []);
 
   // Check for active booking and discount eligibility on page load
-  // Discount ONLY applies when navigating from Snooker or Workspace Order Summary cards
+  // Discount applies when navigating from Snooker, Workspace Order Summary cards, or Event Check-In
   useEffect(() => {
     const checkDiscountEligibility = async () => {
-      // Check if user came from a booking page (snooker or workspace)
+      // Check if user came from a booking page (snooker or workspace) or event check-in
       const fromBookingPage = sessionStorage.getItem('fromBookingPage') === 'true';
+      const fromEventCheckIn = sessionStorage.getItem('fromEventCheckIn') === 'true';
       
-      // Clear any saved discount eligibility - only apply if coming from booking page
+      // Clear any saved discount eligibility - only apply if coming from booking page or event check-in
       removeSessionData('food_discountEligible');
+      
+      // If coming from event check-in, automatically apply discount
+      if (fromEventCheckIn) {
+        setIsDiscountEligible(true);
+        setSessionData('food_discountEligible', true);
+        // Don't clear the flag yet - keep it for the session
+        return;
+      }
       
       if (fromBookingPage) {
         // Get phone number - try multiple sources in order of priority
@@ -302,6 +311,12 @@ export default function SocialXMenuApp() {
     const savedSkipCheckout = sessionStorage.getItem('skipCheckoutDialog') === 'true';
     if (savedSkipCheckout) {
       setSkipCheckoutDialog(true);
+    }
+    
+    // Restore discount eligibility if available (for event check-in)
+    const savedDiscountEligible = getSessionData<boolean>('food_discountEligible');
+    if (savedDiscountEligible) {
+      setIsDiscountEligible(true);
     }
     
     // Restore event check-in details if available
@@ -1573,11 +1588,29 @@ export default function SocialXMenuApp() {
                               )}
                               <div className="flex-1 min-w-0">
                                 <h4 className="font-bold text-gray-800 truncate">{item.name}</h4>
-                                <p className="text-xs text-gray-500">₹{item.price.toFixed(2)} each</p>
+                                <p className="text-xs text-gray-500">
+                                  {isDiscountEligible && item.price !== getDiscountedPrice(item.price) ? (
+                                    <>
+                                      <span className="line-through text-gray-400">₹{item.price.toFixed(2)}</span>
+                                      <span className="ml-1 text-green-600 font-bold">₹{getDiscountedPrice(item.price).toFixed(2)}</span> each
+                                    </>
+                                  ) : (
+                                    <>₹{item.price.toFixed(2)} each</>
+                                  )}
+                                </p>
                               </div>
                               <div className="text-right flex-shrink-0">
                                 <p className="text-lg font-bold text-primary-600">× {quantity}</p>
-                                <p className="text-xs text-gray-600">₹{(item.price * quantity).toFixed(2)}</p>
+                                <p className="text-xs text-gray-600">
+                                  {isDiscountEligible && item.price !== getDiscountedPrice(item.price) ? (
+                                    <>
+                                      <span className="line-through text-gray-400">₹{(item.price * quantity).toFixed(2)}</span>
+                                      <span className="ml-1 text-green-600 font-bold">₹{(getDiscountedPrice(item.price) * quantity).toFixed(2)}</span>
+                                    </>
+                                  ) : (
+                                    <>₹{(item.price * quantity).toFixed(2)}</>
+                                  )}
+                                </p>
                               </div>
                             </div>
                           </div>
