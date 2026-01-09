@@ -54,6 +54,15 @@ const bookingOptions: BookingOption[] = [
     gradient: 'from-purple-500 to-purple-600',
     available: true,
   },
+  {
+    id: 'event-checkin',
+    title: 'Event Check-In',
+    description: 'Check in for events and workshops',
+    icon: '✅',
+    route: '/event-checkin',
+    gradient: 'from-pink-500 to-pink-600',
+    available: true,
+  },
 ];
 
 export default function BookOrderPage() {
@@ -178,6 +187,8 @@ export default function BookOrderPage() {
                 return { line1: 'Events & WorkShops', line2: null, line3: null, singleLine: true };
               } else if (option.id === 'cowork-seat') {
                 return { line1: 'Reserve', line2: 'Workspace', line3: null, singleLine: false };
+              } else if (option.id === 'event-checkin') {
+                return { line1: 'Event', line2: 'Check-In', line3: null, singleLine: false };
               }
               return { line1: option.title, line2: null, line3: null, singleLine: false };
             };
@@ -262,6 +273,8 @@ export default function BookOrderPage() {
                 return { line1: 'Events & WorkShops', line2: null, line3: null, singleLine: true };
               } else if (option.id === 'cowork-seat') {
                 return { line1: 'Reserve', line2: 'Workspace', line3: null, singleLine: false };
+              } else if (option.id === 'event-checkin') {
+                return { line1: 'Event', line2: 'Check-In', line3: null, singleLine: false };
               }
               return { line1: option.title, line2: null, line3: null, singleLine: false };
             };
